@@ -493,6 +493,19 @@ body::after {
   }));
   $('sexSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => setSex(b.dataset.s)));
 
+  /* ---------- cloud sync (shares the 'health' row with health.html / po-water.html) ---------- */
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof initCloudSync !== 'function') return;
+    initCloudSync({
+      appKey: 'health',
+      syncedKeys: ['stack:items', 'stack:version', 'stack:low', 'po_water_v1'],
+      syncedPrefixes: ['stack:taken:'],
+      onApplied: function () {
+        if ($('settingsBg').classList.contains('show')) populate();
+      }
+    });
+  });
+
   /* ---------- WHOOP ---------- */
   let whStats = null;
   function relTime(ts) {
