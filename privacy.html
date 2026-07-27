@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050506">
+<title>Privacy Policy · Giorgio's Dashboard</title>
+<style>
+:root {
+  --text-primary: #FAFAFA;
+  --text-secondary: #B8B6B0;
+  --text-tertiary: #76746E;
+  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; background: #050506; color: var(--text-secondary);
+  font-family: var(--font); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+}
+body { padding: max(28px, env(safe-area-inset-top)) 20px 60px; }
+.page { max-width: 720px; margin: 0 auto; }
+h1 {
+  margin: 0 0 6px; font-size: 26px; font-weight: 700; letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+.updated { font-size: 13px; color: var(--text-tertiary); margin-bottom: 32px; }
+h2 {
+  font-size: 15px; font-weight: 700; color: var(--text-primary);
+  margin: 30px 0 10px; letter-spacing: -0.01em;
+}
+p, li { font-size: 14.5px; line-height: 1.65; color: var(--text-secondary); }
+ul { padding-left: 20px; margin: 8px 0; }
+a { color: #A78BFA; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Privacy Policy</h1>
+  <div class="updated">Last updated: 27 July 2026</div>
+
+  <p>Giorgio's Dashboard is a personal, single-user dashboard built and used by one person (Giorgio Furlotti) to track fitness, health, water, caffeine, and finance data, including data from the WHOOP API. It is not a public product or service, and it is not used to collect or process data belonging to anyone other than its owner.</p>
+
+  <h2>What data is used</h2>
+  <p>Depending on which page is open, the dashboard may read and store:</p>
+  <ul>
+    <li>WHOOP data (recovery, sleep, workouts, cycles, profile, body measurements) via the WHOOP API, using an access token obtained through WHOOP's OAuth flow.</li>
+    <li>Manually entered health, fitness, hydration, caffeine, and finance data.</li>
+  </ul>
+
+  <h2>Where data is stored</h2>
+  <p>Data is stored in the browser's local storage and, for cross-device sync, in a private Supabase project that the owner controls directly. No data is sold, shared, or made available to any third party, advertiser, or analytics service.</p>
+
+  <h2>WHOOP data specifically</h2>
+  <p>WHOOP access and refresh tokens are stored only in the browser's local storage and in the owner's private Supabase project, used solely to display the owner's own WHOOP metrics inside this dashboard. Access can be revoked at any time from the Health page ("Disconnect") or from WHOOP's own account settings.</p>
+
+  <h2>Data retention & deletion</h2>
+  <p>Data persists until manually cleared from local storage, deleted from the Supabase project, or disconnected via the app. There is no separate retention period beyond the owner's own use of the dashboard.</p>
+
+  <h2>Contact</h2>
+  <p>Questions about this policy can be sent to <a href="mailto:furlottigio09@gmail.com">furlottigio09@gmail.com</a>.</p>
+</div>
+</body>
+</html>
