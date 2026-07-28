@@ -29,6 +29,9 @@
   --mac-protein: #38BDF8;
   --mac-carbs: #F2C063;
   --mac-fat: #A78BFA;
+  --micro-fiber: #6BE3A4;
+  --micro-mineral: #38BDF8;
+  --micro-vitamin: #A78BFA;
   --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -119,6 +122,9 @@ body::after {
 .gm-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
 .gm-header-left { display: flex; flex-direction: column; }
 .gm-eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 6px; }
+.micro-group-label.fiber { color: var(--micro-fiber); }
+.micro-group-label.mineral { color: var(--micro-mineral); }
+.micro-group-label.vitamin { color: var(--micro-vitamin); }
 .gm-progress-row { display: flex; align-items: baseline; gap: 6px; }
 .gm-progress-num { font-size: 42px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.045em; color: var(--text-primary); line-height: 1; }
 .gm-progress-total { font-family: var(--font-mono); font-size: 18px; color: var(--text-tertiary); }
@@ -258,6 +264,7 @@ body::after {
 .food-row-body { flex: 1; min-width: 0; }
 .food-row-name { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
 .food-row-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.food-row-why { font-size: 10.5px; color: var(--nutri); margin-top: 3px; font-weight: 600; }
 .food-row-grams {
   width: 54px; flex-shrink: 0; text-align: center; padding: 8px 4px;
   border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; background: rgba(0,0,0,0.28);
@@ -334,68 +341,85 @@ body::after {
   <div class="section">
     <div class="section-title">Micronutrients today</div>
     <div class="gm-card">
-      <div class="stat-grid" id="microGrid">
+      <div class="gm-eyebrow micro-group-label fiber">Fiber</div>
+      <div class="stat-grid">
         <div class="stat">
           <div class="stat-num-row"><span class="stat-num" id="mc_fiber_num">0</span><span class="stat-sub">/ <span id="mc_fiber_goal">28g</span></span></div>
           <div class="stat-label">Fiber</div>
-          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_fiber_bar" style="width:0%;background:var(--nutri)"></div></div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_fiber_bar" style="width:0%;background:var(--micro-fiber)"></div></div>
         </div>
+      </div>
+
+      <div class="gm-eyebrow micro-group-label mineral" style="margin-top:16px">Minerals</div>
+      <div class="stat-grid">
         <div class="stat">
           <div class="stat-num-row"><span class="stat-num" id="mc_sodium_num">0</span><span class="stat-sub">/ <span id="mc_sodium_goal">2300mg</span></span></div>
           <div class="stat-label">Sodium</div>
-          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_sodium_bar" style="width:0%;background:var(--nutri)"></div></div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_sodium_bar" style="width:0%;background:var(--micro-mineral)"></div></div>
         </div>
         <div class="stat">
           <div class="stat-num-row"><span class="stat-num" id="mc_potassium_num">0</span><span class="stat-sub">/ <span id="mc_potassium_goal">4700mg</span></span></div>
           <div class="stat-label">Potassium</div>
-          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_potassium_bar" style="width:0%;background:var(--nutri)"></div></div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_potassium_bar" style="width:0%;background:var(--micro-mineral)"></div></div>
         </div>
         <div class="stat">
           <div class="stat-num-row"><span class="stat-num" id="mc_calcium_num">0</span><span class="stat-sub">/ <span id="mc_calcium_goal">1300mg</span></span></div>
           <div class="stat-label">Calcium</div>
-          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_calcium_bar" style="width:0%;background:var(--nutri)"></div></div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_calcium_bar" style="width:0%;background:var(--micro-mineral)"></div></div>
         </div>
         <div class="stat">
           <div class="stat-num-row"><span class="stat-num" id="mc_iron_num">0</span><span class="stat-sub">/ <span id="mc_iron_goal">18mg</span></span></div>
           <div class="stat-label">Iron</div>
-          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_iron_bar" style="width:0%;background:var(--nutri)"></div></div>
-        </div>
-        <div class="stat">
-          <div class="stat-num-row"><span class="stat-num" id="mc_vitaminC_num">0</span><span class="stat-sub">/ <span id="mc_vitaminC_goal">90mg</span></span></div>
-          <div class="stat-label">Vitamin C</div>
-          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_vitaminC_bar" style="width:0%;background:var(--nutri)"></div></div>
-        </div>
-        <div class="stat">
-          <div class="stat-num-row"><span class="stat-num" id="mc_vitaminA_num">0</span><span class="stat-sub">/ <span id="mc_vitaminA_goal">900µg</span></span></div>
-          <div class="stat-label">Vitamin A</div>
-          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_vitaminA_bar" style="width:0%;background:var(--nutri)"></div></div>
-        </div>
-        <div class="stat">
-          <div class="stat-num-row"><span class="stat-num" id="mc_vitaminD_num">0</span><span class="stat-sub">/ <span id="mc_vitaminD_goal">20µg</span></span></div>
-          <div class="stat-label">Vitamin D</div>
-          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_vitaminD_bar" style="width:0%;background:var(--nutri)"></div></div>
-        </div>
-        <div class="stat">
-          <div class="stat-num-row"><span class="stat-num" id="mc_vitaminB12_num">0</span><span class="stat-sub">/ <span id="mc_vitaminB12_goal">2.4µg</span></span></div>
-          <div class="stat-label">Vitamin B12</div>
-          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_vitaminB12_bar" style="width:0%;background:var(--nutri)"></div></div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_iron_bar" style="width:0%;background:var(--micro-mineral)"></div></div>
         </div>
         <div class="stat">
           <div class="stat-num-row"><span class="stat-num" id="mc_magnesium_num">0</span><span class="stat-sub">/ <span id="mc_magnesium_goal">420mg</span></span></div>
           <div class="stat-label">Magnesium</div>
-          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_magnesium_bar" style="width:0%;background:var(--nutri)"></div></div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_magnesium_bar" style="width:0%;background:var(--micro-mineral)"></div></div>
         </div>
         <div class="stat">
           <div class="stat-num-row"><span class="stat-num" id="mc_zinc_num">0</span><span class="stat-sub">/ <span id="mc_zinc_goal">11mg</span></span></div>
           <div class="stat-label">Zinc</div>
-          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_zinc_bar" style="width:0%;background:var(--nutri)"></div></div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_zinc_bar" style="width:0%;background:var(--micro-mineral)"></div></div>
+        </div>
+      </div>
+
+      <div class="gm-eyebrow micro-group-label vitamin" style="margin-top:16px">Vitamins</div>
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="stat-num-row"><span class="stat-num" id="mc_vitaminC_num">0</span><span class="stat-sub">/ <span id="mc_vitaminC_goal">90mg</span></span></div>
+          <div class="stat-label">Vitamin C</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_vitaminC_bar" style="width:0%;background:var(--micro-vitamin)"></div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-num-row"><span class="stat-num" id="mc_vitaminA_num">0</span><span class="stat-sub">/ <span id="mc_vitaminA_goal">900µg</span></span></div>
+          <div class="stat-label">Vitamin A</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_vitaminA_bar" style="width:0%;background:var(--micro-vitamin)"></div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-num-row"><span class="stat-num" id="mc_vitaminD_num">0</span><span class="stat-sub">/ <span id="mc_vitaminD_goal">20µg</span></span></div>
+          <div class="stat-label">Vitamin D</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_vitaminD_bar" style="width:0%;background:var(--micro-vitamin)"></div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-num-row"><span class="stat-num" id="mc_vitaminB12_num">0</span><span class="stat-sub">/ <span id="mc_vitaminB12_goal">2.4µg</span></span></div>
+          <div class="stat-label">Vitamin B12</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_vitaminB12_bar" style="width:0%;background:var(--micro-vitamin)"></div></div>
         </div>
         <div class="stat">
           <div class="stat-num-row"><span class="stat-num" id="mc_folate_num">0</span><span class="stat-sub">/ <span id="mc_folate_goal">400µg</span></span></div>
           <div class="stat-label">Folate</div>
-          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_folate_bar" style="width:0%;background:var(--nutri)"></div></div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_folate_bar" style="width:0%;background:var(--micro-vitamin)"></div></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div class="section" id="recommendedSection" style="display:none">
+    <div class="section-title">Recommended for you</div>
+    <div class="gm-card">
+      <div class="nova-hint" style="margin-bottom:10px">Foods picked to close today's biggest macro and micronutrient gaps at once.</div>
+      <div class="food-results" id="recommendedResults"></div>
     </div>
   </div>
 
@@ -721,12 +745,101 @@ body::after {
     $('tgFolate').value = t.folate;
   }
 
+  /* ---------- recommended foods: close today's macro + micronutrient gaps at once ---------- */
+  const RECOMMEND_MACRO_KEYS = ['protein', 'carbs', 'fat'];
+  const RECOMMEND_MICRO_KEYS = ['fiber', 'potassium', 'calcium', 'iron', 'vitaminC', 'vitaminA', 'vitaminD', 'vitaminB12', 'magnesium', 'zinc', 'folate'];
+  const RECOMMEND_LABELS = { protein: 'protein', carbs: 'carbs', fat: 'fat', fiber: 'fiber', potassium: 'potassium', calcium: 'calcium', iron: 'iron', vitaminC: 'vitamin C', vitaminA: 'vitamin A', vitaminD: 'vitamin D', vitaminB12: 'vitamin B12', magnesium: 'magnesium', zinc: 'zinc', folate: 'folate' };
+
+  function computeNutrientGaps(state) {
+    const totals = todayTotals(state);
+    const t = state.targets;
+    return {
+      protein: Math.max(0, (t.protein || 0) - totals.pro),
+      carbs: Math.max(0, (t.carbs || 0) - totals.carb),
+      fat: Math.max(0, (t.fat || 0) - totals.fat),
+      fiber: Math.max(0, (t.fiber || 0) - totals.fiber),
+      potassium: Math.max(0, (t.potassium || 0) - totals.potassium),
+      calcium: Math.max(0, (t.calcium || 0) - totals.calcium),
+      iron: Math.max(0, (t.iron || 0) - totals.iron),
+      vitaminC: Math.max(0, (t.vitaminC || 0) - totals.vitaminC),
+      vitaminA: Math.max(0, (t.vitaminA || 0) - totals.vitaminA),
+      vitaminD: Math.max(0, (t.vitaminD || 0) - totals.vitaminD),
+      vitaminB12: Math.max(0, (t.vitaminB12 || 0) - totals.vitaminB12),
+      magnesium: Math.max(0, (t.magnesium || 0) - totals.magnesium),
+      zinc: Math.max(0, (t.zinc || 0) - totals.zinc),
+      folate: Math.max(0, (t.folate || 0) - totals.folate),
+    };
+  }
+
+  function scoreFoodAgainstGaps(food, gaps) {
+    let macroScore = 0, macroCount = 0;
+    let microScore = 0, microCount = 0;
+    RECOMMEND_MACRO_KEYS.forEach((k) => {
+      if (gaps[k] > 0) { macroCount++; macroScore += Math.min(1, (food[k] || 0) / gaps[k]); }
+    });
+    RECOMMEND_MICRO_KEYS.forEach((k) => {
+      if (gaps[k] > 0) { microCount++; microScore += Math.min(1, (food[k] || 0) / gaps[k]); }
+    });
+    if (!macroCount && !microCount) return 0;
+    const macroAvg = macroCount ? macroScore / macroCount : 0;
+    const microAvg = microCount ? microScore / microCount : 0;
+    const helpsBoth = macroCount > 0 && microCount > 0 && macroAvg > 0 && microAvg > 0;
+    return (macroAvg + microAvg) * (helpsBoth ? 1.25 : 1);
+  }
+
+  function topGapContributions(food, gaps) {
+    return Object.keys(gaps)
+      .filter((k) => gaps[k] > 0)
+      .map((k) => ({ key: k, pct: Math.min(1, (food[k] || 0) / gaps[k]) }))
+      .filter((c) => c.pct > 0.08)
+      .sort((a, b) => b.pct - a.pct)
+      .slice(0, 3)
+      .map((c) => RECOMMEND_LABELS[c.key]);
+  }
+
+  function computeRecommendedFoods(state) {
+    const gaps = computeNutrientGaps(state);
+    return FOOD_DB
+      .map((food) => ({ food: food, score: scoreFoodAgainstGaps(food, gaps) }))
+      .filter((x) => x.score > 0.3)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+  }
+
+  function renderRecommended(state) {
+    const section = $('recommendedSection');
+    const picks = computeRecommendedFoods(state);
+    const el = $('recommendedResults');
+    el.innerHTML = '';
+    if (!picks.length) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    const gaps = computeNutrientGaps(state);
+    picks.forEach(({ food }) => {
+      const row = buildFoodRow({
+        name: food.name, meta: food.serving, baseGrams: food.grams,
+        calories: food.calories, protein: food.protein, carbs: food.carbs, fat: food.fat,
+        fiber: food.fiber, sodium: food.sodium, potassium: food.potassium, calcium: food.calcium, iron: food.iron,
+        vitaminC: food.vitaminC, vitaminA: food.vitaminA, vitaminD: food.vitaminD, vitaminB12: food.vitaminB12,
+        magnesium: food.magnesium, zinc: food.zinc, folate: food.folate,
+      });
+      const why = topGapContributions(food, gaps);
+      if (why.length) {
+        const tag = document.createElement('div');
+        tag.className = 'food-row-why';
+        tag.textContent = 'Helps: ' + why.join(', ');
+        row.querySelector('.food-row-body').appendChild(tag);
+      }
+      el.appendChild(row);
+    });
+  }
+
   function renderAll() {
     const state = load();
     renderOverview(state);
     renderMicros(state);
     renderMeals(state);
     renderTargets(state);
+    renderRecommended(state);
   }
 
   /* ---------- manual quick-add ---------- */
