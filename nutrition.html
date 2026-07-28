@@ -189,7 +189,7 @@ body::after {
 .gm-ghost:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.18); }
 
 .targets-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.micro-targets-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); }
+.micro-targets-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 8px; }
 .targets-field label { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 6px; }
 .targets-field input {
   width: 100%; padding: 10px; text-align: center;
@@ -202,6 +202,7 @@ body::after {
 .nova-input-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .nova-input-row .gm-input { flex: 1 1 220px; }
 .nova-hint { font-size: 11.5px; color: var(--text-tertiary); margin-top: 10px; line-height: 1.5; }
+.nova-hint a { color: var(--nutri); }
 .nova-key-row { display: none; gap: 8px; margin-top: 12px; }
 .nova-key-row.show { display: flex; flex-wrap: wrap; }
 .nova-key-row .gm-input { flex: 1 1 220px; }
@@ -222,11 +223,19 @@ body::after {
 .nova-preview-actions { display: flex; gap: 8px; }
 
 /* Food index */
-.food-results { display: flex; flex-direction: column; gap: 6px; max-height: 360px; overflow-y: auto; margin-top: 12px; }
-.food-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; }
+.food-group-label { display: none; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 16px; margin-bottom: 4px; }
+.food-results { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; margin-top: 12px; }
+.food-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; }
 .food-row-body { flex: 1; min-width: 0; }
 .food-row-name { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
 .food-row-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.food-row-grams {
+  width: 54px; flex-shrink: 0; text-align: center; padding: 8px 4px;
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; background: rgba(0,0,0,0.28);
+  color: var(--text-primary); font-family: inherit; font-size: 13px; font-variant-numeric: tabular-nums; outline: none;
+}
+.food-row-grams:focus { border-color: color-mix(in srgb, var(--nutri) 45%, transparent); }
+.food-row-unit { font-size: 11px; color: var(--text-tertiary); flex-shrink: 0; }
 .food-row-add {
   width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
   border: 1px solid color-mix(in srgb, var(--nutri) 35%, transparent);
@@ -239,6 +248,11 @@ body::after {
 .food-row-add:active { transform: scale(0.92); }
 .food-row-add.added { background: color-mix(in srgb, var(--success) 25%, transparent); border-color: color-mix(in srgb, var(--success) 45%, transparent); color: var(--success); }
 .food-empty { text-align: center; font-size: 12px; font-style: italic; color: var(--text-tertiary); padding: 10px 0; }
+.usda-key-row { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); }
+.usda-loading { display: none; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--text-tertiary); }
+.usda-loading.show { display: flex; }
+.usda-error { display: none; color: var(--danger); font-size: 12px; margin-top: 10px; }
+.usda-error.show { display: block; }
 
 @media (max-width: 480px) {
   body { padding: max(20px, env(safe-area-inset-top)) 14px 50px; }
@@ -246,6 +260,8 @@ body::after {
   .gm-progress-num { font-size: 34px; }
   .targets-grid { grid-template-columns: repeat(2, 1fr); }
   .micro-targets-grid { grid-template-columns: repeat(2, 1fr); }
+  .food-row { flex-wrap: wrap; }
+  .food-row-body { flex: 1 1 100%; }
 }
 </style>
 </head>
@@ -287,7 +303,7 @@ body::after {
   <div class="section">
     <div class="section-title">Micronutrients today</div>
     <div class="gm-card">
-      <div class="stat-grid">
+      <div class="stat-grid" id="microGrid">
         <div class="stat">
           <div class="stat-num-row"><span class="stat-num" id="mc_fiber_num">0</span><span class="stat-sub">/ <span id="mc_fiber_goal">28g</span></span></div>
           <div class="stat-label">Fiber</div>
@@ -304,11 +320,6 @@ body::after {
           <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_potassium_bar" style="width:0%;background:var(--nutri)"></div></div>
         </div>
         <div class="stat">
-          <div class="stat-num-row"><span class="stat-num" id="mc_vitaminC_num">0</span><span class="stat-sub">/ <span id="mc_vitaminC_goal">90mg</span></span></div>
-          <div class="stat-label">Vitamin C</div>
-          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_vitaminC_bar" style="width:0%;background:var(--nutri)"></div></div>
-        </div>
-        <div class="stat">
           <div class="stat-num-row"><span class="stat-num" id="mc_calcium_num">0</span><span class="stat-sub">/ <span id="mc_calcium_goal">1300mg</span></span></div>
           <div class="stat-label">Calcium</div>
           <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_calcium_bar" style="width:0%;background:var(--nutri)"></div></div>
@@ -317,6 +328,41 @@ body::after {
           <div class="stat-num-row"><span class="stat-num" id="mc_iron_num">0</span><span class="stat-sub">/ <span id="mc_iron_goal">18mg</span></span></div>
           <div class="stat-label">Iron</div>
           <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_iron_bar" style="width:0%;background:var(--nutri)"></div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-num-row"><span class="stat-num" id="mc_vitaminC_num">0</span><span class="stat-sub">/ <span id="mc_vitaminC_goal">90mg</span></span></div>
+          <div class="stat-label">Vitamin C</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_vitaminC_bar" style="width:0%;background:var(--nutri)"></div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-num-row"><span class="stat-num" id="mc_vitaminA_num">0</span><span class="stat-sub">/ <span id="mc_vitaminA_goal">900µg</span></span></div>
+          <div class="stat-label">Vitamin A</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_vitaminA_bar" style="width:0%;background:var(--nutri)"></div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-num-row"><span class="stat-num" id="mc_vitaminD_num">0</span><span class="stat-sub">/ <span id="mc_vitaminD_goal">20µg</span></span></div>
+          <div class="stat-label">Vitamin D</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_vitaminD_bar" style="width:0%;background:var(--nutri)"></div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-num-row"><span class="stat-num" id="mc_vitaminB12_num">0</span><span class="stat-sub">/ <span id="mc_vitaminB12_goal">2.4µg</span></span></div>
+          <div class="stat-label">Vitamin B12</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_vitaminB12_bar" style="width:0%;background:var(--nutri)"></div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-num-row"><span class="stat-num" id="mc_magnesium_num">0</span><span class="stat-sub">/ <span id="mc_magnesium_goal">420mg</span></span></div>
+          <div class="stat-label">Magnesium</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_magnesium_bar" style="width:0%;background:var(--nutri)"></div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-num-row"><span class="stat-num" id="mc_zinc_num">0</span><span class="stat-sub">/ <span id="mc_zinc_goal">11mg</span></span></div>
+          <div class="stat-label">Zinc</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_zinc_bar" style="width:0%;background:var(--nutri)"></div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-num-row"><span class="stat-num" id="mc_folate_num">0</span><span class="stat-sub">/ <span id="mc_folate_goal">400µg</span></span></div>
+          <div class="stat-label">Folate</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_folate_bar" style="width:0%;background:var(--nutri)"></div></div>
         </div>
       </div>
     </div>
@@ -355,7 +401,23 @@ body::after {
     <div class="section-title">Food index</div>
     <div class="gm-card">
       <input class="gm-input" id="foodSearch" type="text" placeholder="Search foods… e.g. “chicken”, “rice”, “almonds”" autocomplete="off">
+
+      <div class="food-group-label" id="quickListLabel">Quick list</div>
       <div class="food-results" id="foodResults"></div>
+
+      <div class="food-group-label" id="usdaResultsLabel">USDA FoodData Central</div>
+      <div class="usda-loading" id="usdaLoading"><span class="dots"><i></i><i></i><i></i></span> Searching USDA…</div>
+      <div class="usda-error" id="usdaError"></div>
+      <div class="food-results" id="usdaResults"></div>
+
+      <div class="usda-key-row" id="usdaKeyRow">
+        <div class="gm-eyebrow">300,000+ verified USDA foods</div>
+        <div class="nova-input-row">
+          <input class="gm-input" id="usdaKeyInput" type="password" placeholder="paste your USDA FDC API key" autocomplete="off">
+          <button class="gm-ghost" id="usdaKeySave" type="button">Save key</button>
+        </div>
+        <div class="nova-hint">Free, takes under a minute — get one at <a href="https://fdc.nal.usda.gov/api-key-signup.html" target="_blank" rel="noopener">fdc.nal.usda.gov</a>. Stored only in this browser.</div>
+      </div>
     </div>
   </div>
 
@@ -387,13 +449,19 @@ body::after {
       </div>
 
       <div class="gm-eyebrow" style="margin-top:16px">Micronutrients</div>
-      <div class="micro-targets-grid" style="margin-top:8px;padding-top:0;border-top:0">
+      <div class="micro-targets-grid">
         <div class="targets-field"><label>Fiber g</label><input id="tgFiber" type="number" min="0" inputmode="numeric"></div>
         <div class="targets-field"><label>Sodium mg</label><input id="tgSodium" type="number" min="0" inputmode="numeric"></div>
         <div class="targets-field"><label>Potassium mg</label><input id="tgPotassium" type="number" min="0" inputmode="numeric"></div>
-        <div class="targets-field"><label>Vitamin C mg</label><input id="tgVitaminC" type="number" min="0" inputmode="numeric"></div>
         <div class="targets-field"><label>Calcium mg</label><input id="tgCalcium" type="number" min="0" inputmode="numeric"></div>
         <div class="targets-field"><label>Iron mg</label><input id="tgIron" type="number" min="0" inputmode="numeric"></div>
+        <div class="targets-field"><label>Vitamin C mg</label><input id="tgVitaminC" type="number" min="0" inputmode="numeric"></div>
+        <div class="targets-field"><label>Vitamin A µg</label><input id="tgVitaminA" type="number" min="0" inputmode="numeric"></div>
+        <div class="targets-field"><label>Vitamin D µg</label><input id="tgVitaminD" type="number" min="0" inputmode="numeric"></div>
+        <div class="targets-field"><label>Vitamin B12 µg</label><input id="tgVitaminB12" type="number" min="0" inputmode="numeric"></div>
+        <div class="targets-field"><label>Magnesium mg</label><input id="tgMagnesium" type="number" min="0" inputmode="numeric"></div>
+        <div class="targets-field"><label>Zinc mg</label><input id="tgZinc" type="number" min="0" inputmode="numeric"></div>
+        <div class="targets-field"><label>Folate µg</label><input id="tgFolate" type="number" min="0" inputmode="numeric"></div>
       </div>
 
       <div class="gm-input-wrap" style="justify-content:flex-end">
@@ -410,72 +478,76 @@ body::after {
 
   const STORE_KEY = 'nutrition:v1';
   const NOVA_KEY_LS = 'nova_lite_api_key';
+  const USDA_KEY_LS = 'usda_fdc_api_key';
   const $ = (id) => document.getElementById(id);
+  const MICRO_KEYS = ['fiber','sodium','potassium','calcium','iron','vitaminC','vitaminA','vitaminD','vitaminB12','magnesium','zinc','folate'];
 
   function dateKey() {
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
 
-  /* ---------- food reference index (approximate, common serving sizes) ---------- */
+  /* ---------- quick-list food reference (approximate, common serving sizes) ---------- */
+  /* grams = weight of the stated serving, used to scale the amount you actually add */
   const FOOD_DB = [
-    { name:'Chicken breast', serving:'100g cooked', calories:165, protein:31, carbs:0, fat:3.6, fiber:0, sodium:74, potassium:256, vitaminC:0, calcium:15, iron:1 },
-    { name:'Salmon', serving:'100g cooked', calories:208, protein:20, carbs:0, fat:13, fiber:0, sodium:59, potassium:384, vitaminC:0, calcium:9, iron:0.3 },
-    { name:'Tuna (canned, water)', serving:'100g', calories:116, protein:26, carbs:0, fat:1, fiber:0, sodium:247, potassium:237, vitaminC:0, calcium:3, iron:1.3 },
-    { name:'Lean ground beef 90/10', serving:'100g cooked', calories:217, protein:26, carbs:0, fat:12, fiber:0, sodium:75, potassium:318, vitaminC:0, calcium:15, iron:2.6 },
-    { name:'Pork chop', serving:'100g cooked', calories:231, protein:25, carbs:0, fat:14, fiber:0, sodium:54, potassium:350, vitaminC:0, calcium:8, iron:0.8 },
-    { name:'Turkey breast', serving:'100g cooked', calories:135, protein:30, carbs:0, fat:1, fiber:0, sodium:54, potassium:239, vitaminC:0, calcium:15, iron:1.2 },
-    { name:'Egg', serving:'1 large', calories:78, protein:6, carbs:0.6, fat:5, fiber:0, sodium:62, potassium:63, vitaminC:0, calcium:25, iron:0.9 },
-    { name:'Egg whites', serving:'100g', calories:52, protein:11, carbs:0.7, fat:0.2, fiber:0, sodium:166, potassium:163, vitaminC:0, calcium:7, iron:0.1 },
-    { name:'Greek yogurt (plain)', serving:'170g cup', calories:100, protein:17, carbs:6, fat:0.7, fiber:0, sodium:61, potassium:240, vitaminC:0, calcium:230, iron:0.1 },
-    { name:'Cottage cheese', serving:'100g', calories:98, protein:11, carbs:3.4, fat:4.3, fiber:0, sodium:364, potassium:104, vitaminC:0, calcium:83, iron:0.1 },
-    { name:'Whey protein', serving:'1 scoop (30g)', calories:120, protein:24, carbs:3, fat:1.5, fiber:0, sodium:50, potassium:170, vitaminC:0, calcium:100, iron:0 },
-    { name:'Tofu (firm)', serving:'100g', calories:144, protein:15, carbs:3, fat:9, fiber:2, sodium:14, potassium:164, vitaminC:0, calcium:201, iron:2.7 },
-    { name:'White rice', serving:'1 cup cooked', calories:205, protein:4.3, carbs:45, fat:0.4, fiber:0.6, sodium:2, potassium:55, vitaminC:0, calcium:16, iron:1.9 },
-    { name:'Brown rice', serving:'1 cup cooked', calories:216, protein:5, carbs:45, fat:1.8, fiber:3.5, sodium:10, potassium:154, vitaminC:0, calcium:20, iron:0.8 },
-    { name:'Oats', serving:'40g dry', calories:150, protein:5, carbs:27, fat:3, fiber:4, sodium:0, potassium:150, vitaminC:0, calcium:20, iron:1.7 },
-    { name:'Quinoa', serving:'1 cup cooked', calories:222, protein:8, carbs:39, fat:3.6, fiber:5, sodium:13, potassium:318, vitaminC:0, calcium:31, iron:2.8 },
-    { name:'Whole wheat bread', serving:'1 slice', calories:81, protein:4, carbs:14, fat:1.1, fiber:2, sodium:144, potassium:69, vitaminC:0, calcium:30, iron:0.9 },
-    { name:'White bread', serving:'1 slice', calories:67, protein:2, carbs:13, fat:0.8, fiber:0.6, sodium:130, potassium:25, vitaminC:0, calcium:30, iron:0.7 },
-    { name:'Pasta', serving:'1 cup cooked', calories:221, protein:8, carbs:43, fat:1.3, fiber:2.5, sodium:1, potassium:62, vitaminC:0, calcium:10, iron:2 },
-    { name:'Potato (baked, w/ skin)', serving:'1 medium', calories:161, protein:4.3, carbs:37, fat:0.2, fiber:3.8, sodium:17, potassium:926, vitaminC:17, calcium:26, iron:1.9 },
-    { name:'Sweet potato (baked)', serving:'1 medium', calories:103, protein:2.3, carbs:24, fat:0.2, fiber:3.8, sodium:41, potassium:542, vitaminC:22, calcium:43, iron:0.8 },
-    { name:'Tortilla (flour)', serving:'1 medium', calories:140, protein:4, carbs:24, fat:3.5, fiber:1.5, sodium:290, potassium:60, vitaminC:0, calcium:60, iron:1.2 },
-    { name:'Banana', serving:'1 medium', calories:105, protein:1.3, carbs:27, fat:0.4, fiber:3.1, sodium:1, potassium:422, vitaminC:10, calcium:6, iron:0.3 },
-    { name:'Apple', serving:'1 medium', calories:95, protein:0.5, carbs:25, fat:0.3, fiber:4.4, sodium:2, potassium:195, vitaminC:8, calcium:11, iron:0.2 },
-    { name:'Orange', serving:'1 medium', calories:62, protein:1.2, carbs:15, fat:0.2, fiber:3.1, sodium:0, potassium:237, vitaminC:70, calcium:52, iron:0.1 },
-    { name:'Strawberries', serving:'1 cup', calories:49, protein:1, carbs:12, fat:0.5, fiber:3, sodium:2, potassium:220, vitaminC:89, calcium:27, iron:0.6 },
-    { name:'Blueberries', serving:'1 cup', calories:84, protein:1.1, carbs:21, fat:0.5, fiber:3.6, sodium:1, potassium:114, vitaminC:14, calcium:9, iron:0.4 },
-    { name:'Grapes', serving:'1 cup', calories:104, protein:1.1, carbs:27, fat:0.2, fiber:1.4, sodium:3, potassium:288, vitaminC:5, calcium:15, iron:0.5 },
-    { name:'Avocado', serving:'1/2 medium', calories:160, protein:2, carbs:9, fat:15, fiber:7, sodium:7, potassium:485, vitaminC:10, calcium:12, iron:0.6 },
-    { name:'Broccoli', serving:'1 cup cooked', calories:55, protein:3.7, carbs:11, fat:0.6, fiber:5.1, sodium:64, potassium:457, vitaminC:101, calcium:62, iron:1 },
-    { name:'Spinach (raw)', serving:'100g', calories:23, protein:2.9, carbs:3.6, fat:0.4, fiber:2.2, sodium:79, potassium:558, vitaminC:28, calcium:99, iron:2.7 },
-    { name:'Carrots (raw)', serving:'1 cup', calories:52, protein:1.2, carbs:12, fat:0.3, fiber:3.6, sodium:88, potassium:410, vitaminC:7, calcium:42, iron:0.4 },
-    { name:'Bell pepper (raw)', serving:'1 medium', calories:24, protein:1, carbs:6, fat:0.2, fiber:2, sodium:3, potassium:211, vitaminC:95, calcium:7, iron:0.4 },
-    { name:'Tomato', serving:'1 medium', calories:22, protein:1.1, carbs:4.8, fat:0.2, fiber:1.5, sodium:6, potassium:292, vitaminC:17, calcium:12, iron:0.3 },
-    { name:'Sweet corn', serving:'1 cup', calories:132, protein:5, carbs:29, fat:1.8, fiber:3.6, sodium:23, potassium:392, vitaminC:10, calcium:3, iron:0.8 },
-    { name:'Milk (whole)', serving:'1 cup', calories:149, protein:8, carbs:12, fat:8, fiber:0, sodium:105, potassium:322, vitaminC:0, calcium:276, iron:0.1 },
-    { name:'Milk (skim)', serving:'1 cup', calories:83, protein:8, carbs:12, fat:0.2, fiber:0, sodium:103, potassium:382, vitaminC:0, calcium:299, iron:0.1 },
-    { name:'Cheddar cheese', serving:'28g', calories:113, protein:7, carbs:0.4, fat:9, fiber:0, sodium:174, potassium:28, vitaminC:0, calcium:200, iron:0.2 },
-    { name:'Mozzarella cheese', serving:'28g', calories:85, protein:6, carbs:0.6, fat:6, fiber:0, sodium:178, potassium:20, vitaminC:0, calcium:143, iron:0.1 },
-    { name:'Almonds', serving:'28g (~23 nuts)', calories:164, protein:6, carbs:6, fat:14, fiber:3.5, sodium:0, potassium:208, vitaminC:0, calcium:76, iron:1.1 },
-    { name:'Peanut butter', serving:'2 tbsp', calories:188, protein:8, carbs:6, fat:16, fiber:2, sodium:147, potassium:208, vitaminC:0, calcium:14, iron:0.6 },
-    { name:'Walnuts', serving:'28g', calories:185, protein:4.3, carbs:3.9, fat:18, fiber:1.9, sodium:1, potassium:125, vitaminC:0.4, calcium:28, iron:0.8 },
-    { name:'Olive oil', serving:'1 tbsp', calories:119, protein:0, carbs:0, fat:14, fiber:0, sodium:0, potassium:0, vitaminC:0, calcium:0, iron:0.1 },
-    { name:'Butter', serving:'1 tbsp', calories:102, protein:0.1, carbs:0, fat:11.5, fiber:0, sodium:91, potassium:3, vitaminC:0, calcium:3, iron:0 },
-    { name:'Black beans', serving:'1 cup cooked', calories:227, protein:15, carbs:41, fat:0.9, fiber:15, sodium:2, potassium:611, vitaminC:0, calcium:46, iron:3.6 },
-    { name:'Lentils', serving:'1 cup cooked', calories:230, protein:18, carbs:40, fat:0.8, fiber:16, sodium:4, potassium:731, vitaminC:3, calcium:37, iron:6.6 },
-    { name:'Chickpeas', serving:'1 cup cooked', calories:269, protein:15, carbs:45, fat:4.3, fiber:13, sodium:11, potassium:477, vitaminC:2, calcium:80, iron:4.7 },
-    { name:'Dark chocolate (70%)', serving:'28g', calories:170, protein:2, carbs:13, fat:12, fiber:3, sodium:6, potassium:202, vitaminC:0, calcium:20, iron:3.3 },
-    { name:'Honey', serving:'1 tbsp', calories:64, protein:0, carbs:17, fat:0, fiber:0, sodium:1, potassium:11, vitaminC:0.1, calcium:1, iron:0.1 },
-    { name:'Protein bar', serving:'1 bar (~60g)', calories:220, protein:20, carbs:24, fat:7, fiber:8, sodium:200, potassium:180, vitaminC:0, calcium:100, iron:2 },
+    { name:'Chicken breast', serving:'100g cooked', grams:100, calories:165, protein:31, carbs:0, fat:3.6, fiber:0, sodium:74, potassium:256, calcium:15, iron:1, vitaminC:0, vitaminA:6, vitaminD:0.1, vitaminB12:0.3, magnesium:29, zinc:1, folate:4 },
+    { name:'Salmon', serving:'100g cooked', grams:100, calories:208, protein:20, carbs:0, fat:13, fiber:0, sodium:59, potassium:384, calcium:9, iron:0.3, vitaminC:0, vitaminA:12, vitaminD:11, vitaminB12:2.8, magnesium:29, zinc:0.5, folate:26 },
+    { name:'Tuna (canned, water)', serving:'100g', grams:100, calories:116, protein:26, carbs:0, fat:1, fiber:0, sodium:247, potassium:237, calcium:3, iron:1.3, vitaminC:0, vitaminA:17, vitaminD:1, vitaminB12:2.2, magnesium:29, zinc:0.6, folate:2 },
+    { name:'Lean ground beef 90/10', serving:'100g cooked', grams:100, calories:217, protein:26, carbs:0, fat:12, fiber:0, sodium:75, potassium:318, calcium:15, iron:2.6, vitaminC:0, vitaminA:0, vitaminD:0.1, vitaminB12:2.1, magnesium:21, zinc:4.5, folate:8 },
+    { name:'Pork chop', serving:'100g cooked', grams:100, calories:231, protein:25, carbs:0, fat:14, fiber:0, sodium:54, potassium:350, calcium:8, iron:0.8, vitaminC:0, vitaminA:2, vitaminD:0.6, vitaminB12:0.7, magnesium:25, zinc:2, folate:5 },
+    { name:'Turkey breast', serving:'100g cooked', grams:100, calories:135, protein:30, carbs:0, fat:1, fiber:0, sodium:54, potassium:239, calcium:15, iron:1.2, vitaminC:0, vitaminA:0, vitaminD:0.1, vitaminB12:0.3, magnesium:28, zinc:1.4, folate:6 },
+    { name:'Egg', serving:'1 large', grams:50, calories:78, protein:6, carbs:0.6, fat:5, fiber:0, sodium:62, potassium:63, calcium:25, iron:0.9, vitaminC:0, vitaminA:75, vitaminD:1.1, vitaminB12:0.6, magnesium:5, zinc:0.6, folate:24 },
+    { name:'Egg whites', serving:'100g', grams:100, calories:52, protein:11, carbs:0.7, fat:0.2, fiber:0, sodium:166, potassium:163, calcium:7, iron:0.1, vitaminC:0, vitaminA:0, vitaminD:0, vitaminB12:0.1, magnesium:11, zinc:0.1, folate:4 },
+    { name:'Greek yogurt (plain)', serving:'170g cup', grams:170, calories:100, protein:17, carbs:6, fat:0.7, fiber:0, sodium:61, potassium:240, calcium:230, iron:0.1, vitaminC:0, vitaminA:5, vitaminD:0, vitaminB12:0.8, magnesium:17, zinc:1, folate:12 },
+    { name:'Cottage cheese', serving:'100g', grams:100, calories:98, protein:11, carbs:3.4, fat:4.3, fiber:0, sodium:364, potassium:104, calcium:83, iron:0.1, vitaminC:0, vitaminA:37, vitaminD:0, vitaminB12:0.4, magnesium:8, zinc:0.4, folate:12 },
+    { name:'Whey protein', serving:'1 scoop (30g)', grams:30, calories:120, protein:24, carbs:3, fat:1.5, fiber:0, sodium:50, potassium:170, calcium:100, iron:0, vitaminC:0, vitaminA:0, vitaminD:0, vitaminB12:0.5, magnesium:20, zinc:1, folate:0 },
+    { name:'Tofu (firm)', serving:'100g', grams:100, calories:144, protein:15, carbs:3, fat:9, fiber:2, sodium:14, potassium:164, calcium:201, iron:2.7, vitaminC:0, vitaminA:0, vitaminD:0, vitaminB12:0, magnesium:30, zinc:1, folate:15 },
+    { name:'White rice', serving:'1 cup cooked', grams:158, calories:205, protein:4.3, carbs:45, fat:0.4, fiber:0.6, sodium:2, potassium:55, calcium:16, iron:1.9, vitaminC:0, vitaminA:0, vitaminD:0, vitaminB12:0, magnesium:19, zinc:0.8, folate:92 },
+    { name:'Brown rice', serving:'1 cup cooked', grams:195, calories:216, protein:5, carbs:45, fat:1.8, fiber:3.5, sodium:10, potassium:154, calcium:20, iron:0.8, vitaminC:0, vitaminA:0, vitaminD:0, vitaminB12:0, magnesium:84, zinc:1.2, folate:8 },
+    { name:'Oats', serving:'40g dry', grams:40, calories:150, protein:5, carbs:27, fat:3, fiber:4, sodium:0, potassium:150, calcium:20, iron:1.7, vitaminC:0, vitaminA:0, vitaminD:0, vitaminB12:0, magnesium:55, zinc:1.5, folate:26 },
+    { name:'Quinoa', serving:'1 cup cooked', grams:185, calories:222, protein:8, carbs:39, fat:3.6, fiber:5, sodium:13, potassium:318, calcium:31, iron:2.8, vitaminC:0, vitaminA:0, vitaminD:0, vitaminB12:0, magnesium:118, zinc:2, folate:78 },
+    { name:'Whole wheat bread', serving:'1 slice', grams:28, calories:81, protein:4, carbs:14, fat:1.1, fiber:2, sodium:144, potassium:69, calcium:30, iron:0.9, vitaminC:0, vitaminA:0, vitaminD:0, vitaminB12:0, magnesium:23, zinc:0.5, folate:14 },
+    { name:'White bread', serving:'1 slice', grams:25, calories:67, protein:2, carbs:13, fat:0.8, fiber:0.6, sodium:130, potassium:25, calcium:30, iron:0.7, vitaminC:0, vitaminA:0, vitaminD:0, vitaminB12:0, magnesium:6, zinc:0.2, folate:43 },
+    { name:'Pasta', serving:'1 cup cooked', grams:140, calories:221, protein:8, carbs:43, fat:1.3, fiber:2.5, sodium:1, potassium:62, calcium:10, iron:2, vitaminC:0, vitaminA:0, vitaminD:0, vitaminB12:0, magnesium:25, zinc:0.9, folate:102 },
+    { name:'Potato (baked, w/ skin)', serving:'1 medium', grams:173, calories:161, protein:4.3, carbs:37, fat:0.2, fiber:3.8, sodium:17, potassium:926, calcium:26, iron:1.9, vitaminC:17, vitaminA:0, vitaminD:0, vitaminB12:0, magnesium:48, zinc:0.6, folate:48 },
+    { name:'Sweet potato (baked)', serving:'1 medium', grams:114, calories:103, protein:2.3, carbs:24, fat:0.2, fiber:3.8, sodium:41, potassium:542, calcium:43, iron:0.8, vitaminC:22, vitaminA:1096, vitaminD:0, vitaminB12:0, magnesium:33, zinc:0.4, folate:6 },
+    { name:'Tortilla (flour)', serving:'1 medium', grams:45, calories:140, protein:4, carbs:24, fat:3.5, fiber:1.5, sodium:290, potassium:60, calcium:60, iron:1.2, vitaminC:0, vitaminA:0, vitaminD:0, vitaminB12:0, magnesium:9, zinc:0.3, folate:30 },
+    { name:'Banana', serving:'1 medium', grams:118, calories:105, protein:1.3, carbs:27, fat:0.4, fiber:3.1, sodium:1, potassium:422, calcium:6, iron:0.3, vitaminC:10, vitaminA:4, vitaminD:0, vitaminB12:0, magnesium:32, zinc:0.2, folate:24 },
+    { name:'Apple', serving:'1 medium', grams:182, calories:95, protein:0.5, carbs:25, fat:0.3, fiber:4.4, sodium:2, potassium:195, calcium:11, iron:0.2, vitaminC:8, vitaminA:5, vitaminD:0, vitaminB12:0, magnesium:9, zinc:0.1, folate:5 },
+    { name:'Orange', serving:'1 medium', grams:131, calories:62, protein:1.2, carbs:15, fat:0.2, fiber:3.1, sodium:0, potassium:237, calcium:52, iron:0.1, vitaminC:70, vitaminA:14, vitaminD:0, vitaminB12:0, magnesium:13, zinc:0.1, folate:40 },
+    { name:'Strawberries', serving:'1 cup', grams:152, calories:49, protein:1, carbs:12, fat:0.5, fiber:3, sodium:2, potassium:220, calcium:27, iron:0.6, vitaminC:89, vitaminA:1, vitaminD:0, vitaminB12:0, magnesium:20, zinc:0.2, folate:37 },
+    { name:'Blueberries', serving:'1 cup', grams:148, calories:84, protein:1.1, carbs:21, fat:0.5, fiber:3.6, sodium:1, potassium:114, calcium:9, iron:0.4, vitaminC:14, vitaminA:3, vitaminD:0, vitaminB12:0, magnesium:9, zinc:0.2, folate:9 },
+    { name:'Grapes', serving:'1 cup', grams:151, calories:104, protein:1.1, carbs:27, fat:0.2, fiber:1.4, sodium:3, potassium:288, calcium:15, iron:0.5, vitaminC:5, vitaminA:2, vitaminD:0, vitaminB12:0, magnesium:11, zinc:0.1, folate:4 },
+    { name:'Avocado', serving:'1/2 medium', grams:100, calories:160, protein:2, carbs:9, fat:15, fiber:7, sodium:7, potassium:485, calcium:12, iron:0.6, vitaminC:10, vitaminA:7, vitaminD:0, vitaminB12:0, magnesium:29, zinc:0.6, folate:61 },
+    { name:'Broccoli', serving:'1 cup cooked', grams:156, calories:55, protein:3.7, carbs:11, fat:0.6, fiber:5.1, sodium:64, potassium:457, calcium:62, iron:1, vitaminC:101, vitaminA:120, vitaminD:0, vitaminB12:0, magnesium:33, zinc:0.6, folate:168 },
+    { name:'Spinach (raw)', serving:'100g', grams:100, calories:23, protein:2.9, carbs:3.6, fat:0.4, fiber:2.2, sodium:79, potassium:558, calcium:99, iron:2.7, vitaminC:28, vitaminA:469, vitaminD:0, vitaminB12:0, magnesium:79, zinc:0.5, folate:194 },
+    { name:'Carrots (raw)', serving:'1 cup', grams:128, calories:52, protein:1.2, carbs:12, fat:0.3, fiber:3.6, sodium:88, potassium:410, calcium:42, iron:0.4, vitaminC:7, vitaminA:1069, vitaminD:0, vitaminB12:0, magnesium:15, zinc:0.3, folate:24 },
+    { name:'Bell pepper (raw)', serving:'1 medium', grams:119, calories:24, protein:1, carbs:6, fat:0.2, fiber:2, sodium:3, potassium:211, calcium:7, iron:0.4, vitaminC:95, vitaminA:117, vitaminD:0, vitaminB12:0, magnesium:12, zinc:0.3, folate:46 },
+    { name:'Tomato', serving:'1 medium', grams:123, calories:22, protein:1.1, carbs:4.8, fat:0.2, fiber:1.5, sodium:6, potassium:292, calcium:12, iron:0.3, vitaminC:17, vitaminA:42, vitaminD:0, vitaminB12:0, magnesium:11, zinc:0.2, folate:15 },
+    { name:'Sweet corn', serving:'1 cup', grams:154, calories:132, protein:5, carbs:29, fat:1.8, fiber:3.6, sodium:23, potassium:392, calcium:3, iron:0.8, vitaminC:10, vitaminA:19, vitaminD:0, vitaminB12:0, magnesium:42, zinc:1, folate:76 },
+    { name:'Milk (whole)', serving:'1 cup', grams:244, calories:149, protein:8, carbs:12, fat:8, fiber:0, sodium:105, potassium:322, calcium:276, iron:0.1, vitaminC:0, vitaminA:112, vitaminD:3.2, vitaminB12:1.1, magnesium:24, zinc:1, folate:12 },
+    { name:'Milk (skim)', serving:'1 cup', grams:245, calories:83, protein:8, carbs:12, fat:0.2, fiber:0, sodium:103, potassium:382, calcium:299, iron:0.1, vitaminC:0, vitaminA:149, vitaminD:2.9, vitaminB12:1.2, magnesium:27, zinc:1, folate:13 },
+    { name:'Cheddar cheese', serving:'28g', grams:28, calories:113, protein:7, carbs:0.4, fat:9, fiber:0, sodium:174, potassium:28, calcium:200, iron:0.2, vitaminC:0, vitaminA:75, vitaminD:0.2, vitaminB12:0.2, magnesium:8, zinc:0.9, folate:5 },
+    { name:'Mozzarella cheese', serving:'28g', grams:28, calories:85, protein:6, carbs:0.6, fat:6, fiber:0, sodium:178, potassium:20, calcium:143, iron:0.1, vitaminC:0, vitaminA:54, vitaminD:0.1, vitaminB12:0.2, magnesium:5, zinc:0.9, folate:2 },
+    { name:'Almonds', serving:'28g (~23 nuts)', grams:28, calories:164, protein:6, carbs:6, fat:14, fiber:3.5, sodium:0, potassium:208, calcium:76, iron:1.1, vitaminC:0, vitaminA:0, vitaminD:0, vitaminB12:0, magnesium:76, zinc:0.9, folate:14 },
+    { name:'Peanut butter', serving:'2 tbsp', grams:32, calories:188, protein:8, carbs:6, fat:16, fiber:2, sodium:147, potassium:208, calcium:14, iron:0.6, vitaminC:0, vitaminA:0, vitaminD:0, vitaminB12:0, magnesium:49, zinc:0.9, folate:24 },
+    { name:'Walnuts', serving:'28g', grams:28, calories:185, protein:4.3, carbs:3.9, fat:18, fiber:1.9, sodium:1, potassium:125, calcium:28, iron:0.8, vitaminC:0.4, vitaminA:0, vitaminD:0, vitaminB12:0, magnesium:45, zinc:0.9, folate:28 },
+    { name:'Olive oil', serving:'1 tbsp', grams:14, calories:119, protein:0, carbs:0, fat:14, fiber:0, sodium:0, potassium:0, calcium:0, iron:0.1, vitaminC:0, vitaminA:0, vitaminD:0, vitaminB12:0, magnesium:0, zinc:0, folate:0 },
+    { name:'Butter', serving:'1 tbsp', grams:14, calories:102, protein:0.1, carbs:0, fat:11.5, fiber:0, sodium:91, potassium:3, calcium:3, iron:0, vitaminC:0, vitaminA:97, vitaminD:0, vitaminB12:0, magnesium:0, zinc:0, folate:0 },
+    { name:'Black beans', serving:'1 cup cooked', grams:172, calories:227, protein:15, carbs:41, fat:0.9, fiber:15, sodium:2, potassium:611, calcium:46, iron:3.6, vitaminC:0, vitaminA:0, vitaminD:0, vitaminB12:0, magnesium:120, zinc:1.9, folate:256 },
+    { name:'Lentils', serving:'1 cup cooked', grams:198, calories:230, protein:18, carbs:40, fat:0.8, fiber:16, sodium:4, potassium:731, calcium:37, iron:6.6, vitaminC:3, vitaminA:8, vitaminD:0, vitaminB12:0, magnesium:71, zinc:2.5, folate:358 },
+    { name:'Chickpeas', serving:'1 cup cooked', grams:164, calories:269, protein:15, carbs:45, fat:4.3, fiber:13, sodium:11, potassium:477, calcium:80, iron:4.7, vitaminC:2, vitaminA:3, vitaminD:0, vitaminB12:0, magnesium:79, zinc:2.5, folate:282 },
+    { name:'Dark chocolate (70%)', serving:'28g', grams:28, calories:170, protein:2, carbs:13, fat:12, fiber:3, sodium:6, potassium:202, calcium:20, iron:3.3, vitaminC:0, vitaminA:1, vitaminD:0, vitaminB12:0, magnesium:65, zinc:0.9, folate:4 },
+    { name:'Honey', serving:'1 tbsp', grams:21, calories:64, protein:0, carbs:17, fat:0, fiber:0, sodium:1, potassium:11, calcium:1, iron:0.1, vitaminC:0.1, vitaminA:0, vitaminD:0, vitaminB12:0, magnesium:0.4, zinc:0, folate:0.2 },
+    { name:'Protein bar', serving:'1 bar (~60g)', grams:60, calories:220, protein:20, carbs:24, fat:7, fiber:8, sodium:200, potassium:180, calcium:100, iron:2, vitaminC:0, vitaminA:0, vitaminD:0, vitaminB12:1, magnesium:40, zinc:2, folate:20 },
   ];
 
   function defaultState() {
     return {
       targets: {
         calories: 2200, protein: 150, carbs: 220, fat: 70,
-        fiber: 28, sodium: 2300, potassium: 4700, vitaminC: 90, calcium: 1300, iron: 18,
+        fiber: 28, sodium: 2300, potassium: 4700, calcium: 1300, iron: 18, vitaminC: 90,
+        vitaminA: 900, vitaminD: 20, vitaminB12: 2.4, magnesium: 420, zinc: 11, folate: 400,
       },
       logs: {},
     };
@@ -498,10 +570,9 @@ body::after {
   function addMealEntry(entry) {
     const state = load();
     const list = state.logs[dateKey()] || [];
-    list.push(Object.assign({
-      id: Date.now() + Math.random(),
-      fiber: 0, sodium: 0, potassium: 0, vitaminC: 0, calcium: 0, iron: 0,
-    }, entry));
+    const zeros = {};
+    MICRO_KEYS.forEach((k) => { zeros[k] = 0; });
+    list.push(Object.assign({ id: Date.now() + Math.random() }, zeros, entry));
     state.logs[dateKey()] = list;
     save(state);
     renderAll();
@@ -513,11 +584,9 @@ body::after {
     return todayMeals(state).reduce((acc, m) => {
       acc.cal += (+m.calories || 0); acc.pro += (+m.protein || 0);
       acc.carb += (+m.carbs || 0); acc.fat += (+m.fat || 0);
-      acc.fiber += (+m.fiber || 0); acc.sodium += (+m.sodium || 0);
-      acc.potassium += (+m.potassium || 0); acc.vitaminC += (+m.vitaminC || 0);
-      acc.calcium += (+m.calcium || 0); acc.iron += (+m.iron || 0);
+      MICRO_KEYS.forEach((k) => { acc[k] += (+m[k] || 0); });
       return acc;
-    }, { cal:0, pro:0, carb:0, fat:0, fiber:0, sodium:0, potassium:0, vitaminC:0, calcium:0, iron:0 });
+    }, Object.assign({ cal:0, pro:0, carb:0, fat:0 }, MICRO_KEYS.reduce((o,k) => (o[k]=0, o), {})));
   }
 
   function renderOverview(state) {
@@ -555,9 +624,15 @@ body::after {
     setMicroTile('fiber', totals.fiber, t.fiber, 'g');
     setMicroTile('sodium', totals.sodium, t.sodium, 'mg');
     setMicroTile('potassium', totals.potassium, t.potassium, 'mg');
-    setMicroTile('vitaminC', totals.vitaminC, t.vitaminC, 'mg');
     setMicroTile('calcium', totals.calcium, t.calcium, 'mg');
     setMicroTile('iron', totals.iron, t.iron, 'mg');
+    setMicroTile('vitaminC', totals.vitaminC, t.vitaminC, 'mg');
+    setMicroTile('vitaminA', totals.vitaminA, t.vitaminA, 'µg');
+    setMicroTile('vitaminD', totals.vitaminD, t.vitaminD, 'µg');
+    setMicroTile('vitaminB12', totals.vitaminB12, t.vitaminB12, 'µg');
+    setMicroTile('magnesium', totals.magnesium, t.magnesium, 'mg');
+    setMicroTile('zinc', totals.zinc, t.zinc, 'mg');
+    setMicroTile('folate', totals.folate, t.folate, 'µg');
   }
 
   function renderMeals(state) {
@@ -604,9 +679,15 @@ body::after {
     $('tgFiber').value = t.fiber;
     $('tgSodium').value = t.sodium;
     $('tgPotassium').value = t.potassium;
-    $('tgVitaminC').value = t.vitaminC;
     $('tgCalcium').value = t.calcium;
     $('tgIron').value = t.iron;
+    $('tgVitaminC').value = t.vitaminC;
+    $('tgVitaminA').value = t.vitaminA;
+    $('tgVitaminD').value = t.vitaminD;
+    $('tgVitaminB12').value = t.vitaminB12;
+    $('tgMagnesium').value = t.magnesium;
+    $('tgZinc').value = t.zinc;
+    $('tgFolate').value = t.folate;
   }
 
   function renderAll() {
@@ -646,59 +727,198 @@ body::after {
       fiber: parseInt($('tgFiber').value, 10) || 0,
       sodium: parseInt($('tgSodium').value, 10) || 0,
       potassium: parseInt($('tgPotassium').value, 10) || 0,
-      vitaminC: parseInt($('tgVitaminC').value, 10) || 0,
       calcium: parseInt($('tgCalcium').value, 10) || 0,
       iron: parseFloat($('tgIron').value) || 0,
+      vitaminC: parseInt($('tgVitaminC').value, 10) || 0,
+      vitaminA: parseInt($('tgVitaminA').value, 10) || 0,
+      vitaminD: parseFloat($('tgVitaminD').value) || 0,
+      vitaminB12: parseFloat($('tgVitaminB12').value) || 0,
+      magnesium: parseInt($('tgMagnesium').value, 10) || 0,
+      zinc: parseFloat($('tgZinc').value) || 0,
+      folate: parseInt($('tgFolate').value, 10) || 0,
     };
     save(state);
     renderAll();
   });
 
-  /* ---------- food index search ---------- */
-  function renderFoodIndex() {
-    const q = $('foodSearch').value.trim().toLowerCase();
+  /* ---------- shared row builder: quantity (grams) + add, used by both the ---------- */
+  /* ---------- quick list and USDA search results                          ---------- */
+  function buildFoodRow(item) {
+    const row = document.createElement('div');
+    row.className = 'food-row';
+
+    const body = document.createElement('div');
+    body.className = 'food-row-body';
+    const nameEl = document.createElement('div');
+    nameEl.className = 'food-row-name';
+    nameEl.textContent = item.name;
+    const metaEl = document.createElement('div');
+    metaEl.className = 'food-row-meta';
+    metaEl.textContent = item.meta + ' · ' + Math.round(item.calories) + ' kcal · P' + Math.round(item.protein) + ' C' + Math.round(item.carbs) + ' F' + Math.round(item.fat) + ' (per ' + item.baseGrams + 'g)';
+    body.append(nameEl, metaEl);
+
+    const gramsInput = document.createElement('input');
+    gramsInput.className = 'food-row-grams';
+    gramsInput.type = 'number';
+    gramsInput.min = '1';
+    gramsInput.value = item.baseGrams;
+    gramsInput.setAttribute('aria-label', 'Amount in grams');
+
+    const unit = document.createElement('span');
+    unit.className = 'food-row-unit';
+    unit.textContent = 'g';
+
+    const btn = document.createElement('button');
+    btn.className = 'food-row-add';
+    btn.type = 'button';
+    btn.setAttribute('aria-label', 'Add ' + item.name);
+    btn.textContent = '+';
+    btn.addEventListener('click', () => {
+      const grams = parseFloat(gramsInput.value) || item.baseGrams;
+      const scale = grams / item.baseGrams;
+      const entry = { name: item.name + ' (' + Math.round(grams) + 'g)', calories: Math.round(item.calories * scale), protein: Math.round(item.protein * scale), carbs: Math.round(item.carbs * scale), fat: Math.round(item.fat * scale) };
+      MICRO_KEYS.forEach((k) => { entry[k] = Math.round((item[k] || 0) * scale * 10) / 10; });
+      addMealEntry(entry);
+      btn.textContent = '✓';
+      btn.classList.add('added');
+      setTimeout(() => { btn.textContent = '+'; btn.classList.remove('added'); }, 900);
+    });
+
+    row.append(body, gramsInput, unit, btn);
+    return row;
+  }
+
+  /* ---------- quick list search ---------- */
+  function renderQuickList(q) {
     const list = q ? FOOD_DB.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 12) : FOOD_DB.slice(0, 8);
     const el = $('foodResults');
     el.innerHTML = '';
     if (!list.length) {
       const d = document.createElement('div');
       d.className = 'food-empty';
-      d.textContent = 'No matches — try a different search.';
+      d.textContent = 'No matches in the quick list.';
       el.appendChild(d);
       return;
     }
     list.forEach((f) => {
-      const row = document.createElement('div');
-      row.className = 'food-row';
-
-      const body = document.createElement('div');
-      body.className = 'food-row-body';
-      const nameEl = document.createElement('div');
-      nameEl.className = 'food-row-name';
-      nameEl.textContent = f.name;
-      const metaEl = document.createElement('div');
-      metaEl.className = 'food-row-meta';
-      metaEl.textContent = f.serving + ' · ' + f.calories + ' kcal · P' + f.protein + ' C' + f.carbs + ' F' + f.fat;
-      body.append(nameEl, metaEl);
-
-      const btn = document.createElement('button');
-      btn.className = 'food-row-add';
-      btn.type = 'button';
-      btn.setAttribute('aria-label', 'Add ' + f.name);
-      btn.textContent = '+';
-      btn.addEventListener('click', () => {
-        addMealEntry({
-          name: f.name, calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat,
-          fiber: f.fiber, sodium: f.sodium, potassium: f.potassium, vitaminC: f.vitaminC, calcium: f.calcium, iron: f.iron,
-        });
-        btn.textContent = '✓';
-        btn.classList.add('added');
-        setTimeout(() => { btn.textContent = '+'; btn.classList.remove('added'); }, 900);
-      });
-
-      row.append(body, btn);
-      el.appendChild(row);
+      el.appendChild(buildFoodRow({
+        name: f.name, meta: f.serving, baseGrams: f.grams,
+        calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat,
+        fiber: f.fiber, sodium: f.sodium, potassium: f.potassium, calcium: f.calcium, iron: f.iron,
+        vitaminC: f.vitaminC, vitaminA: f.vitaminA, vitaminD: f.vitaminD, vitaminB12: f.vitaminB12,
+        magnesium: f.magnesium, zinc: f.zinc, folate: f.folate,
+      }));
     });
+  }
+
+  /* ---------- USDA FoodData Central search (bring-your-own free API key) ---------- */
+  function usdaSavedKey() { try { return localStorage.getItem(USDA_KEY_LS) || ''; } catch (e) { return ''; } }
+  function updateUsdaKeyRow() {
+    const has = !!usdaSavedKey();
+    $('usdaKeyRow').style.display = has ? 'none' : 'block';
+  }
+  updateUsdaKeyRow();
+  $('usdaKeySave').addEventListener('click', () => {
+    const k = $('usdaKeyInput').value.trim();
+    if (!k) return;
+    try { localStorage.setItem(USDA_KEY_LS, k); } catch (e) {}
+    $('usdaKeyInput').value = '';
+    updateUsdaKeyRow();
+    renderFoodIndex();
+  });
+
+  const USDA_NUTRIENT_MAP = [
+    ['calories', ['Energy'], 'KCAL'],
+    ['protein', ['Protein']],
+    ['fat', ['Total lipid (fat)']],
+    ['carbs', ['Carbohydrate, by difference']],
+    ['fiber', ['Fiber, total dietary']],
+    ['sodium', ['Sodium, Na']],
+    ['potassium', ['Potassium, K']],
+    ['calcium', ['Calcium, Ca']],
+    ['iron', ['Iron, Fe']],
+    ['vitaminC', ['Vitamin C, total ascorbic acid', 'Vitamin C']],
+    ['vitaminA', ['Vitamin A, RAE']],
+    ['vitaminD', ['Vitamin D (D2 + D3)', 'Vitamin D']],
+    ['vitaminB12', ['Vitamin B-12']],
+    ['magnesium', ['Magnesium, Mg']],
+    ['zinc', ['Zinc, Zn']],
+    ['folate', ['Folate, total']],
+  ];
+  function extractUsdaNutrients(foodNutrients) {
+    const out = {};
+    USDA_NUTRIENT_MAP.forEach(([key, names, preferUnit]) => {
+      let found = null;
+      for (const n of (foodNutrients || [])) {
+        const nm = n.nutrientName || '';
+        if (names.some((want) => nm.toLowerCase().indexOf(want.toLowerCase()) !== -1)) {
+          if (preferUnit) {
+            if ((n.unitName || '').toUpperCase() === preferUnit) { found = n; break; }
+            if (!found) found = n;
+          } else { found = n; break; }
+        }
+      }
+      out[key] = found ? (+found.value || 0) : 0;
+    });
+    return out;
+  }
+
+  let usdaDebounce = null;
+  async function searchUsda(query) {
+    const key = usdaSavedKey();
+    if (!key || !query) {
+      $('usdaResults').innerHTML = '';
+      $('usdaResultsLabel').style.display = 'none';
+      return;
+    }
+    $('usdaLoading').classList.add('show');
+    $('usdaError').classList.remove('show');
+    $('usdaResultsLabel').style.display = 'block';
+    try {
+      const url = 'https://api.nal.usda.gov/fdc/v1/foods/search?api_key=' + encodeURIComponent(key) +
+        '&query=' + encodeURIComponent(query) + '&pageSize=10&dataType=Foundation,SR%20Legacy,Survey%20(FNDDS)';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('USDA request failed (' + res.status + ') — check your API key.');
+      const json = await res.json();
+      const foods = json.foods || [];
+      const el = $('usdaResults');
+      el.innerHTML = '';
+      if (!foods.length) {
+        const d = document.createElement('div');
+        d.className = 'food-empty';
+        d.textContent = 'No USDA matches.';
+        el.appendChild(d);
+      } else {
+        foods.forEach((food) => {
+          const n = extractUsdaNutrients(food.foodNutrients);
+          el.appendChild(buildFoodRow(Object.assign({
+            name: food.description, meta: (food.dataType || 'USDA'), baseGrams: 100,
+          }, n)));
+        });
+      }
+    } catch (e) {
+      $('usdaError').textContent = e.message || 'Could not reach USDA FoodData Central.';
+      $('usdaError').classList.add('show');
+      $('usdaResults').innerHTML = '';
+    } finally {
+      $('usdaLoading').classList.remove('show');
+    }
+  }
+
+  function renderFoodIndex() {
+    const q = $('foodSearch').value.trim().toLowerCase();
+    $('quickListLabel').style.display = usdaSavedKey() ? 'block' : 'none';
+    renderQuickList(q);
+
+    clearTimeout(usdaDebounce);
+    if (usdaSavedKey() && q.length >= 2) {
+      usdaDebounce = setTimeout(() => searchUsda(q), 450);
+    } else {
+      $('usdaResults').innerHTML = '';
+      $('usdaResultsLabel').style.display = 'none';
+      $('usdaError').classList.remove('show');
+      $('usdaLoading').classList.remove('show');
+    }
   }
   $('foodSearch').addEventListener('input', renderFoodIndex);
 
@@ -721,8 +941,10 @@ body::after {
     'plain language, possibly with quantities. Estimate its total nutrition and reply with ONLY a single ' +
     'valid JSON object — no markdown, no code fences, no explanation — in exactly this shape: ' +
     '{"name":"short label","calories":number,"protein":number,"carbs":number,"fat":number,"fiber":number,' +
-    '"sodium":number,"potassium":number,"vitaminC":number,"calcium":number,"iron":number}. ' +
-    'calories in kcal; protein/carbs/fat/fiber in grams; sodium/potassium/vitaminC/calcium in milligrams; iron in milligrams. ' +
+    '"sodium":number,"potassium":number,"calcium":number,"iron":number,"vitaminC":number,"vitaminA":number,' +
+    '"vitaminD":number,"vitaminB12":number,"magnesium":number,"zinc":number,"folate":number}. ' +
+    'calories in kcal; protein/carbs/fat/fiber/magnesium in grams (magnesium in mg); sodium/potassium/calcium/vitaminC/magnesium/zinc in milligrams; ' +
+    'iron/zinc in milligrams; vitaminA/vitaminD/vitaminB12/folate in micrograms. ' +
     'Give one realistic best-guess estimate for the whole portion described — never ask a clarifying question. ' +
     'If several foods are mentioned, sum them into one combined total.';
 
@@ -759,7 +981,7 @@ body::after {
         },
         body: JSON.stringify({
           model: 'claude-opus-4-8',
-          max_tokens: 400,
+          max_tokens: 500,
           system: NOVA_SYS,
           messages: [{ role: 'user', content: desc }],
         }),
@@ -770,22 +992,15 @@ body::after {
       const data = extractJSON(text);
       if (!data || typeof data.calories === 'undefined') throw new Error('Could not read a nutrition estimate from the reply.');
 
-      novaPreviewData = {
-        name: data.name || desc,
-        calories: Math.round(+data.calories || 0),
-        protein: Math.round(+data.protein || 0),
-        carbs: Math.round(+data.carbs || 0),
-        fat: Math.round(+data.fat || 0),
-        fiber: Math.round(+data.fiber || 0),
-        sodium: Math.round(+data.sodium || 0),
-        potassium: Math.round(+data.potassium || 0),
-        vitaminC: Math.round(+data.vitaminC || 0),
-        calcium: Math.round(+data.calcium || 0),
-        iron: Math.round((+data.iron || 0) * 10) / 10,
-      };
+      novaPreviewData = { name: data.name || desc, calories: Math.round(+data.calories || 0), protein: Math.round(+data.protein || 0), carbs: Math.round(+data.carbs || 0), fat: Math.round(+data.fat || 0) };
+      MICRO_KEYS.forEach((k) => { novaPreviewData[k] = Math.round((+data[k] || 0) * 10) / 10; });
+
       $('npName').textContent = novaPreviewData.name;
       $('npMacros').textContent = novaPreviewData.calories + ' kcal · P' + novaPreviewData.protein + 'g · C' + novaPreviewData.carbs + 'g · F' + novaPreviewData.fat + 'g';
-      $('npMicros').textContent = 'Fiber ' + novaPreviewData.fiber + 'g · Sodium ' + novaPreviewData.sodium + 'mg · Potassium ' + novaPreviewData.potassium + 'mg · Vit C ' + novaPreviewData.vitaminC + 'mg · Calcium ' + novaPreviewData.calcium + 'mg · Iron ' + novaPreviewData.iron + 'mg';
+      $('npMicros').textContent =
+        'Fiber ' + novaPreviewData.fiber + 'g · Sodium ' + novaPreviewData.sodium + 'mg · Potassium ' + novaPreviewData.potassium + 'mg · Calcium ' + novaPreviewData.calcium + 'mg · Iron ' + novaPreviewData.iron + 'mg · ' +
+        'Vit C ' + novaPreviewData.vitaminC + 'mg · Vit A ' + novaPreviewData.vitaminA + 'µg · Vit D ' + novaPreviewData.vitaminD + 'µg · Vit B12 ' + novaPreviewData.vitaminB12 + 'µg · ' +
+        'Magnesium ' + novaPreviewData.magnesium + 'mg · Zinc ' + novaPreviewData.zinc + 'mg · Folate ' + novaPreviewData.folate + 'µg';
       $('novaPreview').classList.add('show');
     } catch (e) {
       $('novaError').textContent = e.message || 'Something went wrong — check your API key and try again.';
