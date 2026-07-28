@@ -1719,6 +1719,37 @@ input[type="date"]::-webkit-calendar-picker-indicator {
       <!-- Bank accounts -->
       <div class="card nw-subcard">
         <div class="label" style="display:flex;justify-content:space-between;align-items:center"><span>🏦 Bank accounts</span><span id="bankTotal" style="font-size:13px;color:var(--text-primary);font-weight:600">0</span></div>
+
+        <div class="quick-add" id="revolutConnectRow">
+          <select id="revolutCountry">
+            <option value="">Revolut country…</option>
+            <option value="IT">Italy</option>
+            <option value="DE">Germany</option>
+            <option value="FR">France</option>
+            <option value="ES">Spain</option>
+            <option value="NL">Netherlands</option>
+            <option value="BE">Belgium</option>
+            <option value="AT">Austria</option>
+            <option value="PT">Portugal</option>
+            <option value="IE">Ireland</option>
+            <option value="PL">Poland</option>
+            <option value="GR">Greece</option>
+            <option value="FI">Finland</option>
+            <option value="SE">Sweden</option>
+            <option value="DK">Denmark</option>
+            <option value="LU">Luxembourg</option>
+            <option value="GB">United Kingdom</option>
+          </select>
+          <button class="quick-add-btn" id="revolutConnectBtn" type="button">Connect Revolut</button>
+        </div>
+        <div class="custom-item" id="revolutSyncedRow" style="display:none">
+          <span class="item-dot" style="background:#6BE3A4"></span>
+          <span id="revolutStatusText">Revolut connected</span>
+          <button class="quick-add-btn" id="revolutSyncBtn" type="button" style="flex:0">Sync</button>
+          <button class="delete-x" id="revolutDisconnectBtn" type="button" title="Disconnect">×</button>
+        </div>
+        <div id="revolutErr" style="display:none;color:#FF6B6B;font-size:11px;margin:2px 0 0"></div>
+
         <div id="bankList" class="nw-list"></div>
         <div class="quick-add">
           <input type="text" placeholder="Account name" id="bankName" />
@@ -3407,6 +3438,10 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   safeRenderTicker();
   setInterval(safeRenderTicker, 1500);
 
+  // Exposed so the separate Revolut-sync script (below) can trigger a
+  // re-render after it writes a new balance into nw:bank.
+  window.renderAllNetWorth = renderAllNetWorth;
+
 })();
 </script>
 
@@ -3415,13 +3450,112 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof initCloudSync !== 'function') return;
   initCloudSync({
     appKey: 'finance',
-    syncedKeys: ['subs', 'wishlist', 'incoming_orders', 'nw_currency', 'nw:activity', 'nw:history'],
+    syncedKeys: ['subs', 'wishlist', 'incoming_orders', 'nw_currency', 'nw:activity', 'nw:history', 'revolut_gc_v1'],
     syncedPrefixes: ['nw:'],
     onApplied: function () {
       window.dispatchEvent(new Event('storage'));
     }
   });
 });
+</script>
+
+<!-- ===== Revolut (via GoCardless Bank Account Data / Open Banking) ===== -->
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const GC_KEY = 'revolut_gc_v1';
+
+  function loadGc() { try { return JSON.parse(localStorage.getItem(GC_KEY)) || null; } catch (e) { return null; } }
+  function saveGc(v) { try { localStorage.setItem(GC_KEY, JSON.stringify(v)); } catch (e) {} }
+
+  // Pick up the accounts handed back by /api/revolut-callback in the URL hash.
+  // The hash never reaches the server — only the browser reads it here.
+  if (location.hash && location.hash.indexOf('revolut_accounts') !== -1) {
+    const h = new URLSearchParams(location.hash.slice(1));
+    const accountsRaw = h.get('revolut_accounts');
+    const requisition = h.get('revolut_requisition');
+    if (accountsRaw) {
+      try {
+        const accounts = JSON.parse(accountsRaw);
+        saveGc({ accounts, requisition, lastSynced: 0 });
+        history.replaceState(null, '', location.pathname + location.search);
+      } catch (e) {}
+    }
+  }
+
+  function showErr(msg) {
+    const el = $('revolutErr');
+    el.textContent = msg || '';
+    el.style.display = msg ? 'block' : 'none';
+  }
+  function relTime(ts) {
+    if (!ts) return 'never';
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60) return 'just now';
+    if (s < 3600) return Math.floor(s / 60) + ' min ago';
+    if (s < 86400) return Math.floor(s / 3600) + ' h ago';
+    return Math.floor(s / 86400) + ' d ago';
+  }
+  function render() {
+    const gc = loadGc();
+    const connected = !!(gc && gc.accounts && gc.accounts.length);
+    $('revolutConnectRow').style.display = connected ? 'none' : 'flex';
+    $('revolutSyncedRow').style.display = connected ? 'flex' : 'none';
+    if (connected) $('revolutStatusText').textContent = 'Revolut connected · synced ' + relTime(gc.lastSynced);
+  }
+
+  $('revolutConnectBtn').addEventListener('click', () => {
+    const country = $('revolutCountry').value;
+    if (!country) { showErr('Pick the country your Revolut account is registered in first.'); return; }
+    showErr('');
+    window.location.href = '/api/revolut-connect?country=' + encodeURIComponent(country);
+  });
+  $('revolutDisconnectBtn').addEventListener('click', () => {
+    saveGc(null);
+    render();
+  });
+
+  async function syncRevolut() {
+    const gc = loadGc();
+    if (!gc || !gc.accounts || !gc.accounts.length) return;
+    showErr('');
+    $('revolutSyncBtn').textContent = 'Syncing…';
+    try {
+      let total = 0;
+      for (const accountId of gc.accounts) {
+        const r = await fetch('/api/revolut-balance?account=' + encodeURIComponent(accountId));
+        const j = await r.json();
+        if (!r.ok || j.error) throw new Error(typeof j.error === 'string' ? j.error : 'Balance fetch failed.');
+        total += (typeof j.amountChf === 'number' ? j.amountChf : 0);
+      }
+      total = Math.round(total * 100) / 100;
+
+      let items = [];
+      try { items = JSON.parse(localStorage.getItem('nw:bank')) || []; } catch (e) {}
+      const idx = items.findIndex((it) => it && it.source === 'revolut');
+      if (idx === -1) items.push({ name: 'Revolut', amount: total, source: 'revolut' });
+      else items[idx].amount = total;
+      localStorage.setItem('nw:bank', JSON.stringify(items));
+
+      gc.lastSynced = Date.now();
+      saveGc(gc);
+      render();
+      if (typeof window.renderAllNetWorth === 'function') window.renderAllNetWorth();
+    } catch (e) {
+      showErr('Sync failed: ' + (e && e.message ? e.message : String(e)));
+    } finally {
+      $('revolutSyncBtn').textContent = 'Sync';
+    }
+  }
+  $('revolutSyncBtn').addEventListener('click', syncRevolut);
+
+  render();
+  window.addEventListener('storage', render);
+  // Auto-sync once right after a fresh connection.
+  const gcNow = loadGc();
+  if (gcNow && gcNow.accounts && gcNow.accounts.length && !gcNow.lastSynced) syncRevolut();
+})();
 </script>
 
 </body>
