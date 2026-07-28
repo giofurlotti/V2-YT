@@ -105,6 +105,8 @@ body::after {
   background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
+  filter: drop-shadow(0 0 22px color-mix(in srgb, var(--glow) 65%, transparent))
+          drop-shadow(0 0 46px color-mix(in srgb, var(--glow) 35%, transparent));
 }
 .dash-sub { margin: 0; font-size: 14px; color: var(--text-tertiary); font-weight: 500; }
 @media (max-width: 480px) { .dash-title { font-size: 28px; } }
@@ -125,6 +127,17 @@ body::after {
 .activity-pattern-label { font-size: 9.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; }
 .activity-pattern-day { font-family: var(--font-display); font-style: italic; font-size: 16px; font-weight: 600; color: var(--text-primary); margin-top: 2px; }
 .activity-pattern-avg { font-size: 11px; color: var(--text-tertiary); margin-top: 1px; }
+.productivity-body { display: flex; align-items: center; gap: 14px; }
+.productivity-icon svg {
+  width: 30px; height: 30px; stroke: #C084FC; fill: none;
+  stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round;
+  filter: drop-shadow(0 0 8px rgba(192,132,252,0.6));
+  flex-shrink: 0;
+}
+.productivity-copy { min-width: 0; }
+.productivity-label { font-size: 9.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; }
+.productivity-window { font-family: var(--font-display); font-style: italic; font-size: 18px; font-weight: 600; color: var(--text-primary); margin-top: 2px; text-shadow: 0 0 16px rgba(192,132,252,0.4); }
+.productivity-sub { font-size: 10.5px; color: var(--text-tertiary); margin-top: 3px; line-height: 1.4; }
 .today-card {
   position: relative;
   padding: 20px;
@@ -136,6 +149,14 @@ body::after {
   box-shadow: 0 12px 40px rgba(0,0,0,0.45);
   overflow: hidden;
 }
+/* Purple glow backdrop for cards that don't carry their own accent colour. */
+.today-card::before, .news-card::before {
+  content: ''; position: absolute; inset: -25%; pointer-events: none; z-index: 0;
+  background: radial-gradient(circle at 50% 32%, color-mix(in srgb, var(--glow) 32%, transparent), transparent 65%);
+  filter: blur(30px);
+  opacity: 0.85;
+}
+.today-card > *, .news-card > * { position: relative; z-index: 1; }
 .today-card-label {
   font-family: var(--font-mono); font-size: 10.5px; font-weight: 600;
   letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-tertiary);
@@ -146,40 +167,51 @@ body::after {
 .readiness-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
 .ring-track { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 9; }
 .ring-fill {
-  fill: none; stroke: #6BE3A4; stroke-width: 9; stroke-linecap: round;
+  fill: none; stroke: #34D399; stroke-width: 9; stroke-linecap: round;
   transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;
-  filter: drop-shadow(0 0 9px rgba(107,227,164,0.55));
+  filter: drop-shadow(0 0 10px rgba(52,211,153,0.6));
 }
 .ring-track-inner { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 7; }
 .ring-fill-inner {
-  fill: none; stroke: #7DD3FC; stroke-width: 7; stroke-linecap: round;
+  fill: none; stroke: #C084FC; stroke-width: 7; stroke-linecap: round;
   transition: stroke-dashoffset 0.6s ease;
-  filter: drop-shadow(0 0 7px rgba(125,211,252,0.45));
+  filter: drop-shadow(0 0 8px rgba(192,132,252,0.55));
 }
 .readiness-center {
   position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
 }
-.readiness-pct-row { display: flex; align-items: baseline; gap: 5px; }
-.readiness-pct { font-family: var(--font-display); font-style: italic; font-size: 26px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+.readiness-pct-row { display: flex; align-items: baseline; gap: 6px; }
+.readiness-pct {
+  font-family: var(--font-numeric); font-size: 34px; font-weight: 800;
+  letter-spacing: -0.03em; color: var(--text-primary); line-height: 1;
+  font-variant-numeric: tabular-nums;
+  filter: drop-shadow(0 0 10px rgba(52,211,153,0.5));
+  transition: color 0.3s ease, filter 0.3s ease;
+}
 .readiness-trend { font-family: var(--font-numeric); font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.readiness-trend.up { color: #6BE3A4; }
-.readiness-trend.down { color: #FF6B6B; }
+.readiness-trend.up { color: #34D399; }
+.readiness-trend.down { color: #FB7185; }
 .readiness-trend.flat { color: var(--text-tertiary); }
-.readiness-pct-sleep-row { display: flex; align-items: baseline; gap: 4px; margin-top: 2px; }
-.readiness-pct-sleep { font-family: var(--font-display); font-style: italic; font-size: 16px; font-weight: 600; color: #7DD3FC; line-height: 1; }
+.readiness-pct-sleep-row { display: flex; align-items: baseline; gap: 4px; margin-top: 3px; }
+.readiness-pct-sleep {
+  font-family: var(--font-numeric); font-size: 15px; font-weight: 700;
+  color: #C084FC; line-height: 1; font-variant-numeric: tabular-nums;
+  filter: drop-shadow(0 0 6px rgba(192,132,252,0.5));
+}
 .readiness-pct-sleep-label { font-size: 9px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
 .readiness-sub { font-size: 9.5px; color: var(--text-tertiary); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.08em; }
 .readiness-headline {
   font-family: var(--font-display); font-style: italic;
   font-size: 15.5px; font-weight: 600; color: var(--text-primary);
   text-align: center; margin: 4px 0 14px;
+  text-shadow: 0 0 18px color-mix(in srgb, var(--glow) 55%, transparent);
 }
 .ring-legend { display: flex; justify-content: center; gap: 14px; margin-bottom: 14px; }
 .ring-legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
 .ring-legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.ring-legend-dot.recovery { background: #6BE3A4; box-shadow: 0 0 5px rgba(107,227,164,0.7); }
-.ring-legend-dot.sleep { background: #7DD3FC; box-shadow: 0 0 5px rgba(125,211,252,0.7); }
+.ring-legend-dot.recovery { background: #34D399; box-shadow: 0 0 5px rgba(52,211,153,0.7); }
+.ring-legend-dot.sleep { background: #C084FC; box-shadow: 0 0 5px rgba(192,132,252,0.7); }
 .readiness-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
 .readiness-stats span { display: block; font-family: var(--font-numeric); font-size: 14px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .readiness-stats label { display: block; font-size: 8.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 3px; }
@@ -217,6 +249,7 @@ body::after {
   background: rgba(18,17,24,0.55); border: 1px solid rgba(255,255,255,0.06);
   backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2);
   box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  overflow: hidden;
 }
 .news-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
 .news-refresh-btn {
@@ -263,12 +296,13 @@ body::after {
   box-shadow: 0 12px 40px rgba(0,0,0,0.45);
   transition: transform 0.22s cubic-bezier(.2,.8,.2,1), border-color 0.22s ease, box-shadow 0.22s ease;
 }
-/* The "its own style" bit — a faint accent glow per tile. */
+/* The "its own style" bit — a soft glowy backdrop matching each tile's accent. */
 .tile::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(circle at 50% 40%,
-              color-mix(in srgb, var(--accent) 20%, transparent), transparent 60%);
-  opacity: 0.7; transition: opacity 0.22s ease;
+  content: ''; position: absolute; inset: -25%; pointer-events: none; z-index: 0;
+  background: radial-gradient(circle at 50% 42%,
+              color-mix(in srgb, var(--accent) 38%, transparent), transparent 65%);
+  filter: blur(28px);
+  opacity: 0.65; transition: opacity 0.22s ease;
 }
 .tile::after {
   content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px;
@@ -498,6 +532,20 @@ body::after {
             <div class="activity-pattern-day" id="activityLeastDay">—</div>
             <div class="activity-pattern-avg" id="activityLeastAvg"></div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="today-card">
+      <div class="today-card-label">Peak focus hours</div>
+      <div class="productivity-body">
+        <span class="productivity-icon">
+          <svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.6.55 1 1.35 1 2.2V16h6v-.3c0-.85.4-1.65 1-2.2A6 6 0 0 0 12 3Z"/></svg>
+        </span>
+        <div class="productivity-copy">
+          <div class="productivity-label">Best window to focus</div>
+          <div class="productivity-window" id="productivityWindow">Connect WHOOP</div>
+          <div class="productivity-sub" id="productivitySub">Uses your average wake time to estimate peak alertness</div>
         </div>
       </div>
     </div>
@@ -870,7 +918,12 @@ body::after {
       return;
     }
     fill.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - rec / 100);
-    fill.style.stroke = rec >= 67 ? '#6BE3A4' : rec >= 34 ? '#F2C063' : '#FF6B6B';
+    const band = rec >= 67 ? { c: '#34D399', glow: 'rgba(52,211,153,0.6)' }
+      : rec >= 34 ? { c: '#FBBF24', glow: 'rgba(251,191,36,0.55)' }
+      : { c: '#FB7185', glow: 'rgba(251,113,133,0.55)' };
+    fill.style.stroke = band.c;
+    $('readinessPct').style.color = band.c;
+    $('readinessPct').style.filter = 'drop-shadow(0 0 10px ' + band.glow + ')';
     $('readinessPct').textContent = rec + '%';
     $('readinessPctSleep').textContent = whStats.sleep != null ? whStats.sleep + '%' : '—';
     $('readinessSub').textContent = 'Recovery';
@@ -1128,34 +1181,42 @@ body::after {
     } catch (e) {}
   }
 
-  /* ---------- Water progress (mirrors topbar.js's formula) ---------- */
   function calendarDateKey() {
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
-  function getWaterProgress() {
-    const state = loadJSON(WATER_KEY, defaultWater());
-    const done = (state.logs || {})[calendarDateKey()] || 0;
-    const p = state.profile || { weightKg: 75 };
-    const wKg = state.weightUnit === 'lb' ? (p.weightKg || 0) / 2.20462 : (p.weightKg || 0);
-    const base = wKg * 35;
-    const exercise = (p.activityHrsPerWeek || 0) / 7 * 500;
-    const caffeine = Math.max(0, (state.caffeineMgPerDay || 0) - 200) * 1.5;
-    const subs = (state.substances || []).reduce((s, x) => {
-      const dose = (x && x.dose != null ? x.dose : (x && x.defaultDose)) || 0;
-      return s + Math.max(0, dose * ((x && x.mlPerUnit) || 0));
-    }, 0);
-    let adjust = 0;
-    if (p.sex === 'm') adjust += 200;
-    if ((p.age || 0) >= 50) adjust += 100;
-    const totalMl = base + exercise + caffeine + subs + adjust;
-    let unitVol;
-    if (state.unit === 'glass') unitVol = state.glassMl || 250;
-    else if (state.unit === 'oz') unitVol = 30;
-    else if (state.unit === 'ml') unitVol = 1;
-    else unitVol = state.bottleMl || 500;
-    const total = Math.max(1, Math.ceil(totalMl / unitVol));
-    return { done, total };
+
+  /* ---------- Peak focus hours (estimated from average WHOOP wake time) ---------- */
+  function fmtHourMinutes(totalMinutes) {
+    let m = ((Math.round(totalMinutes) % 1440) + 1440) % 1440;
+    let h = Math.floor(m / 60);
+    const min = m % 60;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    let h12 = h % 12; if (h12 === 0) h12 = 12;
+    return h12 + ':' + String(min).padStart(2, '0') + ' ' + ampm;
+  }
+  async function loadProductivityWindow() {
+    const t = loadJSON(WHOOP_KEY, null);
+    if (!t || !t.access) return;
+    try {
+      const j = await wFetch('/activity/sleep?limit=14', t);
+      const records = (j && j.records) || [];
+      const wakeMinutes = [];
+      records.forEach((r) => {
+        if (!r.end) return;
+        const d = new Date(r.end);
+        wakeMinutes.push(d.getHours() * 60 + d.getMinutes());
+      });
+      if (!wakeMinutes.length) {
+        $('productivityWindow').textContent = 'Not enough data yet';
+        return;
+      }
+      const avgWake = wakeMinutes.reduce((a, b) => a + b, 0) / wakeMinutes.length;
+      // Alertness typically peaks 2-4h after waking, per circadian research.
+      const windowText = fmtHourMinutes(avgWake + 120) + ' – ' + fmtHourMinutes(avgWake + 240);
+      $('productivityWindow').textContent = windowText;
+      $('productivitySub').textContent = 'Based on your average wake time (' + fmtHourMinutes(avgWake) + ') from WHOOP sleep data';
+    } catch (e) {}
   }
 
   /* ---------- Tips for today ---------- */
@@ -1175,11 +1236,6 @@ body::after {
       if (weatherData.isRainingNow) tips.push("It's raining right now — grab an umbrella before heading out.");
       else if (weatherData.rainProb != null && weatherData.rainProb >= 60) tips.push('Rain is likely today (' + weatherData.rainProb + '%) — plan for it.');
       else if (weatherData.rainProb != null && weatherData.rainProb >= 30) tips.push('Slight chance of rain today (' + weatherData.rainProb + '%) — keep a jacket handy.');
-    }
-
-    const wp = getWaterProgress();
-    if (wp.total > 0 && wp.done < wp.total * 0.3 && new Date().getHours() >= 14) {
-      tips.push("You're behind on water today (" + wp.done + '/' + wp.total + ') — top up this afternoon.');
     }
 
     if (!tips.length) tips.push('Nothing urgent — have a good one.');
@@ -1251,6 +1307,7 @@ body::after {
   loadWeather();
   fetchNews(false);
   loadActivityPattern();
+  loadProductivityWindow();
 })();
 </script>
 </body>
