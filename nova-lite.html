@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Nova Lite · AI Mentor</title>
 <script src="/api/config"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="sync.js" defer></script>
 <!-- ============================================================
  * NOVA LITE — a simple, drop-in AI mentor for ANY dashboard.
  * Single self-contained file. No backend, no build step.
@@ -148,19 +146,49 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: 
     keyInput.value = '';
     refreshKeyUI();
     keypanel.classList.remove('open'); // tuck it away so it's not on screen
+    pushApiKeys();
   });
 
-  // ---- cloud sync (shares the 'apikeys' row with nutrition.html — keep the
-  // exact same key list on both pages, or a push from either one will wipe
-  // the other's key out of the shared row) ----
-  document.addEventListener('DOMContentLoaded', function () {
-    if (typeof initCloudSync !== 'function') return;
-    initCloudSync({
-      appKey: 'apikeys',
-      syncedKeys: [KEY_LS, 'usda_fdc_api_key'],
-      onApplied: refreshKeyUI,
-    });
-  });
+  // ---- API key sync (shared 'apikeys' row with nutrition.html) ----
+  // Deliberately ONE-WAY-SAFE, not the generic bidirectional initCloudSync:
+  // a key you just typed here must never be silently overwritten by a
+  // slightly-late remote pull racing your save — that was a real bug where
+  // a freshly-saved key got clobbered by a stale one moments later, making
+  // it look "invalid". Pulling only ever fills in a key that's currently
+  // EMPTY locally; saving always pushes whatever's present.
+  const USDA_KEY_LS = 'usda_fdc_api_key';
+  const KS_URL = (window.DASH_SUPABASE_URL) || 'https://srajryooffirbroltjmg.supabase.co';
+  const KS_KEY = (window.DASH_SUPABASE_KEY) || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+  function usdaSavedKey() { try { return localStorage.getItem(USDA_KEY_LS) || ''; } catch (e) { return ''; } }
+  async function pullApiKeysIfMissing() {
+    if (savedKey() && usdaSavedKey()) return;
+    try {
+      const r = await fetch(KS_URL + '/rest/v1/app_state?select=data&key=eq.apikeys', {
+        headers: { apikey: KS_KEY, Authorization: 'Bearer ' + KS_KEY },
+      });
+      const rows = await r.json();
+      const data = rows && rows[0] && rows[0].data;
+      if (!data) return;
+      let changed = false;
+      if (!savedKey() && data.nova_lite_api_key) { localStorage.setItem(KEY_LS, data.nova_lite_api_key); changed = true; }
+      if (!usdaSavedKey() && data.usda_fdc_api_key) { localStorage.setItem(USDA_KEY_LS, data.usda_fdc_api_key); }
+      if (changed) refreshKeyUI();
+    } catch (e) {}
+  }
+  async function pushApiKeys() {
+    const payload = {};
+    const nk = savedKey(); if (nk) payload.nova_lite_api_key = nk;
+    const uk = usdaSavedKey(); if (uk) payload.usda_fdc_api_key = uk;
+    if (!Object.keys(payload).length) return;
+    try {
+      await fetch(KS_URL + '/rest/v1/app_state?on_conflict=key', {
+        method: 'POST',
+        headers: { apikey: KS_KEY, Authorization: 'Bearer ' + KS_KEY, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' },
+        body: JSON.stringify({ key: 'apikeys', data: payload, updated_at: new Date().toISOString() }),
+      });
+    } catch (e) {}
+  }
+  pullApiKeysIfMissing();
 
   // ---- read whatever the dashboard stored (for context) ----
   function dashboardData(){

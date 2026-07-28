@@ -856,6 +856,7 @@ body::after {
     $('usdaKeyInput').value = '';
     updateUsdaKeyRow();
     renderFoodIndex();
+    pushApiKeys();
   });
 
   const USDA_NUTRIENT_MAP = [
@@ -965,7 +966,47 @@ body::after {
     try { localStorage.setItem(NOVA_KEY_LS, k); } catch (e) {}
     $('novaKeyInput').value = '';
     updateNovaKeyRow();
+    pushApiKeys();
   });
+
+  /* ---------- API key sync (shared 'apikeys' row with nova-lite.html) ----------
+     Deliberately ONE-WAY-SAFE, not the generic bidirectional initCloudSync:
+     a key you just typed here must never be silently overwritten by a
+     slightly-late remote pull racing your save (that was the actual bug —
+     the key looked "invalid" because a stale remote value clobbered the
+     fresh one right after saving). Pulling only ever fills in a key that's
+     currently EMPTY locally; saving always pushes whatever's present. */
+  const KS_URL = (window.DASH_SUPABASE_URL) || 'https://srajryooffirbroltjmg.supabase.co';
+  const KS_KEY = (window.DASH_SUPABASE_KEY) || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+  async function pullApiKeysIfMissing() {
+    if (novaSavedKey() && usdaSavedKey()) return;
+    try {
+      const r = await fetch(KS_URL + '/rest/v1/app_state?select=data&key=eq.apikeys', {
+        headers: { apikey: KS_KEY, Authorization: 'Bearer ' + KS_KEY },
+      });
+      const rows = await r.json();
+      const data = rows && rows[0] && rows[0].data;
+      if (!data) return;
+      let changed = false;
+      if (!novaSavedKey() && data.nova_lite_api_key) { localStorage.setItem(NOVA_KEY_LS, data.nova_lite_api_key); changed = true; }
+      if (!usdaSavedKey() && data.usda_fdc_api_key) { localStorage.setItem(USDA_KEY_LS, data.usda_fdc_api_key); changed = true; }
+      if (changed) { updateNovaKeyRow(); updateUsdaKeyRow(); renderFoodIndex(); }
+    } catch (e) {}
+  }
+  async function pushApiKeys() {
+    const payload = {};
+    const nk = novaSavedKey(); if (nk) payload.nova_lite_api_key = nk;
+    const uk = usdaSavedKey(); if (uk) payload.usda_fdc_api_key = uk;
+    if (!Object.keys(payload).length) return;
+    try {
+      await fetch(KS_URL + '/rest/v1/app_state?on_conflict=key', {
+        method: 'POST',
+        headers: { apikey: KS_KEY, Authorization: 'Bearer ' + KS_KEY, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' },
+        body: JSON.stringify({ key: 'apikeys', data: payload, updated_at: new Date().toISOString() }),
+      });
+    } catch (e) {}
+  }
+  pullApiKeysIfMissing();
 
   const NOVA_SYS =
     'You are a nutrition estimator embedded in a food-tracking app. The user describes a food or meal in ' +
@@ -1069,18 +1110,6 @@ body::after {
       appKey: 'nutrition',
       syncedKeys: [STORE_KEY],
       onApplied: renderAll,
-    });
-    // Shared with nova-lite.html — keep the exact same key list on both
-    // pages, since a partial list here would wipe the other page's key
-    // out of the shared row on the next push.
-    initCloudSync({
-      appKey: 'apikeys',
-      syncedKeys: [NOVA_KEY_LS, USDA_KEY_LS],
-      onApplied: function () {
-        updateNovaKeyRow();
-        updateUsdaKeyRow();
-        renderFoodIndex();
-      },
     });
   });
 })();
