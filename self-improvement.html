@@ -77,6 +77,7 @@ body::before {
   clip-path: polygon(0% 100%, 0% 55%, 6% 62%, 13% 40%, 20% 58%, 28% 35%, 36% 60%, 45% 30%, 54% 55%, 62% 42%, 70% 64%, 79% 38%, 87% 58%, 94% 45%, 100% 60%, 100% 100%);
   opacity: 0.4;
 }
+#particleCanvas { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
 body::after {
   content: ''; position: fixed; inset: 0;
   background-image: radial-gradient(rgba(255,255,255,0.01) 1px, transparent 1px);
@@ -114,6 +115,12 @@ body::after {
   -webkit-backdrop-filter: blur(24px) saturate(1.2);
   box-shadow: 0 12px 40px rgba(0,0,0,0.45);
   overflow: hidden;
+  transition: transform 0.25s cubic-bezier(.2,.8,.2,1), box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.gm-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255,255,255,0.14);
+  box-shadow: 0 18px 52px rgba(0,0,0,0.55);
 }
 .gm-eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 6px; }
 .empty-note { font-size: 12.5px; color: var(--text-tertiary); font-style: italic; line-height: 1.5; }
@@ -225,13 +232,68 @@ body::after {
 <body>
 <div class="starfield"></div>
 <div class="horizon"></div>
+<canvas id="particleCanvas" aria-hidden="true"></canvas>
+<script>
+(function () {
+  'use strict';
+  const canvas = document.getElementById('particleCanvas');
+  if (!canvas || !canvas.getContext) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const ctx = canvas.getContext('2d');
+  let w, h;
+  function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const COLORS = ['#2DD4BF', '#38BDF8', '#A78BFA', '#6BE3A4', '#F2C063'];
+  const COUNT = window.innerWidth < 480 ? 20 : 34;
+
+  function makeParticle(seedY) {
+    return {
+      x: Math.random() * w,
+      y: seedY ? Math.random() * h : h + 12,
+      r: 1 + Math.random() * 2.2,
+      speed: 0.15 + Math.random() * 0.35,
+      sway: Math.random() * Math.PI * 2,
+      swaySpeed: 0.004 + Math.random() * 0.01,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      baseAlpha: 0.25 + Math.random() * 0.45,
+    };
+  }
+  const particles = [];
+  for (let i = 0; i < COUNT; i++) particles.push(makeParticle(true));
+
+  let t = 0;
+  function tick() {
+    ctx.clearRect(0, 0, w, h);
+    t++;
+    particles.forEach((p) => {
+      p.y -= p.speed;
+      p.sway += p.swaySpeed;
+      const x = p.x + Math.sin(p.sway) * 14;
+      const alpha = p.baseAlpha * (0.7 + 0.3 * Math.sin(t * 0.02 + p.sway));
+      ctx.beginPath();
+      ctx.arc(x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.color;
+      ctx.globalAlpha = alpha;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 6;
+      ctx.fill();
+      if (p.y < -10) Object.assign(p, makeParticle(false), { x: Math.random() * w });
+    });
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+})();
+</script>
 <div class="page">
 
   <h1 class="dash-title">Growth</h1>
   <p class="dash-sub">Fitness age, nutrition patterns & habits — read from your own data.</p>
 
   <div class="section">
-    <div class="section-title">Fitness age</div>
+    <div class="section-title">⚡ Fitness age</div>
     <div class="gm-card" id="faCard">
       <div class="fa-bg" aria-hidden="true"></div>
       <div class="fa-content">
@@ -244,7 +306,7 @@ body::after {
   </div>
 
   <div class="section">
-    <div class="section-title">Nutrition patterns (last 14 days)</div>
+    <div class="section-title">🍎 Nutrition patterns (last 14 days)</div>
     <div class="gm-card" id="nutriCard">
       <div id="nutriBody">
         <p class="empty-note">No meals logged yet — start tracking on the <a href="nutrition.html">Nutrition</a> page and patterns will show up here.</p>
@@ -253,7 +315,7 @@ body::after {
   </div>
 
   <div class="section">
-    <div class="section-title">Habits (last 14 days)</div>
+    <div class="section-title">✅ Habits (last 14 days)</div>
     <div class="gm-card" id="habitsCard">
       <div id="habitsBody">
         <p class="empty-note">Nothing to analyze yet — log supplements or connect WHOOP to build a habits picture.</p>
@@ -262,7 +324,7 @@ body::after {
   </div>
 
   <div class="section">
-    <div class="section-title">Training variety (last 14 days)</div>
+    <div class="section-title">🏋️ Training variety (last 14 days)</div>
     <div class="gm-card" id="trainingCard">
       <div id="trainingBody">
         <p class="empty-note">No workouts logged yet — train on the <a href="gym.html">Fitness</a> page and your split balance will show up here.</p>
@@ -271,7 +333,7 @@ body::after {
   </div>
 
   <div class="section">
-    <div class="section-title">Ideas to round out your training</div>
+    <div class="section-title">💡 Ideas to round out your training</div>
     <div class="gm-card">
       <p class="empty-note" style="margin-bottom:14px">A well-rounded physical base beats maxing out one thing — these fill the gaps a pure lifting split leaves open.</p>
       <div class="idea-list" id="ideaList"></div>
@@ -279,7 +341,7 @@ body::after {
   </div>
 
   <div class="section">
-    <div class="section-title">Where to focus next</div>
+    <div class="section-title">🎯 Where to focus next</div>
     <div class="gm-card">
       <ul class="reco-list" id="recoList"></ul>
     </div>
