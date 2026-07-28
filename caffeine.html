@@ -666,10 +666,15 @@ body::after {
   setInterval(()=>{ if(scrubT==null) renderAll(); }, 60000);
 
   /* ============ Cloud sync ============ */
-  if(window.initCloudSync){
-    window.initCloudSync({ appKey:'caffeine', syncedKeys:[LOGS_KEY,CUSTOM_KEY],
+  // sync.js is loaded with `defer`, so it hasn't run yet at this point in the
+  // parse — window.initCloudSync would be undefined if checked here directly.
+  // Waiting for DOMContentLoaded (which always fires after deferred scripts
+  // run) guarantees it's ready.
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof initCloudSync !== 'function') return;
+    initCloudSync({ appKey:'caffeine', syncedKeys:[LOGS_KEY,CUSTOM_KEY],
       onApplied:function(){ logs=loadJSON(LOGS_KEY,[]); custom=loadJSON(CUSTOM_KEY,[]); renderResults($('search').value); renderAll(); } });
-  }
+  });
 })();
 </script>
 </body>

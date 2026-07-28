@@ -1059,13 +1059,30 @@ body::after {
   renderAll();
   renderFoodIndex();
 
-  if (window.initCloudSync) {
-    window.initCloudSync({
+  // sync.js is loaded with `defer`, so it hasn't run yet at this point in the
+  // parse — window.initCloudSync would be undefined if checked here directly.
+  // Waiting for DOMContentLoaded (which always fires after deferred scripts
+  // run) guarantees it's ready.
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof initCloudSync !== 'function') return;
+    initCloudSync({
       appKey: 'nutrition',
       syncedKeys: [STORE_KEY],
       onApplied: renderAll,
     });
-  }
+    // Shared with nova-lite.html — keep the exact same key list on both
+    // pages, since a partial list here would wipe the other page's key
+    // out of the shared row on the next push.
+    initCloudSync({
+      appKey: 'apikeys',
+      syncedKeys: [NOVA_KEY_LS, USDA_KEY_LS],
+      onApplied: function () {
+        updateNovaKeyRow();
+        updateUsdaKeyRow();
+        renderFoodIndex();
+      },
+    });
+  });
 })();
 </script>
 </body>

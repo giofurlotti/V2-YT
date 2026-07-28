@@ -4,6 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Nova Lite · AI Mentor</title>
+<script src="/api/config"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
 <!-- ============================================================
  * NOVA LITE — a simple, drop-in AI mentor for ANY dashboard.
  * Single self-contained file. No backend, no build step.
@@ -127,15 +130,36 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: 
 
   // ---- key handling ----
   function savedKey(){ try { return localStorage.getItem(KEY_LS) || ''; } catch(e){ return ''; } }
-  if (savedKey()) { hint.classList.add('saved'); hint.innerHTML = '✓ Key saved in this browser. Ask away.'; keyInput.placeholder = '•••• key saved ••••'; keyToggle.classList.add('has-key'); }
+  function refreshKeyUI(){
+    if (savedKey()) {
+      hint.classList.add('saved'); hint.innerHTML = '✓ Key saved in this browser. Ask away.';
+      keyInput.placeholder = '•••• key saved ••••'; keyToggle.classList.add('has-key');
+    } else {
+      hint.classList.remove('saved');
+      hint.innerHTML = 'Your key is stored only in <b>this browser</b> and sent straight to Anthropic — never to us. Get one at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>.';
+      keyInput.placeholder = 'paste your Anthropic API key (sk-ant-…)'; keyToggle.classList.remove('has-key');
+    }
+  }
+  refreshKeyUI();
   document.getElementById('keySave').addEventListener('click', () => {
     const k = keyInput.value.trim();
     if (!k) return;
     try { localStorage.setItem(KEY_LS, k); } catch(e){}
-    keyInput.value = ''; keyInput.placeholder = '•••• key saved ••••';
-    hint.classList.add('saved'); hint.innerHTML = '✓ Key saved in this browser. Ask away.';
-    keyToggle.classList.add('has-key');
+    keyInput.value = '';
+    refreshKeyUI();
     keypanel.classList.remove('open'); // tuck it away so it's not on screen
+  });
+
+  // ---- cloud sync (shares the 'apikeys' row with nutrition.html — keep the
+  // exact same key list on both pages, or a push from either one will wipe
+  // the other's key out of the shared row) ----
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof initCloudSync !== 'function') return;
+    initCloudSync({
+      appKey: 'apikeys',
+      syncedKeys: [KEY_LS, 'usda_fdc_api_key'],
+      onApplied: refreshKeyUI,
+    });
   });
 
   // ---- read whatever the dashboard stored (for context) ----
