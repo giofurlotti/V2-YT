@@ -140,6 +140,28 @@ body::after {
 .productivity-window { font-family: var(--font-display); font-style: italic; font-size: 18px; font-weight: 600; color: var(--text-primary); margin-top: 2px; text-shadow: 0 0 16px rgba(192,132,252,0.4); }
 .productivity-sub { font-size: 10.5px; color: var(--text-tertiary); margin-top: 3px; line-height: 1.4; }
 .productivity-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 16px 0; }
+
+.sun-card { --accent: #FBBF24; }
+.sun-stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; }
+.sun-stat-num { font-family: var(--font-numeric); font-size: 18px; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.sun-stat-label { font-size: 8.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 3px; }
+.sun-track-btn {
+  width: 100%; margin-top: 14px; padding: 10px; border: 1px solid rgba(251,191,36,0.3);
+  border-radius: 11px; background: rgba(251,191,36,0.10); color: #FBBF24;
+  font-family: inherit; font-size: 11.5px; font-weight: 700; letter-spacing: 0.03em;
+  cursor: pointer; transition: background 0.15s, border-color 0.15s;
+}
+.sun-track-btn:hover { background: rgba(251,191,36,0.18); }
+.sun-track-btn.active { background: rgba(251,191,36,0.22); border-color: rgba(251,191,36,0.5); }
+.sun-input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.sun-input-field label { display: block; font-size: 9px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+.sun-input {
+  width: 100%; padding: 8px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.25); color: var(--text-primary); font-family: inherit; font-size: 12.5px; outline: none;
+}
+.sun-input:focus { border-color: rgba(251,191,36,0.4); }
+.sun-hint { font-size: 10px; color: var(--text-tertiary); margin-top: 6px; min-height: 12px; }
+.sun-note { font-size: 9.5px; color: var(--text-tertiary); margin-top: 10px; line-height: 1.5; }
 .today-card {
   position: relative;
   padding: 20px;
@@ -159,6 +181,9 @@ body::after {
   opacity: 0.85;
 }
 .today-card > *, .news-card > * { position: relative; z-index: 1; }
+.sun-card::before {
+  background: radial-gradient(circle at 50% 28%, color-mix(in srgb, #FBBF24 30%, transparent), transparent 65%);
+}
 .today-card-label {
   font-family: var(--font-mono); font-size: 10.5px; font-weight: 600;
   letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-tertiary);
@@ -672,6 +697,28 @@ body::after {
       </div>
     </div>
 
+    <div class="today-card sun-card">
+      <div class="today-card-label">Sun & vitamin D</div>
+      <div class="sun-stat-row">
+        <div class="sun-stat"><div class="sun-stat-num" id="sunSteps">0</div><div class="sun-stat-label">Steps</div></div>
+        <div class="sun-stat"><div class="sun-stat-num" id="sunUv">—</div><div class="sun-stat-label">UV index</div></div>
+        <div class="sun-stat"><div class="sun-stat-num" id="sunVitD">—</div><div class="sun-stat-label">Vitamin D</div></div>
+      </div>
+      <button class="sun-track-btn" id="sunTrackBtn" type="button">🚶 Start live step tracking</button>
+      <div class="sun-input-grid">
+        <div class="sun-input-field">
+          <label for="sunStepsInput">Steps today</label>
+          <input class="sun-input" id="sunStepsInput" type="number" min="0" inputmode="numeric" placeholder="e.g. 6000">
+        </div>
+        <div class="sun-input-field">
+          <label for="sunMinutesInput">Minutes outside</label>
+          <input class="sun-input" id="sunMinutesInput" type="number" min="0" inputmode="numeric" placeholder="e.g. 30">
+        </div>
+      </div>
+      <div class="sun-hint" id="sunMinutesHint"></div>
+      <div class="sun-note">Estimated from today's UV index and time outdoors — a rough guide, not a clinical measurement. Live tracking only counts steps while this tab stays open. Added automatically to today's Vitamin D in Nutrition.</div>
+    </div>
+
     <div class="today-card">
       <div class="today-card-label">Activity pattern</div>
       <div class="activity-pattern-row" id="activityPatternRow">
@@ -943,6 +990,7 @@ body::after {
   const PROFILE_KEY = 'user_profile_v1';
   const WHOOP_KEY = 'whoop_tokens_v1';
   const SYNC_KEY  = 'whoop_last_sync';
+  const SUN_KEY = 'sun_tracker_v1';
 
   /* ---------- WHOOP token cross-device sync ----------
      Deliberately NOT folded into sync.js's generic syncedKeys: that
@@ -1105,6 +1153,14 @@ body::after {
       onApplied: function () {
         if ($('settingsBg').classList.contains('show')) populate();
       }
+    });
+    // Same single-key config nutrition.html and the Growth page use — pulls
+    // in fresh meal logs so the sun-exposure Vitamin D entry merges into
+    // the right day's data instead of a stale local copy.
+    initCloudSync({
+      appKey: 'nutrition',
+      syncedKeys: ['nutrition:v1'],
+      onApplied: renderSunCard,
     });
     pullWhoopTokenFromCloud().then((changed) => {
       if (changed) { whSyncFailed = false; whSyncAttempted = false; renderWhoop(); }
@@ -1325,10 +1381,132 @@ body::after {
         rainEl.textContent = prob != null ? 'No rain expected today (' + prob + '% chance).' : 'No rain expected today.';
         rainEl.classList.add('dry');
       }
+      renderSunCard();
     } catch (e) {
       $('weatherDesc').textContent = 'Weather unavailable';
     }
   }
+
+  /* ---------- Sun exposure & Vitamin D estimate ----------
+     Websites can't read Apple Health / Google Fit step data (no web
+     API exists for either), so this can't be a true all-day pedometer.
+     Instead: a live in-browser step counter (DeviceMotion) that only
+     counts while this tab is open and visible, plus manual fields for
+     the real daily totals. Vitamin D is estimated from today's UV
+     index x minutes outdoors and merged into nutrition:v1 as a
+     synthetic, clearly-labeled log entry so the Nutrition page's
+     existing Vitamin D total picks it up automatically. (calendarDateKey
+     is defined further down, reused here — function declarations hoist.) */
+  function loadSunState() {
+    const s = loadJSON(SUN_KEY, null);
+    const today = calendarDateKey();
+    if (!s || s.date !== today) return { date: today, steps: 0, outdoorMinutes: null };
+    return s;
+  }
+  function saveSunState(s) { saveJSON(SUN_KEY, s); }
+  let sunState = loadSunState();
+
+  function estimateVitaminD(uvIndex, minutes) {
+    if (!uvIndex || !minutes) return 0;
+    // Rough model, calibrated so UV index 6 for 30 min ≈ 15µg (≈ the
+    // full daily adult RDA) — matches common "15-30 min midday sun"
+    // public-health guidance. Not a clinical measurement.
+    const iuPerMinute = 20 * (uvIndex / 6);
+    const totalIU = iuPerMinute * minutes;
+    const micrograms = totalIU / 40;
+    return Math.min(100, Math.round(micrograms * 10) / 10);
+  }
+
+  function syncVitaminDToNutrition(vitD) {
+    try {
+      const state = loadJSON('nutrition:v1', null);
+      if (!state) return; // Nutrition page never opened on this device yet — nothing to merge into.
+      state.logs = state.logs || {};
+      const k = calendarDateKey();
+      let list = (state.logs[k] || []).slice();
+      const idx = list.findIndex((e) => e && e.sunEstimate);
+      if (!vitD || vitD <= 0) {
+        if (idx !== -1) { list.splice(idx, 1); state.logs[k] = list; saveJSON('nutrition:v1', state); }
+        return;
+      }
+      const existingId = idx !== -1 ? list[idx].id : (Date.now() + Math.random());
+      const entry = { id: existingId, name: 'Sun exposure (est.)', calories: 0, protein: 0, carbs: 0, fat: 0, vitaminD: vitD, sunEstimate: true };
+      if (idx !== -1) list[idx] = entry; else list.push(entry);
+      state.logs[k] = list;
+      saveJSON('nutrition:v1', state);
+    } catch (e) {}
+  }
+
+  function renderSunCard() {
+    const uv = weatherData && weatherData.uv != null ? weatherData.uv : null;
+    $('sunSteps').textContent = sunState.steps || 0;
+    $('sunUv').textContent = uv != null ? uv : '—';
+    $('sunStepsInput').value = sunState.steps || '';
+    $('sunMinutesInput').value = sunState.outdoorMinutes != null ? sunState.outdoorMinutes : '';
+    const suggested = sunState.steps ? Math.round(sunState.steps / 100) : null;
+    $('sunMinutesHint').textContent = suggested ? ('≈ ' + suggested + ' min outside based on your steps') : '';
+    const vitD = (uv != null && sunState.outdoorMinutes != null) ? estimateVitaminD(uv, sunState.outdoorMinutes) : null;
+    $('sunVitD').textContent = vitD != null ? vitD + 'µg' : '—';
+    syncVitaminDToNutrition(vitD);
+  }
+
+  $('sunStepsInput').addEventListener('change', () => {
+    const v = parseInt($('sunStepsInput').value, 10);
+    sunState.steps = isNaN(v) ? 0 : Math.max(0, v);
+    saveSunState(sunState);
+    renderSunCard();
+  });
+  $('sunMinutesInput').addEventListener('change', () => {
+    const v = parseInt($('sunMinutesInput').value, 10);
+    sunState.outdoorMinutes = isNaN(v) ? null : Math.max(0, v);
+    saveSunState(sunState);
+    renderSunCard();
+  });
+
+  /* ---------- Live step counter (DeviceMotion peak-detection pedometer) ---------- */
+  let stepTrackingActive = false;
+  let lastStepTs = 0;
+  let sunSyncDebounce = null;
+  function handleDeviceMotion(e) {
+    const usingLinear = e.acceleration && e.acceleration.x != null;
+    const acc = usingLinear ? e.acceleration : e.accelerationIncludingGravity;
+    if (!acc || acc.x == null) return;
+    const mag = Math.sqrt((acc.x || 0) ** 2 + (acc.y || 0) ** 2 + (acc.z || 0) ** 2);
+    const threshold = usingLinear ? 2.2 : 12.5; // gravity-inclusive baseline sits around 9.8
+    const now = Date.now();
+    if (mag > threshold && (now - lastStepTs) > 300) {
+      lastStepTs = now;
+      sunState.steps = (sunState.steps || 0) + 1;
+      $('sunSteps').textContent = sunState.steps;
+      $('sunStepsInput').value = sunState.steps;
+      saveSunState(sunState);
+      clearTimeout(sunSyncDebounce);
+      sunSyncDebounce = setTimeout(renderSunCard, 2500);
+    }
+  }
+  async function toggleStepTracking() {
+    const btn = $('sunTrackBtn');
+    if (stepTrackingActive) {
+      window.removeEventListener('devicemotion', handleDeviceMotion);
+      stepTrackingActive = false;
+      btn.textContent = '🚶 Start live step tracking';
+      btn.classList.remove('active');
+      renderSunCard();
+      return;
+    }
+    if (typeof DeviceMotionEvent === 'undefined') { btn.textContent = 'Not supported on this device'; return; }
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+      try {
+        const perm = await DeviceMotionEvent.requestPermission();
+        if (perm !== 'granted') { btn.textContent = 'Motion permission denied'; return; }
+      } catch (e) { btn.textContent = 'Motion not available'; return; }
+    }
+    window.addEventListener('devicemotion', handleDeviceMotion);
+    stepTrackingActive = true;
+    btn.textContent = '⏹ Stop tracking (only counts while open)';
+    btn.classList.add('active');
+  }
+  $('sunTrackBtn').addEventListener('click', toggleStepTracking);
 
   /* ---------- Location picker (manual override for phones that won't grant GPS) ---------- */
   function openLocationModal() {
@@ -1699,6 +1877,7 @@ body::after {
   loadActivityPattern();
   loadProductivityWindow();
   loadBedtime();
+  renderSunCard();
 })();
 </script>
 </body>
