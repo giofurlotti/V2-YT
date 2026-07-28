@@ -139,6 +139,7 @@ body::after {
 .productivity-label { font-size: 9.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; }
 .productivity-window { font-family: var(--font-display); font-style: italic; font-size: 18px; font-weight: 600; color: var(--text-primary); margin-top: 2px; text-shadow: 0 0 16px rgba(192,132,252,0.4); }
 .productivity-sub { font-size: 10.5px; color: var(--text-tertiary); margin-top: 3px; line-height: 1.4; }
+.productivity-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 16px 0; }
 .today-card {
   position: relative;
   padding: 20px;
@@ -358,10 +359,6 @@ body::after {
 .weather-flash { position: absolute; inset: 0; background: #EAF2FF; opacity: 0; }
 .weather-bg.cond-storm .weather-flash { animation: storm-flash 6.5s ease-in-out infinite; }
 @keyframes storm-flash { 0%, 92%, 100% { opacity: 0; } 93% { opacity: 0.4; } 94% { opacity: 0; } 95% { opacity: 0.55; } 96% { opacity: 0; } }
-
-.tips-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
-.tips-list li { display: flex; gap: 9px; align-items: flex-start; font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; }
-.tip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--glow); margin-top: 5px; flex-shrink: 0; box-shadow: 0 0 6px var(--glow); }
 
 @media (max-width: 640px) {
   .today-grid { grid-template-columns: 1fr; }
@@ -698,7 +695,7 @@ body::after {
     </div>
 
     <div class="today-card">
-      <div class="today-card-label">Peak focus hours</div>
+      <div class="today-card-label">Focus & bedtime</div>
       <div class="productivity-body">
         <span class="productivity-icon">
           <svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.6.55 1 1.35 1 2.2V16h6v-.3c0-.85.4-1.65 1-2.2A6 6 0 0 0 12 3Z"/></svg>
@@ -709,10 +706,7 @@ body::after {
           <div class="productivity-sub" id="productivitySub">Uses your average wake time to estimate peak alertness</div>
         </div>
       </div>
-    </div>
-
-    <div class="today-card">
-      <div class="today-card-label">Bedtime</div>
+      <div class="productivity-divider"></div>
       <div class="productivity-body">
         <span class="productivity-icon bedtime-icon">
           <svg viewBox="0 0 24 24"><path d="M20 14.5a8.5 8.5 0 1 1-9.5-11 7 7 0 0 0 9.5 11Z"/></svg>
@@ -723,11 +717,6 @@ body::after {
           <div class="productivity-sub" id="bedtimeSub">Uses your sleep goal, average wake time, and today's strain</div>
         </div>
       </div>
-    </div>
-
-    <div class="today-card tips-card">
-      <div class="today-card-label">Tips for today</div>
-      <ul class="tips-list" id="tipsList"></ul>
     </div>
   </div>
 
@@ -1336,7 +1325,6 @@ body::after {
         rainEl.textContent = prob != null ? 'No rain expected today (' + prob + '% chance).' : 'No rain expected today.';
         rainEl.classList.add('dry');
       }
-      renderTips();
     } catch (e) {
       $('weatherDesc').textContent = 'Weather unavailable';
     }
@@ -1642,36 +1630,6 @@ body::after {
   }
 
   /* ---------- Tips for today ---------- */
-  function renderTips() {
-    const tips = [];
-    const t = loadJSON(WHOOP_KEY, null);
-    if (!t || !t.access) {
-      tips.push('Connect WHOOP in Settings to see your Readiness score here.');
-    } else if (whStats && whStats.rec != null) {
-      if (whStats.rec < 34) tips.push('Recovery is low (' + whStats.rec + '%) — consider a lighter day or extra rest.');
-      else if (whStats.rec >= 67) tips.push('Recovery is strong (' + whStats.rec + '%) — good day to push training.');
-      else tips.push('Recovery is moderate (' + whStats.rec + '%) — train, but listen to your body.');
-      if (whStats.sleep != null && whStats.sleep < 70) tips.push('Sleep performance was ' + whStats.sleep + '% — try to get to bed earlier tonight.');
-    }
-
-    if (weatherData) {
-      if (weatherData.isRainingNow) tips.push("It's raining right now — grab an umbrella before heading out.");
-      else if (weatherData.rainProb != null && weatherData.rainProb >= 60) tips.push('Rain is likely today (' + weatherData.rainProb + '%) — plan for it.');
-      else if (weatherData.rainProb != null && weatherData.rainProb >= 30) tips.push('Slight chance of rain today (' + weatherData.rainProb + '%) — keep a jacket handy.');
-    }
-
-    if (!tips.length) tips.push('Nothing urgent — have a good one.');
-
-    const el = $('tipsList');
-    el.innerHTML = '';
-    tips.slice(0, 4).forEach((tip) => {
-      const li = document.createElement('li');
-      const dot = document.createElement('span'); dot.className = 'tip-dot';
-      const txt = document.createElement('span'); txt.textContent = tip;
-      li.append(dot, txt);
-      el.appendChild(li);
-    });
-  }
   async function wRefresh(t) {
     if (!t.refresh) return null;
     try {
@@ -1725,7 +1683,6 @@ body::after {
       whSyncAttempted = true;
       renderWhoop(whSyncFailed);
     } catch (e) { whSyncFailed = true; whSyncAttempted = true; renderWhoop(e); }
-    renderTips();
     loadBedtime();
   }
   $('whAction').addEventListener('click', () => {
@@ -1736,7 +1693,6 @@ body::after {
 
   /* ---------- Today panel: initial load ---------- */
   updateReadinessRing();
-  renderTips();
   syncWhoop();
   loadWeather();
   fetchNews(false);

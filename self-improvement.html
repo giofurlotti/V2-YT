@@ -168,6 +168,13 @@ body::after {
 .reco-list li { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
 .reco-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--age-teal); margin-top: 5px; flex-shrink: 0; box-shadow: 0 0 6px var(--age-teal); }
 
+.idea-list { display: flex; flex-direction: column; gap: 10px; }
+.idea-item { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 12px 14px; }
+.idea-item.highlight { border-color: color-mix(in srgb, var(--age-teal) 45%, transparent); background: color-mix(in srgb, var(--age-teal) 8%, rgba(255,255,255,0.035)); }
+.idea-title { font-size: 13px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 7px; }
+.idea-title .tag-pill { padding: 2px 8px; font-size: 9.5px; background: color-mix(in srgb, var(--age-teal) 20%, transparent); border-color: color-mix(in srgb, var(--age-teal) 40%, transparent); color: var(--age-teal); }
+.idea-detail { font-size: 12px; color: var(--text-tertiary); margin-top: 4px; line-height: 1.5; }
+
 .attribution { text-align: center; font-size: 11px; color: var(--text-tertiary); margin-top: 24px; opacity: 0.6; }
 </style>
 </head>
@@ -211,6 +218,23 @@ body::after {
   </div>
 
   <div class="section">
+    <div class="section-title">Training variety (last 14 days)</div>
+    <div class="gm-card" id="trainingCard">
+      <div id="trainingBody">
+        <p class="empty-note">No workouts logged yet — train on the <a href="gym.html">Fitness</a> page and your split balance will show up here.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Ideas to round out your training</div>
+    <div class="gm-card">
+      <p class="empty-note" style="margin-bottom:14px">A well-rounded physical base beats maxing out one thing — these fill the gaps a pure lifting split leaves open.</p>
+      <div class="idea-list" id="ideaList"></div>
+    </div>
+  </div>
+
+  <div class="section">
     <div class="section-title">Where to focus next</div>
     <div class="gm-card">
       <ul class="reco-list" id="recoList"></ul>
@@ -243,14 +267,33 @@ body::after {
   const WHOOP_KEY = 'whoop_tokens_v1';
 
   /* ---------- WHOOP token cross-device sync (additive-only — see index.html for why) ---------- */
-  function whoopSupa() {
+  function getSupa() {
     if (!window.supabase) return null;
     const url = window.DASH_SUPABASE_URL || 'https://srajryooffirbroltjmg.supabase.co';
     const skey = window.DASH_SUPABASE_KEY || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
     return window.supabase.createClient(url, skey);
   }
+  // Read-only fetch of the gym coach's data. Deliberately NOT wired through
+  // sync.js's initCloudSync: that mechanism replaces the entire remote row
+  // with whatever it collects locally, but gym.html syncs four keys
+  // (po_coach_v1, po_coach_workout_done, po_coach_weights, po_coach_photos)
+  // under this same 'po-coach' row, and this page only wants one of them.
+  // Registering a narrower syncedKeys list here would make this page's
+  // background flush-on-unload overwrite the cloud copy with a subset,
+  // silently dropping the weight log and progress photos. A plain read
+  // avoids that entirely.
+  async function loadGymData() {
+    const supa = getSupa();
+    if (supa) {
+      try {
+        const { data } = await supa.from('app_state').select('data').eq('key', 'po-coach').maybeSingle();
+        if (data && data.data && data.data.po_coach_v1) return data.data.po_coach_v1;
+      } catch (e) {}
+    }
+    return loadJSON('po_coach_v1', null);
+  }
   async function pullWhoopTokenFromCloud() {
-    const supa = whoopSupa(); if (!supa) return false;
+    const supa = getSupa(); if (!supa) return false;
     try {
       const { data } = await supa.from('app_state').select('data').eq('key', 'health').maybeSingle();
       const remoteTok = data && data.data && data.data.whoop_tokens_v1;
@@ -262,7 +305,7 @@ body::after {
     } catch (e) { return false; }
   }
   async function pushWhoopTokenToCloud() {
-    const supa = whoopSupa(); if (!supa) return;
+    const supa = getSupa(); if (!supa) return;
     let local = null; try { local = JSON.parse(localStorage.getItem(WHOOP_KEY)); } catch (e) {}
     if (!local || !local.access) return;
     try {
@@ -476,12 +519,97 @@ body::after {
     window.__habitsResult = h;
   }
 
+  /* ================= Training variety (from the gym coach's logged workouts) ================= */
+  function analyzeTrainingVariety(gymState) {
+    if (!gymState || !Array.isArray(gymState.exercises) || !gymState.logs) return null;
+    const dayNameById = {};
+    (gymState.days || []).forEach((d) => { dayNameById[d.id] = d.name; });
+
+    const days = lastNDates(14);
+    const dateSet = new Set(days.map(dateKeyFor));
+    const trainedDates = new Set();
+    const dayTypeDates = {};
+    let lastTrainedTs = null;
+
+    gymState.exercises.forEach((ex) => {
+      const logs = gymState.logs[ex.id] || [];
+      logs.forEach((log) => {
+        if (!log.date) return;
+        const ts = new Date(log.date).getTime();
+        if (!isNaN(ts) && (lastTrainedTs == null || ts > lastTrainedTs)) lastTrainedTs = ts;
+        const dk = log.date.slice(0, 10);
+        if (!dateSet.has(dk)) return;
+        trainedDates.add(dk);
+        if (!dayTypeDates[ex.day]) dayTypeDates[ex.day] = new Set();
+        dayTypeDates[ex.day].add(dk);
+      });
+    });
+
+    const daysSinceLast = lastTrainedTs != null ? Math.floor((Date.now() - lastTrainedTs) / 86400000) : null;
+    if (!trainedDates.size) return { trainedDaysCount: 0, totalDays: days.length, typeEntries: [], daysSinceLast, untrained: [] };
+
+    const typeEntries = Object.keys(dayTypeDates)
+      .map((id) => ({ id, name: dayNameById[id] || id, count: dayTypeDates[id].size }))
+      .sort((a, b) => b.count - a.count);
+    const trainedIds = new Set(typeEntries.map((t) => t.id));
+    const untrained = (gymState.days || []).filter((d) => !trainedIds.has(d.id)).map((d) => d.name);
+
+    return { trainedDaysCount: trainedDates.size, totalDays: days.length, typeEntries, daysSinceLast, untrained };
+  }
+
+  function renderTraining(training) {
+    if (!training || !training.trainedDaysCount) return;
+    const most = training.typeEntries[0];
+    const least = training.typeEntries[training.typeEntries.length - 1];
+    let html = '<div class="stat-grid">' +
+      '<div class="stat"><div class="stat-num-row"><span class="stat-num">' + training.trainedDaysCount + '</span><span class="stat-sub">/ ' + training.totalDays + ' days</span></div><div class="stat-label">Training frequency</div></div>' +
+      '<div class="stat"><div class="stat-num-row"><span class="stat-num">' + (training.daysSinceLast != null ? training.daysSinceLast : '—') + '</span></div><div class="stat-label">Days since last session</div></div>';
+    if (most) html += '<div class="stat"><div class="stat-num-row"><span class="stat-num" style="font-size:16px">' + most.name + '</span></div><div class="stat-label">Most trained (' + most.count + 'x)</div></div>';
+    if (least && (!most || least.id !== most.id)) html += '<div class="stat"><div class="stat-num-row"><span class="stat-num" style="font-size:16px">' + least.name + '</span></div><div class="stat-label">Least trained (' + least.count + 'x)</div></div>';
+    html += '</div>';
+    if (training.untrained.length) {
+      html += '<div class="tag-list">' + training.untrained.map((n) => '<span class="tag-pill">Not hit in 14 days: ' + n + '</span>').join('') + '</div>';
+    }
+    $('trainingBody').innerHTML = html;
+    window.__trainingResult = training;
+  }
+
+  /* ================= Ideas to round out training (curated, lightly data-aware) ================= */
+  const WORKOUT_IDEAS = [
+    { key: 'cardio', title: 'Zone 2 cardio', detail: '30-40 min easy jog, bike, or incline walk, 1-2x/week — builds your aerobic base and speeds recovery between lifting sessions without adding much strain.' },
+    { key: 'mobility', title: 'Mobility & stretching', detail: '15-20 min of hip/shoulder mobility work a couple times a week — improves range of motion and lowers injury risk as training load builds up.' },
+    { key: 'hiit', title: 'HIIT intervals', detail: 'One 15-20 min interval session a week (e.g. 30s hard / 90s easy) sharpens conditioning without a big time commitment.' },
+    { key: 'sport', title: 'A different sport or activity', detail: 'Swimming, climbing, or a pickup game trains movement patterns and muscles your usual split skips entirely — and it\'s just more fun.' },
+    { key: 'core', title: 'Dedicated core work', detail: '10 min of planks, dead bugs, or anti-rotation work a few times a week — most splits only hit core incidentally.' },
+  ];
+  function renderIdeas(training) {
+    const el = $('ideaList');
+    el.innerHTML = '';
+    const highlight = new Set(['cardio', 'mobility']);
+    if (training && training.trainedDaysCount >= 6) highlight.add('sport');
+    if (training && training.untrained && training.untrained.length) highlight.add('core');
+    WORKOUT_IDEAS.forEach((idea) => {
+      const div = document.createElement('div');
+      div.className = 'idea-item' + (highlight.has(idea.key) ? ' highlight' : '');
+      const title = document.createElement('div'); title.className = 'idea-title';
+      title.textContent = idea.title;
+      if (highlight.has(idea.key)) {
+        const pill = document.createElement('span'); pill.className = 'tag-pill'; pill.textContent = 'Try this';
+        title.appendChild(pill);
+      }
+      const detail = document.createElement('div'); detail.className = 'idea-detail'; detail.textContent = idea.detail;
+      div.append(title, detail);
+      el.appendChild(div);
+    });
+  }
+
   /* ================= Recommendations (rule-based, deterministic) ================= */
   function renderRecommendations() {
     const tips = [];
     const n = window.__nutriResult;
     const h = window.__habitsResult;
     const fa = window.__faResult;
+    const tr = window.__trainingResult;
 
     if (n) {
       if (n.daysLogged < n.totalDays * 0.5) {
@@ -515,6 +643,24 @@ body::after {
       tips.push({ score: 1, text: 'Your fitness age is running ' + Math.abs(fa.delta) + ' years younger than your actual age — whatever you’re doing is working, keep it consistent.' });
     }
 
+    if (tr) {
+      if (tr.trainedDaysCount === 0) {
+        tips.push({ score: 3.5, text: "You haven't logged a workout in the last 14 days — even one session gets the streak moving again." });
+      } else {
+        if (tr.daysSinceLast != null && tr.daysSinceLast >= 4) {
+          tips.push({ score: 4, text: "It's been " + tr.daysSinceLast + ' days since your last logged session — momentum is easiest to keep, hardest to rebuild.' });
+        }
+        if (tr.trainedDaysCount < 6) {
+          tips.push({ score: 3, text: 'You trained ' + tr.trainedDaysCount + ' of the last 14 days — going from ' + tr.trainedDaysCount + ' to ' + (tr.trainedDaysCount + 2) + ' sessions is a bigger physical-improvement lever than any single workout choice.' });
+        }
+        if (tr.untrained && tr.untrained.length) {
+          tips.push({ score: 3.5, text: "You haven't hit a " + tr.untrained[0] + ' day in 14 days — rotate it back in to keep the split balanced.' });
+        }
+      }
+    } else {
+      tips.push({ score: 2, text: 'Log workouts on the Fitness page to get split-balance and training-frequency insight here.' });
+    }
+
     if (!tips.length) {
       tips.push({ score: 1, text: 'Nothing stands out yet — keep logging meals, habits and syncing WHOOP so this page has more to work with.' });
     }
@@ -536,6 +682,10 @@ body::after {
     renderFitnessAge(whoop);
     renderNutrition();
     renderHabits(whoop);
+    const gymState = await loadGymData();
+    const training = analyzeTrainingVariety(gymState);
+    renderTraining(training);
+    renderIdeas(training);
     renderRecommendations();
   }
 
