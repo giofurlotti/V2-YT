@@ -8,6 +8,10 @@
 <meta name="theme-color" content="#050506">
 <title>Caffeine · Dashboard</title>
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Playfair+Display:ital,wght@1,500;1,600;1,700&display=swap" rel="stylesheet">
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
@@ -22,7 +26,9 @@
   --danger:  #FF6B6B;
   --caf: #C9A36B;
   --energy: #6BE3A4;
-  --font: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --glow: #C9A36B;
+  --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 * { box-sizing: border-box; }
@@ -38,26 +44,53 @@ body {
 body::before {
   content: ''; position: fixed; inset: 0;
   background:
-    radial-gradient(circle at 82% 14%, rgba(107,227,164,0.12), transparent 45%),
-    radial-gradient(circle at 18% 90%, rgba(201,163,107,0.07), transparent 50%);
-  filter: blur(40px); pointer-events: none; z-index: -2;
-  animation: drift 36s ease-in-out infinite alternate;
+    radial-gradient(circle at 14% 10%, color-mix(in srgb, var(--glow) 24%, transparent), transparent 48%),
+    radial-gradient(circle at 85% 78%, color-mix(in srgb, var(--glow) 10%, transparent), transparent 55%);
+  filter: blur(50px); pointer-events: none; z-index: -3;
+  animation: drift 40s ease-in-out infinite alternate;
+}
+.starfield {
+  position: fixed; inset: 0; pointer-events: none; z-index: -2;
+  background-image:
+    radial-gradient(1.6px 1.6px at 12% 22%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1.2px 1.2px at 24% 8%, rgba(255,255,255,0.38), transparent),
+    radial-gradient(1.4px 1.4px at 38% 34%, rgba(255,255,255,0.32), transparent),
+    radial-gradient(1px 1px at 52% 14%, rgba(255,255,255,0.42), transparent),
+    radial-gradient(1.6px 1.6px at 67% 26%, rgba(255,255,255,0.28), transparent),
+    radial-gradient(1.2px 1.2px at 78% 12%, rgba(255,255,255,0.38), transparent),
+    radial-gradient(1px 1px at 88% 30%, rgba(255,255,255,0.32), transparent),
+    radial-gradient(1.4px 1.4px at 6% 48%, rgba(255,255,255,0.28), transparent),
+    radial-gradient(1px 1px at 30% 58%, rgba(255,255,255,0.38), transparent),
+    radial-gradient(1.6px 1.6px at 46% 66%, rgba(255,255,255,0.28), transparent),
+    radial-gradient(1.2px 1.2px at 62% 46%, rgba(255,255,255,0.32), transparent),
+    radial-gradient(1px 1px at 74% 62%, rgba(255,255,255,0.38), transparent),
+    radial-gradient(1.4px 1.4px at 91% 52%, rgba(255,255,255,0.28), transparent),
+    radial-gradient(1.6px 1.6px at 18% 78%, rgba(255,255,255,0.32), transparent),
+    radial-gradient(1px 1px at 42% 84%, rgba(255,255,255,0.28), transparent),
+    radial-gradient(1.2px 1.2px at 58% 88%, rgba(255,255,255,0.38), transparent);
+}
+.horizon {
+  position: fixed; left: 0; right: 0; bottom: 0; height: 90px; pointer-events: none; z-index: -1;
+  background: color-mix(in srgb, var(--glow) 8%, #050506);
+  clip-path: polygon(0% 100%, 0% 55%, 6% 62%, 13% 40%, 20% 58%, 28% 35%, 36% 60%, 45% 30%, 54% 55%, 62% 42%, 70% 64%, 79% 38%, 87% 58%, 94% 45%, 100% 60%, 100% 100%);
+  opacity: 0.4;
 }
 body::after {
   content: ''; position: fixed; inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.014) 1px, transparent 1px);
-  background-size: 3px 3px; pointer-events: none; z-index: -1;
+  background-image: radial-gradient(rgba(255,255,255,0.01) 1px, transparent 1px);
+  background-size: 3px 3px; pointer-events: none; z-index: -2;
 }
 @keyframes drift { 0%{transform:translate3d(0,0,0)} 100%{transform:translate3d(-22px,14px,0)} }
 
-.page { max-width: 1100px; margin: 0 auto; }
+.page { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; }
 .dash-title {
-  margin: 0 0 14px; font-size: 28px; font-weight: 700; letter-spacing: -0.025em;
+  margin: 0 0 14px; font-family: var(--font-display); font-style: italic;
+  font-size: 32px; font-weight: 600; letter-spacing: -0.01em;
   background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
 }
-@media (max-width: 480px) { .dash-title { font-size: 22px; } }
+@media (max-width: 480px) { .dash-title { font-size: 24px; } }
 
 .section { margin-top: 8px; }
 .section-title {
@@ -183,6 +216,8 @@ body::after {
 </style>
 </head>
 <body>
+<div class="starfield"></div>
+<div class="horizon"></div>
 <div class="page">
 
   <h1 class="dash-title">Caffeine</h1>
