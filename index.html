@@ -181,69 +181,43 @@ body::after {
   margin-bottom: 16px;
 }
 
-.readiness-orb {
-  position: relative; width: 176px; height: 176px; margin: 4px auto 10px;
-  display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center;
-  overflow: hidden;
-  border-radius: 44% 56% 62% 38% / 41% 46% 54% 59%;
-  background:
-    radial-gradient(circle at 30% 26%, color-mix(in srgb, var(--orb-color, #34D399) 78%, transparent), transparent 60%),
-    radial-gradient(circle at 72% 76%, color-mix(in srgb, var(--orb-color-2, #A78BFA) 55%, transparent), transparent 68%),
-    #0a0a0d;
-  box-shadow:
-    0 0 50px color-mix(in srgb, var(--orb-color, #34D399) 45%, transparent),
-    inset 0 0 60px color-mix(in srgb, var(--orb-color, #34D399) 28%, transparent);
-  animation: readiness-orb-morph 9s ease-in-out infinite alternate, readiness-orb-pulse 4s ease-in-out infinite;
-  transition: background 0.6s ease, box-shadow 0.6s ease;
+.readiness-ring-wrap { position: relative; width: 152px; height: 152px; margin: 0 auto 6px; }
+.readiness-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring-track { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 9; }
+.ring-fill {
+  fill: none; stroke: #38BDF8; stroke-width: 9; stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;
+  filter: drop-shadow(0 0 10px rgba(56,189,248,0.6));
 }
-@keyframes readiness-orb-morph {
-  0% { border-radius: 44% 56% 62% 38% / 41% 46% 54% 59%; }
-  50% { border-radius: 58% 42% 40% 60% / 55% 60% 40% 45%; }
-  100% { border-radius: 48% 52% 55% 45% / 47% 55% 45% 53%; }
-}
-@keyframes readiness-orb-pulse {
-  0%, 100% { box-shadow: 0 0 50px color-mix(in srgb, var(--orb-color, #34D399) 45%, transparent), inset 0 0 60px color-mix(in srgb, var(--orb-color, #34D399) 28%, transparent); }
-  50%      { box-shadow: 0 0 66px color-mix(in srgb, var(--orb-color, #34D399) 60%, transparent), inset 0 0 74px color-mix(in srgb, var(--orb-color, #34D399) 35%, transparent); }
-}
-.readiness-orb-specks {
-  position: absolute; inset: 0; opacity: 0.9;
-  background-image:
-    radial-gradient(1.6px 1.6px at 18% 22%, rgba(255,255,255,0.9), transparent),
-    radial-gradient(1.1px 1.1px at 32% 12%, rgba(255,255,255,0.6), transparent),
-    radial-gradient(1.4px 1.4px at 48% 30%, rgba(255,255,255,0.75), transparent),
-    radial-gradient(1px 1px at 62% 14%, rgba(255,255,255,0.55), transparent),
-    radial-gradient(1.5px 1.5px at 78% 24%, rgba(255,255,255,0.7), transparent),
-    radial-gradient(1.1px 1.1px at 88% 40%, rgba(255,255,255,0.55), transparent),
-    radial-gradient(1.3px 1.3px at 12% 48%, rgba(255,255,255,0.6), transparent),
-    radial-gradient(1px 1px at 25% 65%, rgba(255,255,255,0.5), transparent),
-    radial-gradient(1.6px 1.6px at 40% 82%, rgba(255,255,255,0.7), transparent),
-    radial-gradient(1.1px 1.1px at 58% 88%, rgba(255,255,255,0.5), transparent),
-    radial-gradient(1.4px 1.4px at 74% 78%, rgba(255,255,255,0.65), transparent),
-    radial-gradient(1px 1px at 90% 62%, rgba(255,255,255,0.5), transparent);
+.ring-track-inner { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 7; }
+.ring-fill-inner {
+  fill: none; stroke: #A78BFA; stroke-width: 7; stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease;
+  filter: drop-shadow(0 0 8px rgba(167,139,250,0.55));
 }
 .readiness-center {
-  position: relative; z-index: 1; display: flex; flex-direction: column;
+  position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
 }
 .readiness-split { display: flex; align-items: center; justify-content: center; gap: 5px; max-width: 108px; white-space: nowrap; }
 .readiness-divider { width: 1px; height: 18px; flex-shrink: 0; background: linear-gradient(180deg, transparent, rgba(255,255,255,0.25), transparent); }
 .readiness-pct-row { display: flex; align-items: baseline; gap: 1.5px; }
 .readiness-pct {
-  font-family: var(--font-numeric); font-size: 17px; font-weight: 800;
-  letter-spacing: -0.03em; color: #FAFAFA; line-height: 1;
+  font-family: var(--font-numeric); font-size: 16px; font-weight: 800;
+  letter-spacing: -0.03em; color: #38BDF8; line-height: 1;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 10px color-mix(in srgb, var(--orb-color, #34D399) 70%, transparent);
-  transition: color 0.3s ease, text-shadow 0.3s ease;
+  filter: drop-shadow(0 0 8px rgba(56,189,248,0.55));
+  transition: color 0.3s ease, filter 0.3s ease;
 }
 .readiness-trend { font-family: var(--font-numeric); font-size: 7.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.readiness-trend.up { color: #6BE3A4; }
-.readiness-trend.down { color: #FECACA; }
-.readiness-trend.flat { color: rgba(255,255,255,0.6); }
+.readiness-trend.up { color: #34D399; }
+.readiness-trend.down { color: #FB7185; }
+.readiness-trend.flat { color: var(--text-tertiary); }
 .readiness-pct-sleep {
-  font-family: var(--font-numeric); font-size: 15px; font-weight: 800;
-  color: #FAFAFA; line-height: 1; font-variant-numeric: tabular-nums;
+  font-family: var(--font-numeric); font-size: 14px; font-weight: 800;
+  color: #A78BFA; line-height: 1; font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
-  text-shadow: 0 0 9px color-mix(in srgb, var(--orb-color-2, #A78BFA) 70%, transparent);
+  filter: drop-shadow(0 0 7px rgba(167,139,250,0.5));
 }
 .readiness-headline {
   font-family: var(--font-display); font-style: italic;
@@ -254,8 +228,8 @@ body::after {
 .ring-legend { display: flex; justify-content: center; gap: 14px; margin-bottom: 14px; }
 .ring-legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
 .ring-legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.ring-legend-dot.recovery { background: var(--orb-color, #34D399); box-shadow: 0 0 5px color-mix(in srgb, var(--orb-color, #34D399) 70%, transparent); }
-.ring-legend-dot.sleep { background: var(--orb-color-2, #A78BFA); box-shadow: 0 0 5px color-mix(in srgb, var(--orb-color-2, #A78BFA) 70%, transparent); }
+.ring-legend-dot.recovery { background: #38BDF8; box-shadow: 0 0 5px rgba(56,189,248,0.7); }
+.ring-legend-dot.sleep { background: #A78BFA; box-shadow: 0 0 5px rgba(167,139,250,0.7); }
 
 /* ===== Readiness card ambient background (echoes the ring's blue + purple) ===== */
 .readiness-card { position: relative; }
@@ -649,11 +623,16 @@ body::after {
   </div>
 
   <div class="today-grid">
-    <div class="today-card readiness-card" id="readinessCard">
+    <div class="today-card readiness-card">
       <div class="readiness-bg" aria-hidden="true"></div>
       <div class="today-card-label">Readiness</div>
-      <div class="readiness-orb" id="readinessOrb">
-        <div class="readiness-orb-specks"></div>
+      <div class="readiness-ring-wrap">
+        <svg class="readiness-ring" viewBox="0 0 140 140">
+          <circle class="ring-track" cx="70" cy="70" r="60"/>
+          <circle class="ring-fill" id="readinessRingFill" cx="70" cy="70" r="60"/>
+          <circle class="ring-track-inner" cx="70" cy="70" r="47"/>
+          <circle class="ring-fill-inner" id="sleepRingFill" cx="70" cy="70" r="47"/>
+        </svg>
         <div class="readiness-center">
           <div class="readiness-split">
             <div class="readiness-pct-row">
@@ -1193,19 +1172,19 @@ body::after {
     updateReadinessRing();
   }
 
-  /* ---------- Readiness orb (home screen) ---------- */
+  /* ---------- Readiness ring (home screen) ---------- */
+  const RING_CIRCUMFERENCE = 2 * Math.PI * 60;
+  const RING_CIRCUMFERENCE_INNER = 2 * Math.PI * 47;
   function readinessHeadlineFor(rec) {
     if (rec >= 67) return 'Well Recovered';
     if (rec >= 34) return 'Adequately Recovered';
     return 'Take It Easy Today';
   }
-  function readinessBandColor(rec) {
-    if (rec >= 67) return '#34D399';
-    if (rec >= 34) return '#F2C063';
-    return '#FB7185';
-  }
   function updateReadinessRing() {
-    const card = $('readinessCard');
+    const fill = $('readinessRingFill');
+    const fillInner = $('sleepRingFill');
+    fill.style.strokeDasharray = RING_CIRCUMFERENCE;
+    fillInner.style.strokeDasharray = RING_CIRCUMFERENCE_INNER;
     const t = loadJSON(WHOOP_KEY, null);
     const rec = whStats && whStats.rec;
     if (!t || !t.access) {
@@ -1213,6 +1192,8 @@ body::after {
       $('readinessTrend').textContent = '';
       $('readinessPctSleep').textContent = '—';
       $('readinessHeadline').textContent = 'Connect WHOOP in Settings';
+      fill.style.strokeDashoffset = RING_CIRCUMFERENCE;
+      fillInner.style.strokeDashoffset = RING_CIRCUMFERENCE_INNER;
       $('readinessSleep').textContent = '—';
       $('readinessRhr').textContent = '—';
       $('readinessHrv').textContent = '—';
@@ -1225,10 +1206,11 @@ body::after {
       $('readinessHeadline').textContent = (whSyncAttempted && whSyncFailed)
         ? 'WHOOP sync failed — reconnect on the Health page'
         : 'Syncing your WHOOP data…';
+      fill.style.strokeDashoffset = RING_CIRCUMFERENCE;
+      fillInner.style.strokeDashoffset = RING_CIRCUMFERENCE_INNER;
       return;
     }
-    card.style.setProperty('--orb-color', readinessBandColor(rec));
-    card.style.setProperty('--orb-color-2', '#A78BFA');
+    fill.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - rec / 100);
     $('readinessPct').textContent = rec + '%';
     $('readinessPctSleep').textContent = whStats.sleep != null ? whStats.sleep + '%' : '—';
     $('readinessHeadline').textContent = readinessHeadlineFor(rec);
@@ -1243,6 +1225,8 @@ body::after {
       trendEl.textContent = '';
     }
 
+    const sleepPct = whStats.sleep != null ? whStats.sleep : 0;
+    fillInner.style.strokeDashoffset = RING_CIRCUMFERENCE_INNER * (1 - sleepPct / 100);
     $('readinessSleep').textContent = whStats.sleep != null ? whStats.sleep + '%' : '—';
     $('readinessRhr').textContent = whStats.rhr != null ? whStats.rhr : '—';
     $('readinessHrv').textContent = whStats.hrv != null ? whStats.hrv : '—';
@@ -1689,6 +1673,7 @@ body::after {
     }
   }
   $('newsRefreshBtn').addEventListener('click', () => fetchNews(true));
+
 
   function calendarDateKey() {
     const d = new Date();
