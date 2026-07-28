@@ -1276,6 +1276,54 @@ img, video, canvas, svg { max-width: 100%; }
     <span class="po-day-split" id="dayPillSplit">—</span>
   </button>
 
+  <!-- RUNNING COACH (Nova AI, bring-your-own Anthropic key — shared with the rest of the dashboard) -->
+  <style>
+    .rc-card { padding-bottom: 14px; }
+    .rc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .rc-av {
+      position: relative; overflow: hidden; width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+      background: radial-gradient(circle at 34% 26%, rgba(255,255,255,0.85), rgba(255,255,255,0) 42%),
+                  conic-gradient(from 0deg, #1E6FD9, #9FD6F2, #38BDF8, #7DD3FC, #1E6FD9);
+    }
+    .rc-title { font-size: 15px; font-weight: 700; color: var(--text-1); }
+    .rc-sub { font-size: 10.5px; color: var(--text-3); }
+    .rc-body { display: flex; flex-direction: column; gap: 9px; max-height: 260px; overflow-y: auto; margin-bottom: 10px; }
+    .rc-body:empty { display: none; }
+    .rc-msg { font-size: 13px; line-height: 1.5; max-width: 90%; padding: 9px 12px; border-radius: 13px; }
+    .rc-msg.coach { background: rgba(255,255,255,0.05); color: #E9E7E2; align-self: flex-start; border-bottom-left-radius: 4px; }
+    .rc-msg.user { background: rgba(56,189,248,0.18); color: #FAFAFA; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .rc-msg b { color: #FAFAFA; } .rc-msg ul { margin: 4px 0; padding-left: 18px; } .rc-msg li { margin: 2px 0; }
+    .rc-quick { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .rc-chip { border: 1px solid rgba(56,189,248,0.35); background: rgba(56,189,248,0.10); color: #9FD6F2; font-size: 11px; font-weight: 600; padding: 6px 10px; border-radius: 999px; cursor: pointer; }
+    .rc-chip:active { transform: scale(0.96); }
+    .rc-foot { display: flex; gap: 7px; }
+    .rc-input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 11px; border: 1px solid var(--border-strong); background: rgba(0,0,0,0.32); color: var(--text-1); font-family: inherit; font-size: 13px; outline: none; }
+    .rc-input::placeholder { color: var(--text-4); }
+    .rc-send { border: 0; border-radius: 11px; padding: 0 14px; background: linear-gradient(180deg,#9FD6F2,#38BDF8); color: #04222f; font-weight: 700; font-size: 15px; cursor: pointer; }
+    .rc-dots i { display:inline-block; width:5px; height:5px; margin:0 1px; border-radius:50%; background:#38BDF8; animation: rcb 1s infinite; }
+    .rc-dots i:nth-child(2){animation-delay:.15s} .rc-dots i:nth-child(3){animation-delay:.3s}
+    @keyframes rcb { 0%,100%{opacity:.3;transform:translateY(0)} 50%{opacity:1;transform:translateY(-3px)} }
+  </style>
+  <div class="card rc-card">
+    <div class="rc-head">
+      <div class="rc-av"></div>
+      <div>
+        <div class="rc-title">Running Coach</div>
+        <div class="rc-sub">powered by Nova</div>
+      </div>
+    </div>
+    <div class="rc-body" id="rcBody"></div>
+    <div class="rc-quick">
+      <button class="rc-chip" data-q="Based on my recovery, strain and sleep, is today a good day for a hard run, an easy run, or a rest day?">🏃 Ready to run?</button>
+      <button class="rc-chip" data-q="Help me plan my running week around my current recovery and training load.">🗓️ Plan my week</button>
+      <button class="rc-chip" data-q="Give me pacing guidance for my next run based on how recovered I am.">⏱️ Pacing</button>
+    </div>
+    <div class="rc-foot">
+      <input class="rc-input" id="rcInput" type="text" placeholder="Ask your running coach…" autocomplete="off">
+      <button class="rc-send" id="rcSend" type="button">↑</button>
+    </div>
+  </div>
+
   <!-- WEIGHT + PROGRESS PHOTOS -->
   <div class="wt-section">
     <div class="wt-divider"><span>WEIGHT</span></div>
@@ -1751,6 +1799,59 @@ img, video, canvas, svg { max-width: 100%; }
   }
   let state = loadState();
   document.getElementById('appTitle').textContent = CONFIG.appTitle || 'Progressive Overload Coach';
+
+  // One-time import of the FB (Lower/Push/Pull) 3-day split from the
+  // Apple Watch workout templates — adds the days + exercises and points
+  // the rotation at them, but never touches existing logged history.
+  (function importFbSplit() {
+    const FLAG = 'po_coach_fb_import_v1';
+    if (localStorage.getItem(FLAG)) return;
+    try {
+      const newDays = [
+        { id: 'fbLower', name: 'FB (Lower)' },
+        { id: 'fbPush', name: 'FB (Push)' },
+        { id: 'fbPull', name: 'FB (Pull)' },
+      ];
+      newDays.forEach((d) => { if (!state.days.find((x) => x.id === d.id)) state.days.push(d); });
+
+      const newExercises = [
+        { name: 'Leg Press (Machine)', gym: 'both', day: 'fbLower', repMin: 8, repMax: 12, step: 10, startWeight: 80 },
+        { name: 'Leg Extensions (Machine)', gym: 'both', day: 'fbLower', repMin: 10, repMax: 15, step: 5, startWeight: 30 },
+        { name: 'Seated Leg Curl (Machine)', gym: 'both', day: 'fbLower', repMin: 10, repMax: 15, step: 5, startWeight: 25 },
+        { name: 'Calf Press (Machine)', gym: 'both', day: 'fbLower', repMin: 10, repMax: 15, step: 5, startWeight: 40 },
+        { name: 'Incline Bench Press (Smith Machine)', gym: 'both', day: 'fbLower', repMin: 6, repMax: 10, step: 2.5, startWeight: 40 },
+        { name: 'One Arm Lateral Raise (Cable)', gym: 'both', day: 'fbLower', repMin: 12, repMax: 15, step: 1.25, startWeight: 5 },
+        { name: 'One Arm Lat Pulldown (Machine)', gym: 'both', day: 'fbLower', repMin: 10, repMax: 12, step: 2.5, startWeight: 20 },
+
+        { name: 'Chest Press (Machine)', gym: 'both', day: 'fbPush', repMin: 8, repMax: 12, step: 5, startWeight: 40 },
+        { name: 'Pec Deck Fly (Machine)', gym: 'both', day: 'fbPush', repMin: 10, repMax: 15, step: 5, startWeight: 25 },
+        { name: 'Shoulder Press (Machine)', gym: 'both', day: 'fbPush', repMin: 8, repMax: 12, step: 2.5, startWeight: 25 },
+        { name: 'Tricep Pushdown (Cable)', gym: 'both', day: 'fbPush', repMin: 10, repMax: 15, step: 2.5, startWeight: 20 },
+        { name: 'Overhead Triceps Extension (Cable)', gym: 'both', day: 'fbPush', repMin: 10, repMax: 15, step: 2.5, startWeight: 15 },
+        { name: 'Low Row (Cable)', gym: 'both', day: 'fbPush', repMin: 8, repMax: 12, step: 2.5, startWeight: 30 },
+        { name: 'Preacher Curl (EZ Bar)', gym: 'both', day: 'fbPush', repMin: 8, repMax: 12, step: 2.5, startWeight: 15 },
+        { name: 'Leg Press (Machine)', gym: 'both', day: 'fbPush', repMin: 8, repMax: 12, step: 10, startWeight: 80 },
+
+        { name: 'Lat Pulldown (Cable)', gym: 'both', day: 'fbPull', repMin: 8, repMax: 12, step: 2.5, startWeight: 35 },
+        { name: 'Low Row (Cable)', gym: 'both', day: 'fbPull', repMin: 8, repMax: 12, step: 2.5, startWeight: 30 },
+        { name: 'Reverse Fly (Cable)', gym: 'both', day: 'fbPull', repMin: 12, repMax: 15, step: 1.25, startWeight: 7.5 },
+        { name: 'Preacher Curl (EZ Bar)', gym: 'both', day: 'fbPull', repMin: 8, repMax: 12, step: 2.5, startWeight: 15 },
+        { name: 'Incline Bicep Curl (Dumbbell)', gym: 'both', day: 'fbPull', repMin: 8, repMax: 12, step: 1.25, startWeight: 8 },
+        { name: 'Incline Bench Press (Smith Machine)', gym: 'both', day: 'fbPull', repMin: 6, repMax: 10, step: 2.5, startWeight: 40 },
+        { name: 'Leg Extensions (Machine)', gym: 'both', day: 'fbPull', repMin: 10, repMax: 15, step: 5, startWeight: 30 },
+      ];
+      newExercises.forEach((e) => {
+        state.exercises.push(Object.assign({ id: 'ex_' + Date.now() + '_' + Math.floor(Math.random() * 9999) }, e));
+      });
+
+      state.splitRotation = ['FB (Lower)', 'FB (Push)', 'FB (Pull)', 'Rest'];
+      state.splitAnchor = { date: new Date().toISOString().slice(0, 10), index: 0 };
+      state._userPickedDay = false;
+
+      localStorage.setItem(LS_KEY, JSON.stringify(state));
+      localStorage.setItem(FLAG, '1');
+    } catch (e) {}
+  })();
 
   // ============================================================
   // HELPERS
@@ -3691,6 +3792,107 @@ img, video, canvas, svg { max-width: 100%; }
   $('nvSend').addEventListener('click', ()=>{ const t=input.value; input.value=''; ask(t); });
   input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ const t=input.value; input.value=''; ask(t); } });
   document.querySelectorAll('.nv-chip').forEach(c=> c.addEventListener('click', ()=> ask(c.getAttribute('data-q'))));
+})();
+</script>
+
+<!-- ===== Running Coach (Nova AI, inline card — shares the Anthropic key above) ===== -->
+<script>
+(function () {
+  'use strict';
+  const KEY_LS = 'nova_lite_api_key';
+  const WHOOP_KEY = 'whoop_tokens_v1';
+  const $ = (id) => document.getElementById(id);
+  const body = $('rcBody'), input = $('rcInput');
+  let busy = false, greeted = false;
+
+  function savedKey() { try { return localStorage.getItem(KEY_LS) || ''; } catch (e) { return ''; } }
+  function esc(s) { return String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
+  function md(t) {
+    let h = esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`(.+?)`/g, '<code>$1</code>');
+    const lines = h.split('\n'); let out = '', inUl = false;
+    for (const ln of lines) {
+      if (/^\s*[-*]\s+/.test(ln)) { if (!inUl) { out += '<ul>'; inUl = true; } out += '<li>' + ln.replace(/^\s*[-*]\s+/, '') + '</li>'; }
+      else { if (inUl) { out += '</ul>'; inUl = false; } out += ln.trim() ? '<div>' + ln + '</div>' : ''; }
+    }
+    if (inUl) out += '</ul>';
+    return out;
+  }
+  function addMsg(who, html) { const d = document.createElement('div'); d.className = 'rc-msg ' + who; d.innerHTML = html; body.appendChild(d); body.scrollTop = body.scrollHeight; return d; }
+  function readLS(k, f) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? f : v; } catch (e) { return f; } }
+
+  async function wFetch(path, t) {
+    const [p, qs] = path.split('?');
+    const params = new URLSearchParams(qs || ''); params.set('path', p);
+    const r = await fetch('/api/whoop-data?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + t.access, 'Accept': 'application/json' } });
+    if (!r.ok) throw new Error('whoop ' + r.status);
+    return r.json();
+  }
+  async function whoopSnapshot() {
+    const t = readLS(WHOOP_KEY, null);
+    if (!t || !t.access) return null;
+    try {
+      const [rec, sleep, cycle] = await Promise.all([
+        wFetch('/recovery?limit=1', t).catch(() => null),
+        wFetch('/activity/sleep?limit=1', t).catch(() => null),
+        wFetch('/cycle?limit=1', t).catch(() => null),
+      ]);
+      const r0 = rec && rec.records && rec.records[0];
+      const s0 = sleep && sleep.records && sleep.records[0];
+      const c0 = cycle && cycle.records && cycle.records[0];
+      return {
+        recovery: r0 && r0.score && r0.score.recovery_score != null ? Math.round(r0.score.recovery_score) : null,
+        hrv: r0 && r0.score && r0.score.hrv_rmssd_milli != null ? Math.round(r0.score.hrv_rmssd_milli) : null,
+        restingHr: r0 && r0.score && r0.score.resting_heart_rate != null ? Math.round(r0.score.resting_heart_rate) : null,
+        sleepPerformance: s0 && s0.score && s0.score.sleep_performance_percentage != null ? Math.round(s0.score.sleep_performance_percentage) : null,
+        strain: c0 && c0.score && c0.score.strain != null ? Math.round(c0.score.strain * 10) / 10 : null,
+      };
+    } catch (e) { return null; }
+  }
+  async function runningContext() {
+    const prof = readLS('user_profile_v1', {}) || {};
+    const whoop = await whoopSnapshot();
+    return JSON.stringify({
+      today: new Date().toDateString(),
+      profile: { age: prof.age, sex: prof.sex, weightKg: prof.weightKg, activityHrsPerWeek: prof.activityHrsPerWeek, sleepGoalHours: prof.sleepGoalHours },
+      whoop: whoop || 'not connected',
+    });
+  }
+
+  const SYS = "You are Nova, acting as the user's personal running coach inside their fitness dashboard. "
+    + "You can see their body profile and, if connected, today's WHOOP recovery score, HRV, resting heart rate, sleep performance, and strain. "
+    + "Give concrete, encouraging running guidance — whether today suits a hard effort, an easy run, or rest, plus pacing and weekly mileage progression. "
+    + "If WHOOP isn't connected, coach from the profile alone and general training principles. Use short markdown bullets. Keep replies under ~180 words. Their data as JSON: ";
+
+  async function ask(text) {
+    text = (text || '').trim(); if (!text || busy) return;
+    const key = savedKey();
+    addMsg('user', md(text));
+    if (!key) { addMsg('coach', md("Paste your **Anthropic API key** on the Nova page first (the 🧠 tile on the home screen) — it's saved in this browser and I'll use it here too.")); return; }
+    busy = true;
+    const loading = addMsg('coach', '<span class="rc-dots"><i></i><i></i><i></i></span>');
+    try {
+      const ctx = await runningContext();
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model: 'claude-opus-4-8', max_tokens: 1024, system: SYS + ctx, messages: [{ role: 'user', content: text }] }),
+      });
+      const json = await res.json();
+      if (json.error) { loading.innerHTML = md('- ' + (json.error.message || 'Something went wrong — check your API key.')); busy = false; return; }
+      const reply = (json.content && json.content[0] && json.content[0].text) || 'Hmm, no reply.';
+      loading.innerHTML = md(reply);
+    } catch (e) { loading.innerHTML = md('- Could not reach Anthropic — check your connection and key.'); }
+    body.scrollTop = body.scrollHeight; busy = false;
+  }
+
+  if (!greeted) {
+    greeted = true;
+    addMsg('coach', md("Hey — I'm Nova, your running coach. I can see your WHOOP recovery and strain if it's connected. Tap a suggestion or ask me anything."));
+  }
+
+  $('rcSend').addEventListener('click', () => { const t = input.value; input.value = ''; ask(t); });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { const t = input.value; input.value = ''; ask(t); } });
+  document.querySelectorAll('.rc-chip').forEach((c) => c.addEventListener('click', () => ask(c.getAttribute('data-q'))));
 })();
 </script>
 

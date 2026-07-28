@@ -134,6 +134,7 @@ body::after {
   filter: drop-shadow(0 0 8px rgba(192,132,252,0.6));
   flex-shrink: 0;
 }
+.bedtime-icon svg { stroke: #7DD3FC; filter: drop-shadow(0 0 8px rgba(125,211,252,0.6)); }
 .productivity-copy { min-width: 0; }
 .productivity-label { font-size: 9.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; }
 .productivity-window { font-family: var(--font-display); font-style: italic; font-size: 18px; font-weight: 600; color: var(--text-primary); margin-top: 2px; text-shadow: 0 0 16px rgba(192,132,252,0.4); }
@@ -710,6 +711,20 @@ body::after {
       </div>
     </div>
 
+    <div class="today-card">
+      <div class="today-card-label">Bedtime</div>
+      <div class="productivity-body">
+        <span class="productivity-icon bedtime-icon">
+          <svg viewBox="0 0 24 24"><path d="M20 14.5a8.5 8.5 0 1 1-9.5-11 7 7 0 0 0 9.5 11Z"/></svg>
+        </span>
+        <div class="productivity-copy">
+          <div class="productivity-label">Wind down by</div>
+          <div class="productivity-window" id="bedtimeWindow">Connect WHOOP</div>
+          <div class="productivity-sub" id="bedtimeSub">Uses your sleep goal, average wake time, and today's strain</div>
+        </div>
+      </div>
+    </div>
+
     <div class="today-card tips-card">
       <div class="today-card-label">Tips for today</div>
       <ul class="tips-list" id="tipsList"></ul>
@@ -882,6 +897,11 @@ body::after {
       <input class="set-input" id="activity" type="number" min="0" inputmode="decimal" placeholder="e.g. 5">
     </div>
 
+    <div class="field">
+      <label class="field-label">Sleep goal (hours)</label>
+      <input class="set-input" id="sleepGoal" type="number" min="0" step="0.5" inputmode="decimal" placeholder="e.g. 8">
+    </div>
+
     <button class="set-save" id="settingsSave" type="button">Save</button>
     <div class="set-status" id="settingsStatus"></div>
 
@@ -944,7 +964,7 @@ body::after {
   function saveJSON(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
 
   function defaultProfile() {
-    return { heightCm: null, heightUnit: 'cm', weightKg: null, weightUnit: 'kg', age: null, sex: 'm', activityHrsPerWeek: 5 };
+    return { heightCm: null, heightUnit: 'cm', weightKg: null, weightUnit: 'kg', age: null, sex: 'm', activityHrsPerWeek: 5, sleepGoalHours: 8 };
   }
   // One-time migration: profile data used to live inside the (now removed)
   // water tracker's state object. Pull it out once, then it's on its own.
@@ -1005,6 +1025,7 @@ body::after {
     else $('weight').value = '';
     $('age').value = p.age || '';
     $('activity').value = (p.activityHrsPerWeek != null ? p.activityHrsPerWeek : '');
+    $('sleepGoal').value = (p.sleepGoalHours != null ? p.sleepGoalHours : 8);
   }
 
   /* ---------- save back into user_profile_v1 ---------- */
@@ -1017,6 +1038,7 @@ body::after {
     const age = parseInt($('age').value, 10); if (age > 0) p.age = age;
     p.sex = sex;
     const act = parseFloat($('activity').value); if (act >= 0 && !isNaN(act)) p.activityHrsPerWeek = act;
+    const sg = parseFloat($('sleepGoal').value); if (sg > 0 && !isNaN(sg)) p.sleepGoalHours = sg;
     saveJSON(PROFILE_KEY, p);
     const s = $('settingsStatus'); s.textContent = 'Saved ✓';
     setTimeout(() => { s.textContent = ''; }, 1800);
@@ -1509,9 +1531,11 @@ body::after {
     let h12 = h % 12; if (h12 === 0) h12 = 12;
     return h12 + ':' + String(min).padStart(2, '0') + ' ' + ampm;
   }
-  async function loadProductivityWindow() {
+  let avgWakeMinutesCache = null;
+  async function computeAvgWakeMinutes() {
+    if (avgWakeMinutesCache != null) return avgWakeMinutesCache;
     const t = loadJSON(WHOOP_KEY, null);
-    if (!t || !t.access) return;
+    if (!t || !t.access) return null;
     try {
       const j = await wFetch('/activity/sleep?limit=14', t);
       const records = (j && j.records) || [];
@@ -1521,16 +1545,49 @@ body::after {
         const d = new Date(r.end);
         wakeMinutes.push(d.getHours() * 60 + d.getMinutes());
       });
-      if (!wakeMinutes.length) {
-        $('productivityWindow').textContent = 'Not enough data yet';
-        return;
-      }
-      const avgWake = wakeMinutes.reduce((a, b) => a + b, 0) / wakeMinutes.length;
-      // Alertness typically peaks 2-4h after waking, per circadian research.
-      const windowText = fmtHourMinutes(avgWake + 120) + ' – ' + fmtHourMinutes(avgWake + 240);
-      $('productivityWindow').textContent = windowText;
-      $('productivitySub').textContent = 'Based on your average wake time (' + fmtHourMinutes(avgWake) + ') from WHOOP sleep data';
-    } catch (e) {}
+      if (!wakeMinutes.length) return null;
+      avgWakeMinutesCache = wakeMinutes.reduce((a, b) => a + b, 0) / wakeMinutes.length;
+      return avgWakeMinutesCache;
+    } catch (e) { return null; }
+  }
+  async function loadProductivityWindow() {
+    const t = loadJSON(WHOOP_KEY, null);
+    if (!t || !t.access) return;
+    const avgWake = await computeAvgWakeMinutes();
+    if (avgWake == null) {
+      $('productivityWindow').textContent = 'Not enough data yet';
+      return;
+    }
+    // Alertness typically peaks 2-4h after waking, per circadian research.
+    const windowText = fmtHourMinutes(avgWake + 120) + ' – ' + fmtHourMinutes(avgWake + 240);
+    $('productivityWindow').textContent = windowText;
+    $('productivitySub').textContent = 'Based on your average wake time (' + fmtHourMinutes(avgWake) + ') from WHOOP sleep data';
+  }
+
+  /* ---------- Bedtime (average wake time - sleep goal, nudged by today's strain) ---------- */
+  async function loadBedtime() {
+    const t = loadJSON(WHOOP_KEY, null);
+    if (!t || !t.access) return;
+    const avgWake = await computeAvgWakeMinutes();
+    if (avgWake == null) {
+      $('bedtimeWindow').textContent = 'Not enough data yet';
+      return;
+    }
+    const profile = loadJSON(PROFILE_KEY, defaultProfile());
+    const sleepGoalHours = profile.sleepGoalHours != null ? profile.sleepGoalHours : 8;
+    const strain = whStats && whStats.strain != null ? whStats.strain : null;
+    // Harder days need more recovery sleep — every point of strain above a
+    // moderate baseline nudges the target bedtime a little earlier.
+    const baselineStrain = 12;
+    const strainBonusHours = strain != null ? Math.max(0, (strain - baselineStrain) * 0.04) : 0;
+    const neededMinutes = (sleepGoalHours + strainBonusHours) * 60;
+    const bedtime = avgWake - neededMinutes;
+    $('bedtimeWindow').textContent = fmtHourMinutes(bedtime);
+    let sub = 'Based on your ' + sleepGoalHours + 'h sleep goal and average wake time (' + fmtHourMinutes(avgWake) + ')';
+    if (strain != null && strainBonusHours > 0) {
+      sub += ' — plus ~' + Math.round(strainBonusHours * 60) + ' min for today\'s strain (' + strain + ')';
+    }
+    $('bedtimeSub').textContent = sub;
   }
 
   /* ---------- Tips for today ---------- */
@@ -1607,6 +1664,7 @@ body::after {
       renderWhoop();
     } catch (e) { renderWhoop(e); }
     renderTips();
+    loadBedtime();
   }
   $('whAction').addEventListener('click', () => {
     const t = loadJSON(WHOOP_KEY, null);
@@ -1622,6 +1680,7 @@ body::after {
   fetchNews(false);
   loadActivityPattern();
   loadProductivityWindow();
+  loadBedtime();
 })();
 </script>
 </body>
