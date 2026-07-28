@@ -1,54 +1,65 @@
 // ============================================================
-// GET /api/revolut-callback?ref=...
-// GoCardless redirects here once the viewer approves the Revolut
-// connection. `ref` is the reference we generated and attached to
-// the requisition in /api/revolut-connect — we look that
-// requisition up (GoCardless doesn't echo the requisition id back
-// itself) to read the resulting account id(s), then bounce back to
-// /finance.html with them in the URL hash. The hash never reaches
-// the server — only the browser reads it and stores it locally.
+// GET /api/revolut-callback?code=...&state=...
+// Receives the OAuth code from TrueLayer, exchanges it for tokens,
+// and bounces back to /finance.html with the tokens in the URL
+// hash. The hash never reaches the server — only the browser
+// reads it, then stores the tokens in localStorage.
+//
+// Env vars required on Vercel:
+//   TRUELAYER_CLIENT_ID
+//   TRUELAYER_CLIENT_SECRET
+//
+// The redirect_uri used here must be registered exactly (same
+// scheme + host + path) as an allowed Redirect URI on the
+// TrueLayer Console application — same requirement as WHOOP.
 // ============================================================
-const GC_BASE = 'https://bankaccountdata.gocardless.com/api/v2';
-
 export default async function handler(req, res) {
-  const ref = req.query && req.query.ref;
+  const code = req.query && req.query.code;
   const errorParam = req.query && req.query.error;
-  if (errorParam) return res.status(400).send('Revolut connection error: ' + errorParam);
-  if (!ref) return res.status(400).send('Missing ref parameter.');
+  if (errorParam) return res.status(400).send('TrueLayer auth error: ' + errorParam);
+  if (!code) return res.status(400).send('Missing code parameter.');
 
-  const secretId = process.env.GOCARDLESS_SECRET_ID;
-  const secretKey = process.env.GOCARDLESS_SECRET_KEY;
-  if (!secretId || !secretKey) {
-    return res.status(500).send('Server not configured (missing GOCARDLESS_SECRET_ID / GOCARDLESS_SECRET_KEY).');
+  const clientId = process.env.TRUELAYER_CLIENT_ID;
+  const clientSecret = process.env.TRUELAYER_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    return res.status(500).send('Server not configured (missing TRUELAYER_CLIENT_ID / TRUELAYER_CLIENT_SECRET).');
   }
 
+  // ALWAYS derive the redirect from the live host — TrueLayer sends the
+  // browser back to whatever redirect_uri was used at login, so deriving
+  // it here guarantees the token-exchange redirect_uri matches the
+  // authorize redirect_uri, regardless of any env var.
+  const proto = (req.headers['x-forwarded-proto'] || 'https').split(',')[0];
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  const redirectUri = proto + '://' + host + '/api/revolut-callback';
+
   try {
-    const tokenRes = await fetch(GC_BASE + '/token/new/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ secret_id: secretId, secret_key: secretKey }),
+    const body = new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      code,
     });
-    const tokenJson = await tokenRes.json();
-    if (!tokenRes.ok) return res.status(500).send('GoCardless auth failed: ' + JSON.stringify(tokenJson));
-    const access = tokenJson.access;
-
-    let found = null;
-    let url = GC_BASE + '/requisitions/?limit=100';
-    for (let i = 0; i < 20 && url && !found; i++) {
-      const listRes = await fetch(url, { headers: { Authorization: 'Bearer ' + access } });
-      const list = await listRes.json();
-      if (!listRes.ok) return res.status(500).send('Requisition lookup failed: ' + JSON.stringify(list));
-      found = (list.results || []).find((r) => r.reference === ref);
-      url = !found && list.next ? list.next : null;
-    }
-    if (!found) return res.status(404).send('Could not find the requisition for this connection. Try connecting again.');
-    if (!found.accounts || !found.accounts.length) {
-      return res.status(400).send('Revolut connection completed but no accounts were returned — the consent may have been declined.');
+    const tokenRes = await fetch('https://auth.truelayer.com/connect/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+    });
+    const text = await tokenRes.text();
+    if (!tokenRes.ok) return res.status(500).send('TrueLayer token exchange failed: ' + text);
+    let json;
+    try { json = JSON.parse(text); } catch (e) {
+      return res.status(500).send('TrueLayer returned non-JSON: ' + text);
     }
 
+    const access = json.access_token || '';
+    const refresh = json.refresh_token || '';
+    const expiresIn = json.expires_in || 3600;
     const hash = new URLSearchParams({
-      revolut_accounts: JSON.stringify(found.accounts),
-      revolut_requisition: found.id,
+      revolut_access: access,
+      revolut_refresh: refresh,
+      revolut_expires: String(Date.now() + expiresIn * 1000),
     }).toString();
     res.writeHead(302, { Location: '/finance.html#' + hash });
     res.end();

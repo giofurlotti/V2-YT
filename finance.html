@@ -1721,26 +1721,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
         <div class="label" style="display:flex;justify-content:space-between;align-items:center"><span>🏦 Bank accounts</span><span id="bankTotal" style="font-size:13px;color:var(--text-primary);font-weight:600">0</span></div>
 
         <div class="quick-add" id="revolutConnectRow">
-          <select id="revolutCountry">
-            <option value="">Revolut country…</option>
-            <option value="IT">Italy</option>
-            <option value="DE">Germany</option>
-            <option value="FR">France</option>
-            <option value="ES">Spain</option>
-            <option value="NL">Netherlands</option>
-            <option value="BE">Belgium</option>
-            <option value="AT">Austria</option>
-            <option value="PT">Portugal</option>
-            <option value="IE">Ireland</option>
-            <option value="PL">Poland</option>
-            <option value="GR">Greece</option>
-            <option value="FI">Finland</option>
-            <option value="SE">Sweden</option>
-            <option value="DK">Denmark</option>
-            <option value="LU">Luxembourg</option>
-            <option value="GB">United Kingdom</option>
-          </select>
-          <button class="quick-add-btn" id="revolutConnectBtn" type="button">Connect Revolut</button>
+          <button class="quick-add-btn" id="revolutConnectBtn" type="button" style="flex:1">Connect Revolut</button>
         </div>
         <div class="custom-item" id="revolutSyncedRow" style="display:none">
           <span class="item-dot" style="background:#6BE3A4"></span>
@@ -3450,7 +3431,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if (typeof initCloudSync !== 'function') return;
   initCloudSync({
     appKey: 'finance',
-    syncedKeys: ['subs', 'wishlist', 'incoming_orders', 'nw_currency', 'nw:activity', 'nw:history', 'revolut_gc_v1'],
+    syncedKeys: ['subs', 'wishlist', 'incoming_orders', 'nw_currency', 'nw:activity', 'nw:history'],
     syncedPrefixes: ['nw:'],
     onApplied: function () {
       window.dispatchEvent(new Event('storage'));
@@ -3464,23 +3445,30 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
-  const GC_KEY = 'revolut_gc_v1';
+  const TL_KEY = 'revolut_tl_v1';
+  // 👈 Replace with your own TrueLayer app's Client ID (console.truelayer.com).
+  // Not a secret — same pattern as the WHOOP CLIENT_ID in health.html.
+  const CLIENT_ID = 'PASTE-YOUR-TRUELAYER-CLIENT-ID';
+  const REDIRECT = window.location.origin + '/api/revolut-callback';
+  const SCOPES = 'info accounts balance offline_access';
 
-  function loadGc() { try { return JSON.parse(localStorage.getItem(GC_KEY)) || null; } catch (e) { return null; } }
-  function saveGc(v) { try { localStorage.setItem(GC_KEY, JSON.stringify(v)); } catch (e) {} }
+  // Kept local-only (not cloud-synced) — these are live bank-read tokens,
+  // more sensitive than most of what this dashboard syncs. Same treatment
+  // as the WHOOP tokens in health.html.
+  function loadTokens() { try { return JSON.parse(localStorage.getItem(TL_KEY)); } catch (e) { return null; } }
+  function saveTokens(t) { try { localStorage.setItem(TL_KEY, JSON.stringify(t)); } catch (e) {} }
+  function wipeTokens() { try { localStorage.removeItem(TL_KEY); } catch (e) {} }
 
-  // Pick up the accounts handed back by /api/revolut-callback in the URL hash.
+  // Pick up the tokens handed back by /api/revolut-callback in the URL hash.
   // The hash never reaches the server — only the browser reads it here.
-  if (location.hash && location.hash.indexOf('revolut_accounts') !== -1) {
+  if (location.hash && location.hash.indexOf('revolut_access') !== -1) {
     const h = new URLSearchParams(location.hash.slice(1));
-    const accountsRaw = h.get('revolut_accounts');
-    const requisition = h.get('revolut_requisition');
-    if (accountsRaw) {
-      try {
-        const accounts = JSON.parse(accountsRaw);
-        saveGc({ accounts, requisition, lastSynced: 0 });
-        history.replaceState(null, '', location.pathname + location.search);
-      } catch (e) {}
+    const access = h.get('revolut_access');
+    const refresh = h.get('revolut_refresh');
+    const expires = Number(h.get('revolut_expires')) || Date.now() + 3500e3;
+    if (access) {
+      saveTokens({ access, refresh, expires, lastSynced: 0 });
+      history.replaceState(null, '', location.pathname + location.search);
     }
   }
 
@@ -3498,36 +3486,90 @@ document.addEventListener('DOMContentLoaded', function () {
     return Math.floor(s / 86400) + ' d ago';
   }
   function render() {
-    const gc = loadGc();
-    const connected = !!(gc && gc.accounts && gc.accounts.length);
+    const t = loadTokens();
+    const connected = !!(t && t.access);
     $('revolutConnectRow').style.display = connected ? 'none' : 'flex';
     $('revolutSyncedRow').style.display = connected ? 'flex' : 'none';
-    if (connected) $('revolutStatusText').textContent = 'Revolut connected · synced ' + relTime(gc.lastSynced);
+    if (connected) $('revolutStatusText').textContent = 'Revolut connected · synced ' + relTime(t.lastSynced);
   }
 
   $('revolutConnectBtn').addEventListener('click', () => {
-    const country = $('revolutCountry').value;
-    if (!country) { showErr('Pick the country your Revolut account is registered in first.'); return; }
+    if (CLIENT_ID.indexOf('PASTE-') === 0) {
+      showErr('Add your TrueLayer Client ID in finance.html first (see the setup notes).');
+      return;
+    }
     showErr('');
-    window.location.href = '/api/revolut-connect?country=' + encodeURIComponent(country);
+    const url = 'https://auth.truelayer.com/'
+      + '?response_type=code'
+      + '&client_id=' + encodeURIComponent(CLIENT_ID)
+      + '&redirect_uri=' + encodeURIComponent(REDIRECT)
+      + '&scope=' + encodeURIComponent(SCOPES)
+      + '&state=' + Math.random().toString(36).slice(2);
+    window.location.href = url;
   });
   $('revolutDisconnectBtn').addEventListener('click', () => {
-    saveGc(null);
+    wipeTokens();
     render();
   });
 
+  async function tlRefresh(t) {
+    if (!t.refresh) return null;
+    try {
+      const r = await fetch('/api/revolut-refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: t.refresh }),
+      });
+      const j = await r.json();
+      if (j.access_token) {
+        const n = { access: j.access_token, refresh: j.refresh_token || t.refresh, expires: Date.now() + (j.expires_in || 3500) * 1000, lastSynced: t.lastSynced };
+        saveTokens(n);
+        return n;
+      }
+    } catch (e) {}
+    return null;
+  }
+  async function tlFetch(path, t) {
+    const r = await fetch('/api/revolut-data?path=' + encodeURIComponent(path), {
+      headers: { Authorization: 'Bearer ' + t.access, Accept: 'application/json' },
+    });
+    if (r.status === 401) {
+      const n = await tlRefresh(t);
+      if (n) return tlFetch(path, n);
+      throw new Error('unauthorized');
+    }
+    if (!r.ok) throw new Error('revolut ' + r.status);
+    return r.json();
+  }
+
+  async function convertToChf(amount, currency) {
+    if (!amount) return 0;
+    if (currency === 'CHF') return amount;
+    try {
+      const r = await fetch('https://api.frankfurter.app/latest?amount=' + amount + '&from=' + currency + '&to=CHF');
+      const j = await r.json();
+      if (j && j.rates && typeof j.rates.CHF === 'number') return j.rates.CHF;
+    } catch (e) {}
+    return amount; // best effort — falls back to the raw number if the FX lookup fails
+  }
+
   async function syncRevolut() {
-    const gc = loadGc();
-    if (!gc || !gc.accounts || !gc.accounts.length) return;
+    let t = loadTokens();
+    if (!t || !t.access) return;
     showErr('');
     $('revolutSyncBtn').textContent = 'Syncing…';
     try {
+      if (t.expires && Date.now() > t.expires - 60000) { const n = await tlRefresh(t); if (n) t = n; }
+
+      const accountsJson = await tlFetch('/accounts', t);
+      const accounts = (accountsJson && accountsJson.results) || [];
       let total = 0;
-      for (const accountId of gc.accounts) {
-        const r = await fetch('/api/revolut-balance?account=' + encodeURIComponent(accountId));
-        const j = await r.json();
-        if (!r.ok || j.error) throw new Error(typeof j.error === 'string' ? j.error : 'Balance fetch failed.');
-        total += (typeof j.amountChf === 'number' ? j.amountChf : 0);
+      for (const acc of accounts) {
+        const balJson = await tlFetch('/accounts/' + acc.account_id + '/balance', t);
+        const bal = (balJson && balJson.results && balJson.results[0]) || null;
+        if (!bal) continue;
+        const amount = typeof bal.current === 'number' ? bal.current : (bal.available || 0);
+        total += await convertToChf(amount, acc.currency || 'EUR');
       }
       total = Math.round(total * 100) / 100;
 
@@ -3538,8 +3580,8 @@ document.addEventListener('DOMContentLoaded', function () {
       else items[idx].amount = total;
       localStorage.setItem('nw:bank', JSON.stringify(items));
 
-      gc.lastSynced = Date.now();
-      saveGc(gc);
+      t.lastSynced = Date.now();
+      saveTokens(t);
       render();
       if (typeof window.renderAllNetWorth === 'function') window.renderAllNetWorth();
     } catch (e) {
@@ -3551,10 +3593,9 @@ document.addEventListener('DOMContentLoaded', function () {
   $('revolutSyncBtn').addEventListener('click', syncRevolut);
 
   render();
-  window.addEventListener('storage', render);
   // Auto-sync once right after a fresh connection.
-  const gcNow = loadGc();
-  if (gcNow && gcNow.accounts && gcNow.accounts.length && !gcNow.lastSynced) syncRevolut();
+  const tNow = loadTokens();
+  if (tNow && tNow.access && !tNow.lastSynced) syncRevolut();
 })();
 </script>
 
