@@ -3638,7 +3638,7 @@ img, video, canvas, svg { max-width: 100%; }
     return v;
   }
   function gymContext(){
-    const prof = (readLS('po_water_v1', {}) || {}).profile || {};
+    const prof = readLS('user_profile_v1', {}) || {};
     const photosRaw = readLS('po_coach_photos', []) || [];
     const photos = (Array.isArray(photosRaw)?photosRaw:[]).map(p=>({ date:p.dateKey||p.date||p.d, weight:p.weight||p.w }));
     let ctx = {

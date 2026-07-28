@@ -371,9 +371,9 @@ body::after {
   let bodyKg = null, recovery = null;
   let wakeHour = 7, bedHour = 23;   // defaults; overridden by WHOOP
   function readProfile() {
-    const w = loadJSON('po_water_v1', null);
-    if (w && w.profile && w.profile.weightKg) {
-      const kg = w.weightUnit === 'lb' ? w.profile.weightKg/2.20462 : w.profile.weightKg;
+    const p = loadJSON('user_profile_v1', null);
+    if (p && p.weightKg) {
+      const kg = p.weightUnit === 'lb' ? p.weightKg/2.20462 : p.weightKg;
       if (kg > 0) bodyKg = kg;
     }
   }

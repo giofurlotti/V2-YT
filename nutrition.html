@@ -1126,9 +1126,8 @@ body::after {
     const uk = usdaSavedKey(); if (uk) payload.usda_fdc_api_key = uk;
     if (!Object.keys(payload).length) return;
     try {
-      // Fetch-merge-push (mirrors topbar.js's pushWaterMergedToSupabase) so a
-      // device that only has one of the two keys locally doesn't wipe the
-      // other one out of the shared row.
+      // Fetch-merge-push so a device that only has one of the two keys
+      // locally doesn't wipe the other one out of the shared row.
       let current = {};
       try {
         const r = await fetch(KS_URL + '/rest/v1/app_state?select=data&key=eq.apikeys', {

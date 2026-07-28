@@ -90,8 +90,8 @@ body::after {
 .page { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; }
 
 /* This screen has its own header + Today panel — the shared topbar.js
-   water pill doesn't add anything here, so it's hidden outright. The
-   bottom tab bar stays (still useful navigation). */
+   finance quick-link doesn't add anything here, so it's hidden outright.
+   The bottom tab bar stays (still useful navigation). */
 #topbar { display: none !important; }
 
 .hub-eyebrow {
@@ -931,7 +931,7 @@ body::after {
 (function () {
   'use strict';
   const $ = (id) => document.getElementById(id);
-  const WATER_KEY = 'po_water_v1';
+  const PROFILE_KEY = 'user_profile_v1';
   const WHOOP_KEY = 'whoop_tokens_v1';
   const SYNC_KEY  = 'whoop_last_sync';
 
@@ -943,12 +943,22 @@ body::after {
   function loadJSON(k, f) { try { return JSON.parse(localStorage.getItem(k)) || f; } catch (e) { return f; } }
   function saveJSON(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
 
-  // Mirror of topbar.js defaultWaterState so we never clobber the water tracker.
-  function defaultWater() {
-    return { unit:'bottle', bottleMl:500, glassMl:250, weightUnit:'kg',
-      profile:{ weightKg:75, age:25, sex:'m', activityHrsPerWeek:5 },
-      caffeineMgPerDay:200, substances:[], logs:{} };
+  function defaultProfile() {
+    return { heightCm: null, heightUnit: 'cm', weightKg: null, weightUnit: 'kg', age: null, sex: 'm', activityHrsPerWeek: 5 };
   }
+  // One-time migration: profile data used to live inside the (now removed)
+  // water tracker's state object. Pull it out once, then it's on its own.
+  (function migrateProfileFromWater() {
+    if (loadJSON(PROFILE_KEY, null)) return;
+    try {
+      const old = JSON.parse(localStorage.getItem('po_water_v1'));
+      if (old && old.profile) {
+        const p = Object.assign(defaultProfile(), old.profile, { weightUnit: old.weightUnit || 'kg' });
+        saveJSON(PROFILE_KEY, p);
+      }
+    } catch (e) {}
+    try { localStorage.removeItem('po_water_v1'); } catch (e) {}
+  })();
 
   /* ---------- unit state ---------- */
   let heightUnit = 'cm';   // 'cm' | 'ft'
@@ -986,9 +996,8 @@ body::after {
 
   /* ---------- load existing profile into the form ---------- */
   function populate() {
-    const w = loadJSON(WATER_KEY, defaultWater());
-    const p = w.profile || {};
-    setWeightUnit(w.weightUnit === 'lb' ? 'lb' : 'kg');
+    const p = loadJSON(PROFILE_KEY, defaultProfile());
+    setWeightUnit(p.weightUnit === 'lb' ? 'lb' : 'kg');
     setHeightUnit(p.heightUnit === 'ft' ? 'ft' : 'cm');
     setSex(p.sex === 'f' ? 'f' : 'm');
     fillHeight(p.heightCm || null);
@@ -998,18 +1007,17 @@ body::after {
     $('activity').value = (p.activityHrsPerWeek != null ? p.activityHrsPerWeek : '');
   }
 
-  /* ---------- save back into po_water_v1 (merge, never overwrite logs) ---------- */
+  /* ---------- save back into user_profile_v1 ---------- */
   function save() {
-    const w = loadJSON(WATER_KEY, defaultWater());
-    w.profile = w.profile || {};
+    const p = loadJSON(PROFILE_KEY, defaultProfile());
     const cm = getHeightCm();
-    if (cm) { w.profile.heightCm = cm; w.profile.heightUnit = heightUnit; }
+    if (cm) { p.heightCm = cm; p.heightUnit = heightUnit; }
     const wv = parseFloat($('weight').value);
-    if (wv > 0) { w.profile.weightKg = weightUnit === 'lb' ? +(wv / 2.20462).toFixed(1) : wv; w.weightUnit = weightUnit; }
-    const age = parseInt($('age').value, 10); if (age > 0) w.profile.age = age;
-    w.profile.sex = sex;
-    const act = parseFloat($('activity').value); if (act >= 0 && !isNaN(act)) w.profile.activityHrsPerWeek = act;
-    saveJSON(WATER_KEY, w);
+    if (wv > 0) { p.weightKg = weightUnit === 'lb' ? +(wv / 2.20462).toFixed(1) : wv; p.weightUnit = weightUnit; }
+    const age = parseInt($('age').value, 10); if (age > 0) p.age = age;
+    p.sex = sex;
+    const act = parseFloat($('activity').value); if (act >= 0 && !isNaN(act)) p.activityHrsPerWeek = act;
+    saveJSON(PROFILE_KEY, p);
     const s = $('settingsStatus'); s.textContent = 'Saved ✓';
     setTimeout(() => { s.textContent = ''; }, 1800);
   }
@@ -1033,12 +1041,12 @@ body::after {
   }));
   $('sexSeg').querySelectorAll('button').forEach(b => b.addEventListener('click', () => setSex(b.dataset.s)));
 
-  /* ---------- cloud sync (shares the 'health' row with health.html / po-water.html) ---------- */
+  /* ---------- cloud sync (shares the 'health' row with health.html) ---------- */
   document.addEventListener('DOMContentLoaded', function () {
     if (typeof initCloudSync !== 'function') return;
     initCloudSync({
       appKey: 'health',
-      syncedKeys: ['stack:items', 'stack:version', 'stack:low', 'po_water_v1'],
+      syncedKeys: ['stack:items', 'stack:version', 'stack:low', 'user_profile_v1'],
       syncedPrefixes: ['stack:taken:'],
       onApplied: function () {
         if ($('settingsBg').classList.contains('show')) populate();

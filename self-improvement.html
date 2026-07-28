@@ -205,7 +205,7 @@ body::after {
     <div class="section-title">Habits (last 14 days)</div>
     <div class="gm-card" id="habitsCard">
       <div id="habitsBody">
-        <p class="empty-note">Nothing to analyze yet — log water, supplements or connect WHOOP to build a habits picture.</p>
+        <p class="empty-note">Nothing to analyze yet — log supplements or connect WHOOP to build a habits picture.</p>
       </div>
     </div>
   </div>
@@ -266,8 +266,8 @@ body::after {
     if (t.expires && Date.now() > t.expires - 60000) { const n = await wRefresh(t); if (n) t = n; }
     try {
       const [rec, sleep] = await Promise.all([
-        wFetch('/recovery?limit=30', t).catch(() => null),
-        wFetch('/activity/sleep?limit=30', t).catch(() => null),
+        wFetch('/recovery?limit=25', t).catch(() => null),
+        wFetch('/activity/sleep?limit=25', t).catch(() => null),
       ]);
       const recRecords = (rec && rec.records) || [];
       const sleepRecords = (sleep && sleep.records) || [];
@@ -297,14 +297,17 @@ body::after {
     return { fitnessAge, rhrAdjust, hrvAdjust, recoveryAdjust, activityAdjust };
   }
 
-  async function renderFitnessAge() {
-    const water = loadJSON('po_water_v1', null);
-    const profile = (water && water.profile) || {};
+  function renderFitnessAge(whoop) {
+    const profile = loadJSON('user_profile_v1', null) || {};
     const chronoAge = profile.age;
-    const whoop = await loadWhoopAverages();
 
-    if (!chronoAge || !whoop || whoop.avgRhr == null || whoop.avgHrv == null) {
-      return; // leave the default empty-state prompt in place
+    if (!chronoAge) {
+      $('faBody').innerHTML = '<p class="empty-note">Add your age (and ideally sex/activity) in the Settings on the <a href="index.html">Main</a> page to unlock this.</p>';
+      return;
+    }
+    if (!whoop || whoop.avgRhr == null || whoop.avgHrv == null) {
+      $('faBody').innerHTML = '<p class="empty-note">Connect WHOOP on the <a href="health.html">Health</a> page — this needs a few days of recovery data to compute.</p>';
+      return;
     }
 
     const { fitnessAge, rhrAdjust, hrvAdjust, recoveryAdjust, activityAdjust } = computeFitnessAge({
@@ -418,29 +421,12 @@ body::after {
       supplementPct = mean(dayPcts);
     }
 
-    const water = loadJSON('po_water_v1', null);
-    let waterPct = null;
-    if (water && water.logs) {
-      const p = water.profile || { weightKg: 75 };
-      const wKg = water.weightUnit === 'lb' ? (p.weightKg || 0) / 2.20462 : (p.weightKg || 0);
-      const base = wKg * 35;
-      const exercise = (p.activityHrsPerWeek || 0) / 7 * 500;
-      const totalMl = base + exercise + (p.sex === 'm' ? 200 : 0) + ((p.age || 0) >= 50 ? 100 : 0);
-      let unitVol = water.unit === 'glass' ? (water.glassMl || 250) : water.unit === 'oz' ? 30 : water.unit === 'ml' ? 1 : (water.bottleMl || 500);
-      const target = Math.max(1, Math.ceil(totalMl / unitVol));
-      const dayPcts = days.map((d) => {
-        const done = (water.logs[dateKeyFor(d)] || 0);
-        return Math.min(100, done / target * 100);
-      });
-      waterPct = mean(dayPcts);
-    }
-
-    return { supplementPct, waterPct, avgSleep: whoop ? whoop.avgSleep : null, avgRecovery: whoop ? whoop.avgRecovery : null };
+    return { supplementPct, avgSleep: whoop ? whoop.avgSleep : null, avgRecovery: whoop ? whoop.avgRecovery : null };
   }
 
   function renderHabits(whoop) {
     const h = analyzeHabits(whoop);
-    if (h.supplementPct == null && h.waterPct == null && h.avgSleep == null && h.avgRecovery == null) return;
+    if (h.supplementPct == null && h.avgSleep == null && h.avgRecovery == null) return;
     const pct = (v) => v == null ? '—' : Math.round(v) + '%';
     const barColor = (v) => v == null ? 'rgba(255,255,255,0.2)' : v >= 70 ? 'var(--success)' : v >= 40 ? 'var(--warning)' : 'var(--danger)';
     function tile(label, v) {
@@ -450,7 +436,6 @@ body::after {
     }
     $('habitsBody').innerHTML = '<div class="stat-grid">' +
       tile('Supplement adherence', h.supplementPct) +
-      tile('Water adherence', h.waterPct) +
       tile('Avg sleep performance', h.avgSleep) +
       tile('Avg recovery', h.avgRecovery) +
       '</div>';
@@ -481,9 +466,6 @@ body::after {
     if (h) {
       if (h.supplementPct != null && h.supplementPct < 60) {
         tips.push({ score: 4, text: "You're hitting your supplement stack only " + Math.round(h.supplementPct) + '% of days — try tying it to an existing habit, like your morning coffee.' });
-      }
-      if (h.waterPct != null && h.waterPct < 60) {
-        tips.push({ score: 3, text: 'Water intake is averaging ' + Math.round(h.waterPct) + '% of your target — keeping a bottle in sight helps more than reminders do.' });
       }
       if (h.avgSleep != null && h.avgSleep < 70) {
         tips.push({ score: 4.5, text: 'Sleep performance has averaged ' + Math.round(h.avgSleep) + '% — an earlier wind-down is likely the highest-leverage change available to you right now.' });
@@ -517,7 +499,7 @@ body::after {
 
   async function boot() {
     const whoop = await loadWhoopAverages();
-    await renderFitnessAge();
+    renderFitnessAge(whoop);
     renderNutrition();
     renderHabits(whoop);
     renderRecommendations();
@@ -528,7 +510,7 @@ body::after {
       initCloudSync({ appKey: 'nutrition', syncedKeys: ['nutrition:v1'], onApplied: boot });
       initCloudSync({
         appKey: 'health',
-        syncedKeys: ['stack:items', 'stack:version', 'stack:low', 'po_water_v1'],
+        syncedKeys: ['stack:items', 'stack:version', 'stack:low', 'user_profile_v1'],
         syncedPrefixes: ['stack:taken:'],
         onApplied: boot,
       });
