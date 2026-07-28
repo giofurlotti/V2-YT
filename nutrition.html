@@ -143,6 +143,23 @@ body::after {
 .bar-track { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow: hidden; margin-top: 14px; }
 .bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--nutri), #FDBA74); transition: width 0.3s ease; }
 
+/* ===== Today's eating score (hero card) ===== */
+.day-score-card { text-align: center; }
+.day-score-row { display: flex; align-items: baseline; justify-content: center; gap: 3px; }
+.day-score-num {
+  font-family: var(--font-mono); font-size: 56px; font-weight: 700; letter-spacing: -0.04em;
+  color: var(--text-primary); line-height: 1; font-variant-numeric: tabular-nums;
+  transition: color 0.3s ease;
+}
+.day-score-pct-sign { font-size: 22px; font-weight: 700; color: var(--text-tertiary); align-self: flex-start; margin-top: 6px; }
+.day-score-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-top: 6px; }
+.day-score-track { height: 10px; border-radius: 999px; background: rgba(255,255,255,0.07); overflow: hidden; margin-top: 16px; }
+.day-score-fill { height: 100%; border-radius: 999px; transition: width 0.4s ease, background 0.3s ease; }
+.day-score-breakdown { display: flex; justify-content: center; gap: 22px; margin-top: 16px; flex-wrap: wrap; }
+.day-score-breakdown-item { text-align: center; }
+.day-score-breakdown-item .v { font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.day-score-breakdown-item .l { font-size: 9.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+
 /* Macro calorie-split — a single part-to-whole bar instead of three disconnected mini-bars */
 .macro-split { display: flex; gap: 2px; height: 14px; border-radius: 7px; overflow: hidden; background: rgba(255,255,255,0.06); margin-top: 18px; }
 .macro-seg { height: 100%; transition: width 0.3s ease, opacity 0.3s ease; }
@@ -308,6 +325,23 @@ body::after {
 
   <h1 class="dash-title">Nutrition</h1>
   <p class="dash-sub">Meals, macros & micronutrients — tracked daily.</p>
+
+  <div class="section">
+    <div class="section-title">Today's eating score</div>
+    <div class="gm-card day-score-card">
+      <div class="day-score-row">
+        <span class="day-score-num" id="dayScoreNum">—</span>
+        <span class="day-score-pct-sign">%</span>
+      </div>
+      <div class="day-score-label" id="dayScoreLabel">Log a meal to see today's score</div>
+      <div class="day-score-track"><div class="day-score-fill" id="dayScoreBar" style="width:0%"></div></div>
+      <div class="day-score-breakdown">
+        <div class="day-score-breakdown-item"><div class="v" id="dayScoreCal">—</div><div class="l">Calories</div></div>
+        <div class="day-score-breakdown-item"><div class="v" id="dayScoreMacro">—</div><div class="l">Macros</div></div>
+        <div class="day-score-breakdown-item"><div class="v" id="dayScoreMicro">—</div><div class="l">Micros</div></div>
+      </div>
+    </div>
+  </div>
 
   <div class="section">
     <div class="section-title">Today</div>
@@ -644,6 +678,61 @@ body::after {
     }, Object.assign({ cal:0, pro:0, carb:0, fat:0 }, MICRO_KEYS.reduce((o,k) => (o[k]=0, o), {})));
   }
 
+  /* ---------- Today's eating score: calories + macros + micros, blended ---------- */
+  function computeDayScore(state) {
+    if (!todayMeals(state).length) return null;
+    const totals = todayTotals(state);
+    const t = state.targets;
+
+    // Calories: symmetric penalty — going far over OR under the target both cost points.
+    let calScore = 100;
+    if (t.calories) {
+      const diffPct = Math.abs(totals.cal - t.calories) / t.calories * 100;
+      calScore = Math.max(0, 100 - diffPct);
+    }
+
+    // Macros: average of protein/carbs/fat as % of target, capped at 100 each
+    // (hitting or exceeding a macro target is fine — no bonus for excess).
+    const macroPairs = [['pro', 'protein'], ['carb', 'carbs'], ['fat', 'fat']];
+    const macroPcts = macroPairs
+      .map(([totalKey, targetKey]) => (t[targetKey] ? Math.min(100, totals[totalKey] / t[targetKey] * 100) : null))
+      .filter((v) => v != null);
+    const macroScore = macroPcts.length ? macroPcts.reduce((a, b) => a + b, 0) / macroPcts.length : 0;
+
+    // Micronutrients: average % of target across all tracked micros, capped at 100
+    // each. Sodium is excluded — it's a cap to stay under, not a target to hit.
+    const microPcts = MICRO_KEYS.filter((k) => k !== 'sodium')
+      .map((k) => (t[k] ? Math.min(100, totals[k] / t[k] * 100) : null))
+      .filter((v) => v != null);
+    const microScore = microPcts.length ? microPcts.reduce((a, b) => a + b, 0) / microPcts.length : 0;
+
+    const overall = calScore * 0.25 + macroScore * 0.35 + microScore * 0.40;
+    return { overall: Math.round(overall), calScore: Math.round(calScore), macroScore: Math.round(macroScore), microScore: Math.round(microScore) };
+  }
+
+  function renderDayScore(state) {
+    const score = computeDayScore(state);
+    const numEl = $('dayScoreNum'), barEl = $('dayScoreBar'), labelEl = $('dayScoreLabel');
+    if (!score) {
+      numEl.textContent = '—'; numEl.style.color = '';
+      barEl.style.width = '0%';
+      labelEl.textContent = 'Log a meal to see today\'s score';
+      $('dayScoreCal').textContent = '—'; $('dayScoreMacro').textContent = '—'; $('dayScoreMicro').textContent = '—';
+      return;
+    }
+    const band = score.overall >= 75 ? { c: 'var(--success)', label: 'Great day for eating' }
+      : score.overall >= 50 ? { c: 'var(--warning)', label: 'Decent — room to improve' }
+      : { c: 'var(--danger)', label: 'Rough day — check the gaps below' };
+    numEl.textContent = score.overall;
+    numEl.style.color = band.c;
+    barEl.style.width = score.overall + '%';
+    barEl.style.background = band.c;
+    labelEl.textContent = band.label;
+    $('dayScoreCal').textContent = score.calScore + '%';
+    $('dayScoreMacro').textContent = score.macroScore + '%';
+    $('dayScoreMicro').textContent = score.microScore + '%';
+  }
+
   function renderOverview(state) {
     const totals = todayTotals(state);
     const t = state.targets;
@@ -835,6 +924,7 @@ body::after {
 
   function renderAll() {
     const state = load();
+    renderDayScore(state);
     renderOverview(state);
     renderMicros(state);
     renderMeals(state);
