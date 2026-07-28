@@ -167,39 +167,39 @@ body::after {
 .readiness-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
 .ring-track { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 9; }
 .ring-fill {
-  fill: none; stroke: #34D399; stroke-width: 9; stroke-linecap: round;
+  fill: none; stroke: #38BDF8; stroke-width: 9; stroke-linecap: round;
   transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;
-  filter: drop-shadow(0 0 10px rgba(52,211,153,0.6));
+  filter: drop-shadow(0 0 10px rgba(56,189,248,0.6));
 }
 .ring-track-inner { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 7; }
 .ring-fill-inner {
-  fill: none; stroke: #C084FC; stroke-width: 7; stroke-linecap: round;
+  fill: none; stroke: #A78BFA; stroke-width: 7; stroke-linecap: round;
   transition: stroke-dashoffset 0.6s ease;
-  filter: drop-shadow(0 0 8px rgba(192,132,252,0.55));
+  filter: drop-shadow(0 0 8px rgba(167,139,250,0.55));
 }
 .readiness-center {
   position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
 }
-.readiness-split { display: flex; align-items: center; justify-content: center; gap: 7px; max-width: 128px; }
-.readiness-divider { width: 1px; height: 24px; flex-shrink: 0; background: linear-gradient(180deg, transparent, rgba(255,255,255,0.25), transparent); }
-.readiness-pct-row { display: flex; align-items: baseline; gap: 3px; }
+.readiness-split { display: flex; align-items: center; justify-content: center; gap: 5px; max-width: 108px; white-space: nowrap; }
+.readiness-divider { width: 1px; height: 18px; flex-shrink: 0; background: linear-gradient(180deg, transparent, rgba(255,255,255,0.25), transparent); }
+.readiness-pct-row { display: flex; align-items: baseline; gap: 1.5px; }
 .readiness-pct {
-  font-family: var(--font-numeric); font-size: 21px; font-weight: 800;
-  letter-spacing: -0.03em; color: var(--text-primary); line-height: 1;
+  font-family: var(--font-numeric); font-size: 16px; font-weight: 800;
+  letter-spacing: -0.03em; color: #38BDF8; line-height: 1;
   font-variant-numeric: tabular-nums;
-  filter: drop-shadow(0 0 10px rgba(52,211,153,0.5));
+  filter: drop-shadow(0 0 8px rgba(56,189,248,0.55));
   transition: color 0.3s ease, filter 0.3s ease;
 }
-.readiness-trend { font-family: var(--font-numeric); font-size: 8.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.readiness-trend { font-family: var(--font-numeric); font-size: 7.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .readiness-trend.up { color: #34D399; }
 .readiness-trend.down { color: #FB7185; }
 .readiness-trend.flat { color: var(--text-tertiary); }
 .readiness-pct-sleep {
-  font-family: var(--font-numeric); font-size: 18px; font-weight: 800;
-  color: #C084FC; line-height: 1; font-variant-numeric: tabular-nums;
+  font-family: var(--font-numeric); font-size: 14px; font-weight: 800;
+  color: #A78BFA; line-height: 1; font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
-  filter: drop-shadow(0 0 8px rgba(192,132,252,0.5));
+  filter: drop-shadow(0 0 7px rgba(167,139,250,0.5));
 }
 .readiness-headline {
   font-family: var(--font-display); font-style: italic;
@@ -210,8 +210,28 @@ body::after {
 .ring-legend { display: flex; justify-content: center; gap: 14px; margin-bottom: 14px; }
 .ring-legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
 .ring-legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.ring-legend-dot.recovery { background: #34D399; box-shadow: 0 0 5px rgba(52,211,153,0.7); }
-.ring-legend-dot.sleep { background: #C084FC; box-shadow: 0 0 5px rgba(192,132,252,0.7); }
+.ring-legend-dot.recovery { background: #38BDF8; box-shadow: 0 0 5px rgba(56,189,248,0.7); }
+.ring-legend-dot.sleep { background: #A78BFA; box-shadow: 0 0 5px rgba(167,139,250,0.7); }
+
+/* ===== Readiness card ambient background (echoes the ring's blue + purple) ===== */
+.readiness-card { position: relative; }
+.readiness-card::before { content: none; }
+.readiness-bg {
+  position: absolute; inset: 0; z-index: 0; overflow: hidden; border-radius: inherit;
+  background: linear-gradient(160deg, #0E1526 0%, #161227 55%, #1A1430 100%);
+}
+.readiness-bg::after {
+  content: ''; position: absolute; inset: -20%;
+  background:
+    radial-gradient(circle at 24% 22%, rgba(56,189,248,0.32), transparent 55%),
+    radial-gradient(circle at 78% 80%, rgba(167,139,250,0.34), transparent 55%);
+  filter: blur(10px);
+  animation: readiness-glow-drift 9s ease-in-out infinite alternate;
+}
+@keyframes readiness-glow-drift {
+  0% { opacity: 0.75; transform: scale(1); }
+  100% { opacity: 1; transform: scale(1.06); }
+}
 .readiness-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
 .readiness-stats span { display: block; font-family: var(--font-numeric); font-size: 14px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .readiness-stats label { display: block; font-size: 8.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 3px; }
@@ -556,7 +576,8 @@ body::after {
   </div>
 
   <div class="today-grid">
-    <div class="today-card">
+    <div class="today-card readiness-card">
+      <div class="readiness-bg" aria-hidden="true"></div>
       <div class="today-card-label">Readiness</div>
       <div class="readiness-ring-wrap">
         <svg class="readiness-ring" viewBox="0 0 140 140">
@@ -1016,12 +1037,6 @@ body::after {
       return;
     }
     fill.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - rec / 100);
-    const band = rec >= 67 ? { c: '#34D399', glow: 'rgba(52,211,153,0.6)' }
-      : rec >= 34 ? { c: '#FBBF24', glow: 'rgba(251,191,36,0.55)' }
-      : { c: '#FB7185', glow: 'rgba(251,113,133,0.55)' };
-    fill.style.stroke = band.c;
-    $('readinessPct').style.color = band.c;
-    $('readinessPct').style.filter = 'drop-shadow(0 0 10px ' + band.glow + ')';
     $('readinessPct').textContent = rec + '%';
     $('readinessPctSleep').textContent = whStats.sleep != null ? whStats.sleep + '%' : '—';
     $('readinessHeadline').textContent = readinessHeadlineFor(rec);
