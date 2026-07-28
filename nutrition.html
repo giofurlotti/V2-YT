@@ -143,22 +143,18 @@ body::after {
 .bar-track { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow: hidden; margin-top: 14px; }
 .bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--nutri), #FDBA74); transition: width 0.3s ease; }
 
-/* ===== Today's eating score (hero card) ===== */
-.day-score-card { text-align: center; }
-.day-score-row { display: flex; align-items: baseline; justify-content: center; gap: 3px; }
-.day-score-num {
-  font-family: var(--font-mono); font-size: 56px; font-weight: 700; letter-spacing: -0.04em;
+/* ===== Today's eating score (compact, next to the title) ===== */
+.dash-head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.day-score-mini { flex-shrink: 0; text-align: right; padding-top: 6px; }
+.day-score-mini-row { display: flex; align-items: baseline; justify-content: flex-end; gap: 1px; }
+.day-score-mini-num {
+  font-family: var(--font-mono); font-size: 24px; font-weight: 700; letter-spacing: -0.02em;
   color: var(--text-primary); line-height: 1; font-variant-numeric: tabular-nums;
   transition: color 0.3s ease;
 }
-.day-score-pct-sign { font-size: 22px; font-weight: 700; color: var(--text-tertiary); align-self: flex-start; margin-top: 6px; }
-.day-score-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-top: 6px; }
-.day-score-track { height: 10px; border-radius: 999px; background: rgba(255,255,255,0.07); overflow: hidden; margin-top: 16px; }
-.day-score-fill { height: 100%; border-radius: 999px; transition: width 0.4s ease, background 0.3s ease; }
-.day-score-breakdown { display: flex; justify-content: center; gap: 22px; margin-top: 16px; flex-wrap: wrap; }
-.day-score-breakdown-item { text-align: center; }
-.day-score-breakdown-item .v { font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--text-primary); }
-.day-score-breakdown-item .l { font-size: 9.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
+.day-score-mini-pct { font-size: 12px; font-weight: 700; color: var(--text-tertiary); }
+.day-score-mini-track { width: 84px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; margin-top: 6px; }
+.day-score-mini-fill { height: 100%; border-radius: 999px; transition: width 0.4s ease, background 0.3s ease; }
 
 /* Macro calorie-split — a single part-to-whole bar instead of three disconnected mini-bars */
 .macro-split { display: flex; gap: 2px; height: 14px; border-radius: 7px; overflow: hidden; background: rgba(255,255,255,0.06); margin-top: 18px; }
@@ -323,23 +319,16 @@ body::after {
 <div class="horizon"></div>
 <div class="page">
 
-  <h1 class="dash-title">Nutrition</h1>
-  <p class="dash-sub">Meals, macros & micronutrients — tracked daily.</p>
-
-  <div class="section">
-    <div class="section-title">Today's eating score</div>
-    <div class="gm-card day-score-card">
-      <div class="day-score-row">
-        <span class="day-score-num" id="dayScoreNum">—</span>
-        <span class="day-score-pct-sign">%</span>
+  <div class="dash-head-row">
+    <div>
+      <h1 class="dash-title">Nutrition</h1>
+      <p class="dash-sub">Meals, macros & micronutrients — tracked daily.</p>
+    </div>
+    <div class="day-score-mini" id="dayScoreMini" title="Today's eating score">
+      <div class="day-score-mini-row">
+        <span class="day-score-mini-num" id="dayScoreNum">—</span><span class="day-score-mini-pct">%</span>
       </div>
-      <div class="day-score-label" id="dayScoreLabel">Log a meal to see today's score</div>
-      <div class="day-score-track"><div class="day-score-fill" id="dayScoreBar" style="width:0%"></div></div>
-      <div class="day-score-breakdown">
-        <div class="day-score-breakdown-item"><div class="v" id="dayScoreCal">—</div><div class="l">Calories</div></div>
-        <div class="day-score-breakdown-item"><div class="v" id="dayScoreMacro">—</div><div class="l">Macros</div></div>
-        <div class="day-score-breakdown-item"><div class="v" id="dayScoreMicro">—</div><div class="l">Micros</div></div>
-      </div>
+      <div class="day-score-mini-track"><div class="day-score-mini-fill" id="dayScoreBar" style="width:0%"></div></div>
     </div>
   </div>
 
@@ -712,25 +701,19 @@ body::after {
 
   function renderDayScore(state) {
     const score = computeDayScore(state);
-    const numEl = $('dayScoreNum'), barEl = $('dayScoreBar'), labelEl = $('dayScoreLabel');
+    const numEl = $('dayScoreNum'), barEl = $('dayScoreBar'), miniEl = $('dayScoreMini');
     if (!score) {
       numEl.textContent = '—'; numEl.style.color = '';
-      barEl.style.width = '0%';
-      labelEl.textContent = 'Log a meal to see today\'s score';
-      $('dayScoreCal').textContent = '—'; $('dayScoreMacro').textContent = '—'; $('dayScoreMicro').textContent = '—';
+      barEl.style.width = '0%'; barEl.style.background = 'rgba(255,255,255,0.2)';
+      miniEl.title = "Today's eating score — log a meal to see it";
       return;
     }
-    const band = score.overall >= 75 ? { c: 'var(--success)', label: 'Great day for eating' }
-      : score.overall >= 50 ? { c: 'var(--warning)', label: 'Decent — room to improve' }
-      : { c: 'var(--danger)', label: 'Rough day — check the gaps below' };
+    const band = score.overall >= 75 ? 'var(--success)' : score.overall >= 50 ? 'var(--warning)' : 'var(--danger)';
     numEl.textContent = score.overall;
-    numEl.style.color = band.c;
+    numEl.style.color = band;
     barEl.style.width = score.overall + '%';
-    barEl.style.background = band.c;
-    labelEl.textContent = band.label;
-    $('dayScoreCal').textContent = score.calScore + '%';
-    $('dayScoreMacro').textContent = score.macroScore + '%';
-    $('dayScoreMicro').textContent = score.microScore + '%';
+    barEl.style.background = band;
+    miniEl.title = "Today's eating score: " + score.overall + '% (calories ' + score.calScore + '%, macros ' + score.macroScore + '%, micros ' + score.microScore + '%)';
   }
 
   function renderOverview(state) {
