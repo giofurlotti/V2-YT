@@ -25,6 +25,9 @@
   --warning: #F2C063;
   --danger:  #FF6B6B;
   --nutri: #FB923C;
+  --mac-protein: #38BDF8;
+  --mac-carbs: #F2C063;
+  --mac-fat: #A78BFA;
   --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
@@ -105,10 +108,26 @@ body::after {
 .bar-track { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow: hidden; margin-top: 14px; }
 .bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--nutri), #FDBA74); transition: width 0.3s ease; }
 
+/* Macro calorie-split — a single part-to-whole bar instead of three disconnected mini-bars */
+.macro-split { display: flex; gap: 2px; height: 14px; border-radius: 7px; overflow: hidden; background: rgba(255,255,255,0.06); margin-top: 18px; }
+.macro-seg { height: 100%; transition: width 0.3s ease, opacity 0.3s ease; }
+.macro-seg.protein { background: var(--mac-protein); }
+.macro-seg.carbs { background: var(--mac-carbs); }
+.macro-seg.fat { background: var(--mac-fat); }
+.macro-legend { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 12px; }
+.macro-legend-item { display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
+.macro-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.macro-dot.protein { background: var(--mac-protein); }
+.macro-dot.carbs { background: var(--mac-carbs); }
+.macro-dot.fat { background: var(--mac-fat); }
+.macro-legend-label { color: var(--text-tertiary); font-weight: 600; }
+.macro-legend-val { color: var(--text-primary); font-variant-numeric: tabular-nums; font-weight: 700; }
+
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
 .stat { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 14px; }
+.stat-num-row { display: flex; align-items: baseline; gap: 4px; }
 .stat-num { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; color: var(--text-primary); line-height: 1; }
-.stat-sub { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; }
+.stat-sub { font-size: 11px; color: var(--text-tertiary); }
 .stat-label { margin-top: 6px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
 .stat-bar-track { height: 5px; border-radius: 999px; background: rgba(255,255,255,0.07); overflow: hidden; margin-top: 8px; }
 .stat-bar-fill { height: 100%; border-radius: 999px; }
@@ -159,6 +178,7 @@ body::after {
 }
 .gm-add:hover { filter: brightness(1.06); transform: translateY(-1px); }
 .gm-add:active { transform: translateY(0); }
+.gm-add:disabled { opacity: 0.5; cursor: default; transform: none; filter: none; }
 
 .gm-ghost {
   padding: 11px 18px; border: 1px solid rgba(255,255,255,0.10); border-radius: 12px;
@@ -169,6 +189,7 @@ body::after {
 .gm-ghost:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.18); }
 
 .targets-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.micro-targets-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); }
 .targets-field label { display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 6px; }
 .targets-field input {
   width: 100%; padding: 10px; text-align: center;
@@ -177,11 +198,54 @@ body::after {
 }
 .targets-field input:focus { border-color: color-mix(in srgb, var(--nutri) 45%, transparent); }
 
+/* Ask Nova */
+.nova-input-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.nova-input-row .gm-input { flex: 1 1 220px; }
+.nova-hint { font-size: 11.5px; color: var(--text-tertiary); margin-top: 10px; line-height: 1.5; }
+.nova-key-row { display: none; gap: 8px; margin-top: 12px; }
+.nova-key-row.show { display: flex; flex-wrap: wrap; }
+.nova-key-row .gm-input { flex: 1 1 220px; }
+.nova-loading { display: none; align-items: center; gap: 8px; margin-top: 12px; font-size: 12.5px; color: var(--text-tertiary); }
+.nova-loading.show { display: flex; }
+.dots { display: inline-flex; gap: 4px; }
+.dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--nutri); opacity: 0.4; animation: dotpulse 1.2s ease-in-out infinite; }
+.dots i:nth-child(2) { animation-delay: 0.2s; }
+.dots i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotpulse { 0%,100%{opacity:.35;transform:scale(1)} 50%{opacity:1;transform:scale(1.4)} }
+.nova-error { display: none; color: var(--danger); font-size: 12.5px; margin-top: 10px; }
+.nova-error.show { display: block; }
+.nova-preview { display: none; margin-top: 14px; padding: 14px; border-radius: 12px; background: rgba(255,255,255,0.035); border: 1px solid color-mix(in srgb, var(--nutri) 30%, transparent); }
+.nova-preview.show { display: block; }
+.nova-preview-title { font-size: 14.5px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
+.nova-preview-macros { font-size: 12.5px; color: var(--text-secondary); margin-bottom: 4px; font-variant-numeric: tabular-nums; }
+.nova-preview-micros { font-size: 11px; color: var(--text-tertiary); margin-bottom: 12px; font-variant-numeric: tabular-nums; }
+.nova-preview-actions { display: flex; gap: 8px; }
+
+/* Food index */
+.food-results { display: flex; flex-direction: column; gap: 6px; max-height: 360px; overflow-y: auto; margin-top: 12px; }
+.food-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; }
+.food-row-body { flex: 1; min-width: 0; }
+.food-row-name { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
+.food-row-meta { font-size: 11px; color: var(--text-tertiary); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.food-row-add {
+  width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--nutri) 35%, transparent);
+  background: color-mix(in srgb, var(--nutri) 16%, transparent); color: var(--nutri);
+  font-size: 17px; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, transform 0.1s, color 0.15s, border-color 0.15s;
+}
+.food-row-add:hover { background: color-mix(in srgb, var(--nutri) 26%, transparent); }
+.food-row-add:active { transform: scale(0.92); }
+.food-row-add.added { background: color-mix(in srgb, var(--success) 25%, transparent); border-color: color-mix(in srgb, var(--success) 45%, transparent); color: var(--success); }
+.food-empty { text-align: center; font-size: 12px; font-style: italic; color: var(--text-tertiary); padding: 10px 0; }
+
 @media (max-width: 480px) {
   body { padding: max(20px, env(safe-area-inset-top)) 14px 50px; }
   .gm-card { padding: 16px; }
   .gm-progress-num { font-size: 34px; }
   .targets-grid { grid-template-columns: repeat(2, 1fr); }
+  .micro-targets-grid { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
 </head>
@@ -189,7 +253,7 @@ body::after {
 <div class="page">
 
   <h1 class="dash-title">Nutrition</h1>
-  <p class="dash-sub">Meals & macros, tracked daily.</p>
+  <p class="dash-sub">Meals, macros & micronutrients — tracked daily.</p>
 
   <div class="section">
     <div class="section-title">Today</div>
@@ -207,23 +271,91 @@ body::after {
       </div>
       <div class="bar-track"><div class="bar-fill" id="calBar" style="width:0%"></div></div>
 
-      <div class="stat-grid" style="margin-top:16px">
+      <div class="macro-split" id="macroSplit">
+        <div class="macro-seg protein" id="splitPro" style="width:33.33%"></div>
+        <div class="macro-seg carbs" id="splitCarb" style="width:33.33%"></div>
+        <div class="macro-seg fat" id="splitFat" style="width:33.34%"></div>
+      </div>
+      <div class="macro-legend">
+        <span class="macro-legend-item"><span class="macro-dot protein"></span><span class="macro-legend-label">Protein</span><span class="macro-legend-val" id="legendPro">0 / 150g</span></span>
+        <span class="macro-legend-item"><span class="macro-dot carbs"></span><span class="macro-legend-label">Carbs</span><span class="macro-legend-val" id="legendCarb">0 / 220g</span></span>
+        <span class="macro-legend-item"><span class="macro-dot fat"></span><span class="macro-legend-label">Fat</span><span class="macro-legend-val" id="legendFat">0 / 70g</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Micronutrients today</div>
+    <div class="gm-card">
+      <div class="stat-grid">
         <div class="stat">
-          <div class="stat-num" id="proNum">0<span class="stat-sub"> / <span id="proGoal">150</span>g</span></div>
-          <div class="stat-label">Protein</div>
-          <div class="stat-bar-track"><div class="stat-bar-fill" id="proBar" style="width:0%;background:#38BDF8"></div></div>
+          <div class="stat-num-row"><span class="stat-num" id="mc_fiber_num">0</span><span class="stat-sub">/ <span id="mc_fiber_goal">28g</span></span></div>
+          <div class="stat-label">Fiber</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_fiber_bar" style="width:0%;background:var(--nutri)"></div></div>
         </div>
         <div class="stat">
-          <div class="stat-num" id="carbNum">0<span class="stat-sub"> / <span id="carbGoal">220</span>g</span></div>
-          <div class="stat-label">Carbs</div>
-          <div class="stat-bar-track"><div class="stat-bar-fill" id="carbBar" style="width:0%;background:#F2C063"></div></div>
+          <div class="stat-num-row"><span class="stat-num" id="mc_sodium_num">0</span><span class="stat-sub">/ <span id="mc_sodium_goal">2300mg</span></span></div>
+          <div class="stat-label">Sodium</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_sodium_bar" style="width:0%;background:var(--nutri)"></div></div>
         </div>
         <div class="stat">
-          <div class="stat-num" id="fatNum">0<span class="stat-sub"> / <span id="fatGoal">70</span>g</span></div>
-          <div class="stat-label">Fat</div>
-          <div class="stat-bar-track"><div class="stat-bar-fill" id="fatBar" style="width:0%;background:#A78BFA"></div></div>
+          <div class="stat-num-row"><span class="stat-num" id="mc_potassium_num">0</span><span class="stat-sub">/ <span id="mc_potassium_goal">4700mg</span></span></div>
+          <div class="stat-label">Potassium</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_potassium_bar" style="width:0%;background:var(--nutri)"></div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-num-row"><span class="stat-num" id="mc_vitaminC_num">0</span><span class="stat-sub">/ <span id="mc_vitaminC_goal">90mg</span></span></div>
+          <div class="stat-label">Vitamin C</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_vitaminC_bar" style="width:0%;background:var(--nutri)"></div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-num-row"><span class="stat-num" id="mc_calcium_num">0</span><span class="stat-sub">/ <span id="mc_calcium_goal">1300mg</span></span></div>
+          <div class="stat-label">Calcium</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_calcium_bar" style="width:0%;background:var(--nutri)"></div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-num-row"><span class="stat-num" id="mc_iron_num">0</span><span class="stat-sub">/ <span id="mc_iron_goal">18mg</span></span></div>
+          <div class="stat-label">Iron</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill" id="mc_iron_bar" style="width:0%;background:var(--nutri)"></div></div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Ask Nova · estimate & add</div>
+    <div class="gm-card">
+      <div class="nova-input-row">
+        <input class="gm-input" id="novaInput" type="text" placeholder="Describe a meal… e.g. “2 eggs and a slice of toast”" autocomplete="off">
+        <button class="gm-add" id="novaAsk" type="button">Estimate</button>
+      </div>
+      <div class="nova-hint">Uses the same Anthropic key as the Nova tile — stored only in this browser, sent straight to Anthropic.</div>
+
+      <div class="nova-key-row" id="novaKeyRow">
+        <input class="gm-input" id="novaKeyInput" type="password" placeholder="paste your Anthropic API key (sk-ant-…)" autocomplete="off">
+        <button class="gm-ghost" id="novaKeySave" type="button">Save key</button>
+      </div>
+
+      <div class="nova-loading" id="novaLoading"><span class="dots"><i></i><i></i><i></i></span> Estimating…</div>
+      <div class="nova-error" id="novaError"></div>
+
+      <div class="nova-preview" id="novaPreview">
+        <div class="nova-preview-title" id="npName"></div>
+        <div class="nova-preview-macros" id="npMacros"></div>
+        <div class="nova-preview-micros" id="npMicros"></div>
+        <div class="nova-preview-actions">
+          <button class="gm-add" id="npAdd" type="button">Add to log</button>
+          <button class="gm-ghost" id="npDiscard" type="button">Discard</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Food index</div>
+    <div class="gm-card">
+      <input class="gm-input" id="foodSearch" type="text" placeholder="Search foods… e.g. “chicken”, “rice”, “almonds”" autocomplete="off">
+      <div class="food-results" id="foodResults"></div>
     </div>
   </div>
 
@@ -246,13 +378,25 @@ body::after {
   <div class="section">
     <div class="section-title">Daily targets</div>
     <div class="gm-card">
+      <div class="gm-eyebrow">Calories & macros</div>
       <div class="targets-grid">
         <div class="targets-field"><label>Calories</label><input id="tgCal" type="number" min="0" inputmode="numeric"></div>
         <div class="targets-field"><label>Protein g</label><input id="tgPro" type="number" min="0" inputmode="numeric"></div>
         <div class="targets-field"><label>Carbs g</label><input id="tgCarb" type="number" min="0" inputmode="numeric"></div>
         <div class="targets-field"><label>Fat g</label><input id="tgFat" type="number" min="0" inputmode="numeric"></div>
       </div>
-      <div class="gm-input-wrap" style="border-top:0;padding-top:14px;justify-content:flex-end">
+
+      <div class="gm-eyebrow" style="margin-top:16px">Micronutrients</div>
+      <div class="micro-targets-grid" style="margin-top:8px;padding-top:0;border-top:0">
+        <div class="targets-field"><label>Fiber g</label><input id="tgFiber" type="number" min="0" inputmode="numeric"></div>
+        <div class="targets-field"><label>Sodium mg</label><input id="tgSodium" type="number" min="0" inputmode="numeric"></div>
+        <div class="targets-field"><label>Potassium mg</label><input id="tgPotassium" type="number" min="0" inputmode="numeric"></div>
+        <div class="targets-field"><label>Vitamin C mg</label><input id="tgVitaminC" type="number" min="0" inputmode="numeric"></div>
+        <div class="targets-field"><label>Calcium mg</label><input id="tgCalcium" type="number" min="0" inputmode="numeric"></div>
+        <div class="targets-field"><label>Iron mg</label><input id="tgIron" type="number" min="0" inputmode="numeric"></div>
+      </div>
+
+      <div class="gm-input-wrap" style="justify-content:flex-end">
         <button class="gm-ghost" id="targetsSave" type="button">Save targets</button>
       </div>
     </div>
@@ -265,6 +409,7 @@ body::after {
   'use strict';
 
   const STORE_KEY = 'nutrition:v1';
+  const NOVA_KEY_LS = 'nova_lite_api_key';
   const $ = (id) => document.getElementById(id);
 
   function dateKey() {
@@ -272,8 +417,68 @@ body::after {
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
 
+  /* ---------- food reference index (approximate, common serving sizes) ---------- */
+  const FOOD_DB = [
+    { name:'Chicken breast', serving:'100g cooked', calories:165, protein:31, carbs:0, fat:3.6, fiber:0, sodium:74, potassium:256, vitaminC:0, calcium:15, iron:1 },
+    { name:'Salmon', serving:'100g cooked', calories:208, protein:20, carbs:0, fat:13, fiber:0, sodium:59, potassium:384, vitaminC:0, calcium:9, iron:0.3 },
+    { name:'Tuna (canned, water)', serving:'100g', calories:116, protein:26, carbs:0, fat:1, fiber:0, sodium:247, potassium:237, vitaminC:0, calcium:3, iron:1.3 },
+    { name:'Lean ground beef 90/10', serving:'100g cooked', calories:217, protein:26, carbs:0, fat:12, fiber:0, sodium:75, potassium:318, vitaminC:0, calcium:15, iron:2.6 },
+    { name:'Pork chop', serving:'100g cooked', calories:231, protein:25, carbs:0, fat:14, fiber:0, sodium:54, potassium:350, vitaminC:0, calcium:8, iron:0.8 },
+    { name:'Turkey breast', serving:'100g cooked', calories:135, protein:30, carbs:0, fat:1, fiber:0, sodium:54, potassium:239, vitaminC:0, calcium:15, iron:1.2 },
+    { name:'Egg', serving:'1 large', calories:78, protein:6, carbs:0.6, fat:5, fiber:0, sodium:62, potassium:63, vitaminC:0, calcium:25, iron:0.9 },
+    { name:'Egg whites', serving:'100g', calories:52, protein:11, carbs:0.7, fat:0.2, fiber:0, sodium:166, potassium:163, vitaminC:0, calcium:7, iron:0.1 },
+    { name:'Greek yogurt (plain)', serving:'170g cup', calories:100, protein:17, carbs:6, fat:0.7, fiber:0, sodium:61, potassium:240, vitaminC:0, calcium:230, iron:0.1 },
+    { name:'Cottage cheese', serving:'100g', calories:98, protein:11, carbs:3.4, fat:4.3, fiber:0, sodium:364, potassium:104, vitaminC:0, calcium:83, iron:0.1 },
+    { name:'Whey protein', serving:'1 scoop (30g)', calories:120, protein:24, carbs:3, fat:1.5, fiber:0, sodium:50, potassium:170, vitaminC:0, calcium:100, iron:0 },
+    { name:'Tofu (firm)', serving:'100g', calories:144, protein:15, carbs:3, fat:9, fiber:2, sodium:14, potassium:164, vitaminC:0, calcium:201, iron:2.7 },
+    { name:'White rice', serving:'1 cup cooked', calories:205, protein:4.3, carbs:45, fat:0.4, fiber:0.6, sodium:2, potassium:55, vitaminC:0, calcium:16, iron:1.9 },
+    { name:'Brown rice', serving:'1 cup cooked', calories:216, protein:5, carbs:45, fat:1.8, fiber:3.5, sodium:10, potassium:154, vitaminC:0, calcium:20, iron:0.8 },
+    { name:'Oats', serving:'40g dry', calories:150, protein:5, carbs:27, fat:3, fiber:4, sodium:0, potassium:150, vitaminC:0, calcium:20, iron:1.7 },
+    { name:'Quinoa', serving:'1 cup cooked', calories:222, protein:8, carbs:39, fat:3.6, fiber:5, sodium:13, potassium:318, vitaminC:0, calcium:31, iron:2.8 },
+    { name:'Whole wheat bread', serving:'1 slice', calories:81, protein:4, carbs:14, fat:1.1, fiber:2, sodium:144, potassium:69, vitaminC:0, calcium:30, iron:0.9 },
+    { name:'White bread', serving:'1 slice', calories:67, protein:2, carbs:13, fat:0.8, fiber:0.6, sodium:130, potassium:25, vitaminC:0, calcium:30, iron:0.7 },
+    { name:'Pasta', serving:'1 cup cooked', calories:221, protein:8, carbs:43, fat:1.3, fiber:2.5, sodium:1, potassium:62, vitaminC:0, calcium:10, iron:2 },
+    { name:'Potato (baked, w/ skin)', serving:'1 medium', calories:161, protein:4.3, carbs:37, fat:0.2, fiber:3.8, sodium:17, potassium:926, vitaminC:17, calcium:26, iron:1.9 },
+    { name:'Sweet potato (baked)', serving:'1 medium', calories:103, protein:2.3, carbs:24, fat:0.2, fiber:3.8, sodium:41, potassium:542, vitaminC:22, calcium:43, iron:0.8 },
+    { name:'Tortilla (flour)', serving:'1 medium', calories:140, protein:4, carbs:24, fat:3.5, fiber:1.5, sodium:290, potassium:60, vitaminC:0, calcium:60, iron:1.2 },
+    { name:'Banana', serving:'1 medium', calories:105, protein:1.3, carbs:27, fat:0.4, fiber:3.1, sodium:1, potassium:422, vitaminC:10, calcium:6, iron:0.3 },
+    { name:'Apple', serving:'1 medium', calories:95, protein:0.5, carbs:25, fat:0.3, fiber:4.4, sodium:2, potassium:195, vitaminC:8, calcium:11, iron:0.2 },
+    { name:'Orange', serving:'1 medium', calories:62, protein:1.2, carbs:15, fat:0.2, fiber:3.1, sodium:0, potassium:237, vitaminC:70, calcium:52, iron:0.1 },
+    { name:'Strawberries', serving:'1 cup', calories:49, protein:1, carbs:12, fat:0.5, fiber:3, sodium:2, potassium:220, vitaminC:89, calcium:27, iron:0.6 },
+    { name:'Blueberries', serving:'1 cup', calories:84, protein:1.1, carbs:21, fat:0.5, fiber:3.6, sodium:1, potassium:114, vitaminC:14, calcium:9, iron:0.4 },
+    { name:'Grapes', serving:'1 cup', calories:104, protein:1.1, carbs:27, fat:0.2, fiber:1.4, sodium:3, potassium:288, vitaminC:5, calcium:15, iron:0.5 },
+    { name:'Avocado', serving:'1/2 medium', calories:160, protein:2, carbs:9, fat:15, fiber:7, sodium:7, potassium:485, vitaminC:10, calcium:12, iron:0.6 },
+    { name:'Broccoli', serving:'1 cup cooked', calories:55, protein:3.7, carbs:11, fat:0.6, fiber:5.1, sodium:64, potassium:457, vitaminC:101, calcium:62, iron:1 },
+    { name:'Spinach (raw)', serving:'100g', calories:23, protein:2.9, carbs:3.6, fat:0.4, fiber:2.2, sodium:79, potassium:558, vitaminC:28, calcium:99, iron:2.7 },
+    { name:'Carrots (raw)', serving:'1 cup', calories:52, protein:1.2, carbs:12, fat:0.3, fiber:3.6, sodium:88, potassium:410, vitaminC:7, calcium:42, iron:0.4 },
+    { name:'Bell pepper (raw)', serving:'1 medium', calories:24, protein:1, carbs:6, fat:0.2, fiber:2, sodium:3, potassium:211, vitaminC:95, calcium:7, iron:0.4 },
+    { name:'Tomato', serving:'1 medium', calories:22, protein:1.1, carbs:4.8, fat:0.2, fiber:1.5, sodium:6, potassium:292, vitaminC:17, calcium:12, iron:0.3 },
+    { name:'Sweet corn', serving:'1 cup', calories:132, protein:5, carbs:29, fat:1.8, fiber:3.6, sodium:23, potassium:392, vitaminC:10, calcium:3, iron:0.8 },
+    { name:'Milk (whole)', serving:'1 cup', calories:149, protein:8, carbs:12, fat:8, fiber:0, sodium:105, potassium:322, vitaminC:0, calcium:276, iron:0.1 },
+    { name:'Milk (skim)', serving:'1 cup', calories:83, protein:8, carbs:12, fat:0.2, fiber:0, sodium:103, potassium:382, vitaminC:0, calcium:299, iron:0.1 },
+    { name:'Cheddar cheese', serving:'28g', calories:113, protein:7, carbs:0.4, fat:9, fiber:0, sodium:174, potassium:28, vitaminC:0, calcium:200, iron:0.2 },
+    { name:'Mozzarella cheese', serving:'28g', calories:85, protein:6, carbs:0.6, fat:6, fiber:0, sodium:178, potassium:20, vitaminC:0, calcium:143, iron:0.1 },
+    { name:'Almonds', serving:'28g (~23 nuts)', calories:164, protein:6, carbs:6, fat:14, fiber:3.5, sodium:0, potassium:208, vitaminC:0, calcium:76, iron:1.1 },
+    { name:'Peanut butter', serving:'2 tbsp', calories:188, protein:8, carbs:6, fat:16, fiber:2, sodium:147, potassium:208, vitaminC:0, calcium:14, iron:0.6 },
+    { name:'Walnuts', serving:'28g', calories:185, protein:4.3, carbs:3.9, fat:18, fiber:1.9, sodium:1, potassium:125, vitaminC:0.4, calcium:28, iron:0.8 },
+    { name:'Olive oil', serving:'1 tbsp', calories:119, protein:0, carbs:0, fat:14, fiber:0, sodium:0, potassium:0, vitaminC:0, calcium:0, iron:0.1 },
+    { name:'Butter', serving:'1 tbsp', calories:102, protein:0.1, carbs:0, fat:11.5, fiber:0, sodium:91, potassium:3, vitaminC:0, calcium:3, iron:0 },
+    { name:'Black beans', serving:'1 cup cooked', calories:227, protein:15, carbs:41, fat:0.9, fiber:15, sodium:2, potassium:611, vitaminC:0, calcium:46, iron:3.6 },
+    { name:'Lentils', serving:'1 cup cooked', calories:230, protein:18, carbs:40, fat:0.8, fiber:16, sodium:4, potassium:731, vitaminC:3, calcium:37, iron:6.6 },
+    { name:'Chickpeas', serving:'1 cup cooked', calories:269, protein:15, carbs:45, fat:4.3, fiber:13, sodium:11, potassium:477, vitaminC:2, calcium:80, iron:4.7 },
+    { name:'Dark chocolate (70%)', serving:'28g', calories:170, protein:2, carbs:13, fat:12, fiber:3, sodium:6, potassium:202, vitaminC:0, calcium:20, iron:3.3 },
+    { name:'Honey', serving:'1 tbsp', calories:64, protein:0, carbs:17, fat:0, fiber:0, sodium:1, potassium:11, vitaminC:0.1, calcium:1, iron:0.1 },
+    { name:'Protein bar', serving:'1 bar (~60g)', calories:220, protein:20, carbs:24, fat:7, fiber:8, sodium:200, potassium:180, vitaminC:0, calcium:100, iron:2 },
+  ];
+
   function defaultState() {
-    return { targets: { calories: 2200, protein: 150, carbs: 220, fat: 70 }, logs: {} };
+    return {
+      targets: {
+        calories: 2200, protein: 150, carbs: 220, fat: 70,
+        fiber: 28, sodium: 2300, potassium: 4700, vitaminC: 90, calcium: 1300, iron: 18,
+      },
+      logs: {},
+    };
   }
   function load() {
     try {
@@ -290,32 +495,69 @@ body::after {
   function todayMeals(state) {
     return state.logs[dateKey()] || [];
   }
+  function addMealEntry(entry) {
+    const state = load();
+    const list = state.logs[dateKey()] || [];
+    list.push(Object.assign({
+      id: Date.now() + Math.random(),
+      fiber: 0, sodium: 0, potassium: 0, vitaminC: 0, calcium: 0, iron: 0,
+    }, entry));
+    state.logs[dateKey()] = list;
+    save(state);
+    renderAll();
+  }
 
   const MEAL_ICON = '<svg viewBox="0 0 24 24"><path d="M3 2v7a2 2 0 0 0 2 2h.5a2 2 0 0 0 2-2V2"/><path d="M6.5 11v11"/><path d="M17.5 2c-2 0-3.5 2.5-3.5 6s1 5 3.5 5 1 8 1 8"/></svg>';
 
-  function renderOverview(state) {
-    const meals = todayMeals(state);
-    const totals = meals.reduce((acc, m) => {
+  function todayTotals(state) {
+    return todayMeals(state).reduce((acc, m) => {
       acc.cal += (+m.calories || 0); acc.pro += (+m.protein || 0);
       acc.carb += (+m.carbs || 0); acc.fat += (+m.fat || 0);
+      acc.fiber += (+m.fiber || 0); acc.sodium += (+m.sodium || 0);
+      acc.potassium += (+m.potassium || 0); acc.vitaminC += (+m.vitaminC || 0);
+      acc.calcium += (+m.calcium || 0); acc.iron += (+m.iron || 0);
       return acc;
-    }, { cal: 0, pro: 0, carb: 0, fat: 0 });
+    }, { cal:0, pro:0, carb:0, fat:0, fiber:0, sodium:0, potassium:0, vitaminC:0, calcium:0, iron:0 });
+  }
 
+  function renderOverview(state) {
+    const totals = todayTotals(state);
     const t = state.targets;
+
     $('calNum').textContent = totals.cal;
     $('calGoal').textContent = t.calories;
     $('calBar').style.width = Math.min(100, t.calories ? (totals.cal / t.calories * 100) : 0) + '%';
     const left = Math.max(0, t.calories - totals.cal);
     $('calStreak').textContent = left > 0 ? left + ' left' : 'goal met';
 
-    $('proNum').innerHTML = totals.pro + '<span class="stat-sub"> / ' + t.protein + 'g</span>';
-    $('proBar').style.width = Math.min(100, t.protein ? (totals.pro / t.protein * 100) : 0) + '%';
+    const proKcal = totals.pro * 4, carbKcal = totals.carb * 4, fatKcal = totals.fat * 9;
+    const macroKcal = proKcal + carbKcal + fatKcal;
+    const hasMacros = macroKcal > 0;
+    $('splitPro').style.width = (hasMacros ? proKcal / macroKcal * 100 : 33.33) + '%';
+    $('splitCarb').style.width = (hasMacros ? carbKcal / macroKcal * 100 : 33.33) + '%';
+    $('splitFat').style.width = (hasMacros ? fatKcal / macroKcal * 100 : 33.34) + '%';
+    $('macroSplit').style.opacity = hasMacros ? '1' : '0.25';
 
-    $('carbNum').innerHTML = totals.carb + '<span class="stat-sub"> / ' + t.carbs + 'g</span>';
-    $('carbBar').style.width = Math.min(100, t.carbs ? (totals.carb / t.carbs * 100) : 0) + '%';
+    $('legendPro').textContent = totals.pro + ' / ' + t.protein + 'g';
+    $('legendCarb').textContent = totals.carb + ' / ' + t.carbs + 'g';
+    $('legendFat').textContent = totals.fat + ' / ' + t.fat + 'g';
+  }
 
-    $('fatNum').innerHTML = totals.fat + '<span class="stat-sub"> / ' + t.fat + 'g</span>';
-    $('fatBar').style.width = Math.min(100, t.fat ? (totals.fat / t.fat * 100) : 0) + '%';
+  function setMicroTile(key, val, goal, unit) {
+    const rounded = Math.round(val * 10) / 10;
+    $('mc_' + key + '_num').textContent = rounded;
+    $('mc_' + key + '_goal').textContent = goal + unit;
+    $('mc_' + key + '_bar').style.width = Math.min(100, goal ? (val / goal * 100) : 0) + '%';
+  }
+  function renderMicros(state) {
+    const totals = todayTotals(state);
+    const t = state.targets;
+    setMicroTile('fiber', totals.fiber, t.fiber, 'g');
+    setMicroTile('sodium', totals.sodium, t.sodium, 'mg');
+    setMicroTile('potassium', totals.potassium, t.potassium, 'mg');
+    setMicroTile('vitaminC', totals.vitaminC, t.vitaminC, 'mg');
+    setMicroTile('calcium', totals.calcium, t.calcium, 'mg');
+    setMicroTile('iron', totals.iron, t.iron, 'mg');
   }
 
   function renderMeals(state) {
@@ -354,42 +596,46 @@ body::after {
   }
 
   function renderTargets(state) {
-    $('tgCal').value = state.targets.calories;
-    $('tgPro').value = state.targets.protein;
-    $('tgCarb').value = state.targets.carbs;
-    $('tgFat').value = state.targets.fat;
+    const t = state.targets;
+    $('tgCal').value = t.calories;
+    $('tgPro').value = t.protein;
+    $('tgCarb').value = t.carbs;
+    $('tgFat').value = t.fat;
+    $('tgFiber').value = t.fiber;
+    $('tgSodium').value = t.sodium;
+    $('tgPotassium').value = t.potassium;
+    $('tgVitaminC').value = t.vitaminC;
+    $('tgCalcium').value = t.calcium;
+    $('tgIron').value = t.iron;
   }
 
   function renderAll() {
     const state = load();
     renderOverview(state);
+    renderMicros(state);
     renderMeals(state);
     renderTargets(state);
   }
 
+  /* ---------- manual quick-add ---------- */
   function addMeal() {
     const name = $('mealName').value.trim();
     if (!name) return;
-    const state = load();
-    const list = state.logs[dateKey()] || [];
-    list.push({
-      id: Date.now(),
+    addMealEntry({
       name: name,
       calories: parseInt($('mealCal').value, 10) || 0,
       protein: parseInt($('mealPro').value, 10) || 0,
       carbs: parseInt($('mealCarb').value, 10) || 0,
       fat: parseInt($('mealFat').value, 10) || 0,
     });
-    state.logs[dateKey()] = list;
-    save(state);
     $('mealName').value = ''; $('mealCal').value = ''; $('mealPro').value = ''; $('mealCarb').value = ''; $('mealFat').value = '';
-    renderAll();
   }
   $('mealAdd').addEventListener('click', addMeal);
   ['mealName','mealCal','mealPro','mealCarb','mealFat'].forEach((id) => {
     $(id).addEventListener('keydown', (e) => { if (e.key === 'Enter') addMeal(); });
   });
 
+  /* ---------- targets ---------- */
   $('targetsSave').addEventListener('click', () => {
     const state = load();
     state.targets = {
@@ -397,18 +643,181 @@ body::after {
       protein: parseInt($('tgPro').value, 10) || 0,
       carbs: parseInt($('tgCarb').value, 10) || 0,
       fat: parseInt($('tgFat').value, 10) || 0,
+      fiber: parseInt($('tgFiber').value, 10) || 0,
+      sodium: parseInt($('tgSodium').value, 10) || 0,
+      potassium: parseInt($('tgPotassium').value, 10) || 0,
+      vitaminC: parseInt($('tgVitaminC').value, 10) || 0,
+      calcium: parseInt($('tgCalcium').value, 10) || 0,
+      iron: parseFloat($('tgIron').value) || 0,
     };
     save(state);
     renderAll();
   });
 
+  /* ---------- food index search ---------- */
+  function renderFoodIndex() {
+    const q = $('foodSearch').value.trim().toLowerCase();
+    const list = q ? FOOD_DB.filter((f) => f.name.toLowerCase().includes(q)).slice(0, 12) : FOOD_DB.slice(0, 8);
+    const el = $('foodResults');
+    el.innerHTML = '';
+    if (!list.length) {
+      const d = document.createElement('div');
+      d.className = 'food-empty';
+      d.textContent = 'No matches — try a different search.';
+      el.appendChild(d);
+      return;
+    }
+    list.forEach((f) => {
+      const row = document.createElement('div');
+      row.className = 'food-row';
+
+      const body = document.createElement('div');
+      body.className = 'food-row-body';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'food-row-name';
+      nameEl.textContent = f.name;
+      const metaEl = document.createElement('div');
+      metaEl.className = 'food-row-meta';
+      metaEl.textContent = f.serving + ' · ' + f.calories + ' kcal · P' + f.protein + ' C' + f.carbs + ' F' + f.fat;
+      body.append(nameEl, metaEl);
+
+      const btn = document.createElement('button');
+      btn.className = 'food-row-add';
+      btn.type = 'button';
+      btn.setAttribute('aria-label', 'Add ' + f.name);
+      btn.textContent = '+';
+      btn.addEventListener('click', () => {
+        addMealEntry({
+          name: f.name, calories: f.calories, protein: f.protein, carbs: f.carbs, fat: f.fat,
+          fiber: f.fiber, sodium: f.sodium, potassium: f.potassium, vitaminC: f.vitaminC, calcium: f.calcium, iron: f.iron,
+        });
+        btn.textContent = '✓';
+        btn.classList.add('added');
+        setTimeout(() => { btn.textContent = '+'; btn.classList.remove('added'); }, 900);
+      });
+
+      row.append(body, btn);
+      el.appendChild(row);
+    });
+  }
+  $('foodSearch').addEventListener('input', renderFoodIndex);
+
+  /* ---------- Ask Nova (AI macro estimator, bring-your-own Anthropic key) ---------- */
+  function novaSavedKey() { try { return localStorage.getItem(NOVA_KEY_LS) || ''; } catch (e) { return ''; } }
+  function updateNovaKeyRow() {
+    $('novaKeyRow').classList.toggle('show', !novaSavedKey());
+  }
+  updateNovaKeyRow();
+  $('novaKeySave').addEventListener('click', () => {
+    const k = $('novaKeyInput').value.trim();
+    if (!k) return;
+    try { localStorage.setItem(NOVA_KEY_LS, k); } catch (e) {}
+    $('novaKeyInput').value = '';
+    updateNovaKeyRow();
+  });
+
+  const NOVA_SYS =
+    'You are a nutrition estimator embedded in a food-tracking app. The user describes a food or meal in ' +
+    'plain language, possibly with quantities. Estimate its total nutrition and reply with ONLY a single ' +
+    'valid JSON object — no markdown, no code fences, no explanation — in exactly this shape: ' +
+    '{"name":"short label","calories":number,"protein":number,"carbs":number,"fat":number,"fiber":number,' +
+    '"sodium":number,"potassium":number,"vitaminC":number,"calcium":number,"iron":number}. ' +
+    'calories in kcal; protein/carbs/fat/fiber in grams; sodium/potassium/vitaminC/calcium in milligrams; iron in milligrams. ' +
+    'Give one realistic best-guess estimate for the whole portion described — never ask a clarifying question. ' +
+    'If several foods are mentioned, sum them into one combined total.';
+
+  function extractJSON(text) {
+    try { return JSON.parse(text); } catch (e) {}
+    const m = String(text).match(/\{[\s\S]*\}/);
+    if (m) { try { return JSON.parse(m[0]); } catch (e) {} }
+    return null;
+  }
+
+  let novaPreviewData = null;
+  let novaBusy = false;
+
+  async function novaEstimate() {
+    const desc = $('novaInput').value.trim();
+    if (!desc || novaBusy) return;
+    const key = novaSavedKey();
+    if (!key) { updateNovaKeyRow(); return; }
+
+    novaBusy = true;
+    $('novaAsk').disabled = true;
+    $('novaError').classList.remove('show');
+    $('novaPreview').classList.remove('show');
+    $('novaLoading').classList.add('show');
+
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-opus-4-8',
+          max_tokens: 400,
+          system: NOVA_SYS,
+          messages: [{ role: 'user', content: desc }],
+        }),
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error.message || 'Request failed.');
+      const text = (json.content && json.content[0] && json.content[0].text) || '';
+      const data = extractJSON(text);
+      if (!data || typeof data.calories === 'undefined') throw new Error('Could not read a nutrition estimate from the reply.');
+
+      novaPreviewData = {
+        name: data.name || desc,
+        calories: Math.round(+data.calories || 0),
+        protein: Math.round(+data.protein || 0),
+        carbs: Math.round(+data.carbs || 0),
+        fat: Math.round(+data.fat || 0),
+        fiber: Math.round(+data.fiber || 0),
+        sodium: Math.round(+data.sodium || 0),
+        potassium: Math.round(+data.potassium || 0),
+        vitaminC: Math.round(+data.vitaminC || 0),
+        calcium: Math.round(+data.calcium || 0),
+        iron: Math.round((+data.iron || 0) * 10) / 10,
+      };
+      $('npName').textContent = novaPreviewData.name;
+      $('npMacros').textContent = novaPreviewData.calories + ' kcal · P' + novaPreviewData.protein + 'g · C' + novaPreviewData.carbs + 'g · F' + novaPreviewData.fat + 'g';
+      $('npMicros').textContent = 'Fiber ' + novaPreviewData.fiber + 'g · Sodium ' + novaPreviewData.sodium + 'mg · Potassium ' + novaPreviewData.potassium + 'mg · Vit C ' + novaPreviewData.vitaminC + 'mg · Calcium ' + novaPreviewData.calcium + 'mg · Iron ' + novaPreviewData.iron + 'mg';
+      $('novaPreview').classList.add('show');
+    } catch (e) {
+      $('novaError').textContent = e.message || 'Something went wrong — check your API key and try again.';
+      $('novaError').classList.add('show');
+    } finally {
+      $('novaLoading').classList.remove('show');
+      $('novaAsk').disabled = false;
+      novaBusy = false;
+    }
+  }
+  $('novaAsk').addEventListener('click', novaEstimate);
+  $('novaInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') novaEstimate(); });
+  $('npAdd').addEventListener('click', () => {
+    if (!novaPreviewData) return;
+    addMealEntry(novaPreviewData);
+    novaPreviewData = null;
+    $('novaPreview').classList.remove('show');
+    $('novaInput').value = '';
+  });
+  $('npDiscard').addEventListener('click', () => {
+    novaPreviewData = null;
+    $('novaPreview').classList.remove('show');
+  });
+
   renderAll();
+  renderFoodIndex();
 
   if (window.initCloudSync) {
     window.initCloudSync({
       appKey: 'nutrition',
       syncedKeys: [STORE_KEY],
-      onApplied: renderAll
+      onApplied: renderAll,
     });
   }
 })();
