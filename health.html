@@ -700,11 +700,44 @@ main {
     function save(t) { try { localStorage.setItem(KEY, JSON.stringify(t)); } catch {} }
     function wipe() { try { localStorage.removeItem(KEY); } catch {} }
 
+    /* ---------- WHOOP token cross-device sync (additive-only — see index.html for why) ---------- */
+    function whoopSupa() {
+      if (!window.supabase) return null;
+      const url = window.DASH_SUPABASE_URL || 'https://srajryooffirbroltjmg.supabase.co';
+      const skey = window.DASH_SUPABASE_KEY || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+      return window.supabase.createClient(url, skey);
+    }
+    async function pullWhoopTokenFromCloud() {
+      const supa = whoopSupa(); if (!supa) return false;
+      try {
+        const { data } = await supa.from('app_state').select('data').eq('key', 'health').maybeSingle();
+        const remoteTok = data && data.data && data.data.whoop_tokens_v1;
+        if (!remoteTok || !remoteTok.access) return false;
+        const local = load();
+        if (local && local.expires && remoteTok.expires && local.expires >= remoteTok.expires) return false;
+        save(remoteTok);
+        return true;
+      } catch (e) { return false; }
+    }
+    async function pushWhoopTokenToCloud() {
+      const supa = whoopSupa(); if (!supa) return;
+      const local = load();
+      if (!local || !local.access) return;
+      try {
+        const { data } = await supa.from('app_state').select('data').eq('key', 'health').maybeSingle();
+        const current = (data && data.data) || {};
+        const remoteTok = current.whoop_tokens_v1;
+        if (remoteTok && remoteTok.expires && local.expires && remoteTok.expires > local.expires) return;
+        const merged = Object.assign({}, current, { whoop_tokens_v1: local });
+        await supa.from('app_state').upsert({ key: 'health', data: merged, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+      } catch (e) {}
+    }
+
     if (location.hash && location.hash.indexOf('whoop_access') !== -1) {
       const h = new URLSearchParams(location.hash.slice(1));
       const access = h.get('whoop_access'), refresh = h.get('whoop_refresh');
       const expires = Number(h.get('whoop_expires')) || Date.now() + 3500e3;
-      if (access) { save({ access, refresh, expires }); history.replaceState(null, '', location.pathname + location.search); }
+      if (access) { save({ access, refresh, expires }); pushWhoopTokenToCloud(); history.replaceState(null, '', location.pathname + location.search); }
     }
 
     const $ = (id) => document.getElementById(id);
@@ -733,7 +766,7 @@ main {
         const j = await r.json();
         if (j.access_token) {
           const next = { access: j.access_token, refresh: j.refresh_token || t.refresh, expires: Date.now() + (j.expires_in||3500)*1000 };
-          save(next); return next;
+          save(next); pushWhoopTokenToCloud(); return next;
         }
       } catch {}
       return null;
@@ -902,6 +935,13 @@ main {
       else { $('whDisc').style.display = ''; $('whConn').style.display = 'none'; }
     }
     render();
+    // If this device has no token yet (or an older one), pick up whatever
+    // was connected from another device — this is the "reconnect on the
+    // phone won't work, but the computer's connection reaches it" path.
+    pullWhoopTokenFromCloud().then((changed) => { if (changed) render(); });
+    // Exposed so the cloud-sync handler below (a separate closure) can
+    // re-render once a WHOOP token arrives from another device.
+    window.__whoopRerender = render;
   })();
   </script>
 
@@ -1475,6 +1515,7 @@ document.addEventListener('DOMContentLoaded', function () {
     syncedPrefixes: ['stack:taken:'],
     onApplied: function () {
       window.dispatchEvent(new Event('storage'));
+      if (window.__whoopRerender) window.__whoopRerender();
     }
   });
 });

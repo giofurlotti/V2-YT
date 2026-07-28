@@ -241,12 +241,46 @@ body::after {
 
   /* ================= WHOOP fetch (mirrors index.html) ================= */
   const WHOOP_KEY = 'whoop_tokens_v1';
+
+  /* ---------- WHOOP token cross-device sync (additive-only — see index.html for why) ---------- */
+  function whoopSupa() {
+    if (!window.supabase) return null;
+    const url = window.DASH_SUPABASE_URL || 'https://srajryooffirbroltjmg.supabase.co';
+    const skey = window.DASH_SUPABASE_KEY || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+    return window.supabase.createClient(url, skey);
+  }
+  async function pullWhoopTokenFromCloud() {
+    const supa = whoopSupa(); if (!supa) return false;
+    try {
+      const { data } = await supa.from('app_state').select('data').eq('key', 'health').maybeSingle();
+      const remoteTok = data && data.data && data.data.whoop_tokens_v1;
+      if (!remoteTok || !remoteTok.access) return false;
+      let local = null; try { local = JSON.parse(localStorage.getItem(WHOOP_KEY)); } catch (e) {}
+      if (local && local.expires && remoteTok.expires && local.expires >= remoteTok.expires) return false;
+      localStorage.setItem(WHOOP_KEY, JSON.stringify(remoteTok));
+      return true;
+    } catch (e) { return false; }
+  }
+  async function pushWhoopTokenToCloud() {
+    const supa = whoopSupa(); if (!supa) return;
+    let local = null; try { local = JSON.parse(localStorage.getItem(WHOOP_KEY)); } catch (e) {}
+    if (!local || !local.access) return;
+    try {
+      const { data } = await supa.from('app_state').select('data').eq('key', 'health').maybeSingle();
+      const current = (data && data.data) || {};
+      const remoteTok = current.whoop_tokens_v1;
+      if (remoteTok && remoteTok.expires && local.expires && remoteTok.expires > local.expires) return;
+      const merged = Object.assign({}, current, { whoop_tokens_v1: local });
+      await supa.from('app_state').upsert({ key: 'health', data: merged, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    } catch (e) {}
+  }
+
   async function wRefresh(t) {
     if (!t.refresh) return null;
     try {
       const r = await fetch('/api/whoop-refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: t.refresh }) });
       const j = await r.json();
-      if (j.access_token) { const n = { access: j.access_token, refresh: j.refresh_token || t.refresh, expires: Date.now() + (j.expires_in || 3500) * 1000 }; localStorage.setItem(WHOOP_KEY, JSON.stringify(n)); return n; }
+      if (j.access_token) { const n = { access: j.access_token, refresh: j.refresh_token || t.refresh, expires: Date.now() + (j.expires_in || 3500) * 1000 }; localStorage.setItem(WHOOP_KEY, JSON.stringify(n)); pushWhoopTokenToCloud(); return n; }
     } catch (e) {}
     return null;
   }
@@ -515,6 +549,7 @@ body::after {
         onApplied: boot,
       });
     }
+    pullWhoopTokenFromCloud().then((changed) => { if (changed) boot(); });
   });
 
   boot();

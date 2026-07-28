@@ -955,6 +955,49 @@ body::after {
   const WHOOP_KEY = 'whoop_tokens_v1';
   const SYNC_KEY  = 'whoop_last_sync';
 
+  /* ---------- WHOOP token cross-device sync ----------
+     Deliberately NOT folded into sync.js's generic syncedKeys: that
+     mechanism deletes any local key absent from the remote blob, and
+     the 'health' row has never carried whoop_tokens_v1 before — the
+     first pull on every device would have wiped everyone's token
+     instead of sharing it. This is a narrow, additive-only merge
+     instead: pull only replaces when the incoming token is newer
+     (later `expires`), push only writes when local is newer, and
+     neither ever deletes based on absence. This is what lets a WHOOP
+     connection made on one device (e.g. a computer, when a phone's
+     OAuth flow won't complete) reach every other device. */
+  function whoopSupa() {
+    if (!window.supabase) return null;
+    const url = window.DASH_SUPABASE_URL || 'https://srajryooffirbroltjmg.supabase.co';
+    const key = window.DASH_SUPABASE_KEY || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+    return window.supabase.createClient(url, key);
+  }
+  async function pullWhoopTokenFromCloud() {
+    const supa = whoopSupa(); if (!supa) return false;
+    try {
+      const { data } = await supa.from('app_state').select('data').eq('key', 'health').maybeSingle();
+      const remoteTok = data && data.data && data.data.whoop_tokens_v1;
+      if (!remoteTok || !remoteTok.access) return false;
+      let local = null; try { local = JSON.parse(localStorage.getItem(WHOOP_KEY)); } catch (e) {}
+      if (local && local.expires && remoteTok.expires && local.expires >= remoteTok.expires) return false;
+      localStorage.setItem(WHOOP_KEY, JSON.stringify(remoteTok));
+      return true;
+    } catch (e) { return false; }
+  }
+  async function pushWhoopTokenToCloud() {
+    const supa = whoopSupa(); if (!supa) return;
+    let local = null; try { local = JSON.parse(localStorage.getItem(WHOOP_KEY)); } catch (e) {}
+    if (!local || !local.access) return;
+    try {
+      const { data } = await supa.from('app_state').select('data').eq('key', 'health').maybeSingle();
+      const current = (data && data.data) || {};
+      const remoteTok = current.whoop_tokens_v1;
+      if (remoteTok && remoteTok.expires && local.expires && remoteTok.expires > local.expires) return;
+      const merged = Object.assign({}, current, { whoop_tokens_v1: local });
+      await supa.from('app_state').upsert({ key: 'health', data: merged, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    } catch (e) {}
+  }
+
   const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const now = new Date();
@@ -1073,6 +1116,10 @@ body::after {
       onApplied: function () {
         if ($('settingsBg').classList.contains('show')) populate();
       }
+    });
+    pullWhoopTokenFromCloud().then((changed) => {
+      if (changed) { whSyncFailed = false; whSyncAttempted = false; renderWhoop(); }
+      syncWhoop();
     });
   });
 
@@ -1630,7 +1677,7 @@ body::after {
     try {
       const r = await fetch('/api/whoop-refresh', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ refresh_token: t.refresh }) });
       const j = await r.json();
-      if (j.access_token) { const n = { access:j.access_token, refresh:j.refresh_token||t.refresh, expires:Date.now()+(j.expires_in||3500)*1000 }; saveJSON(WHOOP_KEY, n); return n; }
+      if (j.access_token) { const n = { access:j.access_token, refresh:j.refresh_token||t.refresh, expires:Date.now()+(j.expires_in||3500)*1000 }; saveJSON(WHOOP_KEY, n); pushWhoopTokenToCloud(); return n; }
     } catch (e) {}
     return null;
   }
