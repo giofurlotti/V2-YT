@@ -89,6 +89,11 @@ body::after {
 
 .page { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; }
 
+/* This screen has its own header + Today panel — the shared topbar.js
+   water pill doesn't add anything here, so it's hidden outright. The
+   bottom tab bar stays (still useful navigation). */
+#topbar { display: none !important; }
+
 .hub-eyebrow {
   font-family: var(--font-mono);
   font-size: 11px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase;
@@ -128,34 +133,44 @@ body::after {
   margin-bottom: 16px;
 }
 
-.readiness-ring-wrap { position: relative; width: 124px; height: 124px; margin: 0 auto 14px; }
+.readiness-ring-wrap { position: relative; width: 152px; height: 152px; margin: 0 auto 6px; }
 .readiness-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
-.ring-track { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 8; }
+.ring-track { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 9; }
 .ring-fill {
-  fill: none; stroke: #6BE3A4; stroke-width: 8; stroke-linecap: round;
+  fill: none; stroke: #6BE3A4; stroke-width: 9; stroke-linecap: round;
   transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;
-  filter: drop-shadow(0 0 8px rgba(107,227,164,0.55));
+  filter: drop-shadow(0 0 9px rgba(107,227,164,0.55));
 }
-.ring-track-inner { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 6; }
+.ring-track-inner { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 7; }
 .ring-fill-inner {
-  fill: none; stroke: #7DD3FC; stroke-width: 6; stroke-linecap: round;
+  fill: none; stroke: #7DD3FC; stroke-width: 7; stroke-linecap: round;
   transition: stroke-dashoffset 0.6s ease;
-  filter: drop-shadow(0 0 6px rgba(125,211,252,0.45));
+  filter: drop-shadow(0 0 7px rgba(125,211,252,0.45));
 }
 .readiness-center {
   position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
 }
-.readiness-pct { font-family: var(--font-numeric); font-size: 30px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1; }
+.readiness-pct-row { display: flex; align-items: baseline; gap: 6px; }
+.readiness-pct { font-family: var(--font-numeric); font-size: 38px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1; }
+.readiness-trend { font-family: var(--font-numeric); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.readiness-trend.up { color: #6BE3A4; }
+.readiness-trend.down { color: #FF6B6B; }
+.readiness-trend.flat { color: var(--text-tertiary); }
 .readiness-sub { font-size: 9.5px; color: var(--text-tertiary); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.08em; }
+.readiness-headline {
+  font-family: var(--font-display); font-style: italic;
+  font-size: 15.5px; font-weight: 600; color: var(--text-primary);
+  text-align: center; margin: 4px 0 14px;
+}
 .ring-legend { display: flex; justify-content: center; gap: 14px; margin-bottom: 14px; }
 .ring-legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
 .ring-legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 .ring-legend-dot.recovery { background: #6BE3A4; box-shadow: 0 0 5px rgba(107,227,164,0.7); }
 .ring-legend-dot.sleep { background: #7DD3FC; box-shadow: 0 0 5px rgba(125,211,252,0.7); }
-.readiness-stats { display: flex; justify-content: space-around; text-align: center; }
-.readiness-stats span { display: block; font-family: var(--font-numeric); font-size: 15px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.readiness-stats label { display: block; font-size: 9px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 3px; }
+.readiness-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
+.readiness-stats span { display: block; font-family: var(--font-numeric); font-size: 14px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.readiness-stats label { display: block; font-size: 8.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 3px; }
 
 .weather-icon svg {
   width: 34px; height: 34px; stroke: #7DD3FC; fill: none;
@@ -171,6 +186,10 @@ body::after {
   background: rgba(125,211,252,0.10); border: 1px solid rgba(125,211,252,0.22); color: #7DD3FC;
 }
 .weather-rain.dry { background: rgba(107,227,164,0.08); border-color: rgba(107,227,164,0.20); color: #6BE3A4; }
+.weather-details { display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); }
+.weather-details div { text-align: center; flex: 1; }
+.weather-details span { display: block; font-family: var(--font-numeric); font-size: 13px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.weather-details label { display: block; font-size: 8.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 3px; }
 
 .tips-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
 .tips-list li { display: flex; gap: 9px; align-items: flex-start; font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; }
@@ -184,6 +203,36 @@ body::after {
   .today-grid { grid-template-columns: 1fr; }
   .tips-card { grid-column: span 1; }
 }
+
+/* ===== News card ===== */
+.news-card {
+  position: relative; padding: 20px; border-radius: 24px; margin-bottom: 18px;
+  background: rgba(18,17,24,0.55); border: 1px solid rgba(255,255,255,0.06);
+  backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+}
+.news-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.news-refresh-btn {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.04); color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.news-refresh-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
+.news-refresh-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.news-refresh-btn.spinning svg { animation: news-spin 0.9s linear infinite; }
+@keyframes news-spin { to { transform: rotate(360deg); } }
+.news-meta { font-size: 11px; color: var(--text-tertiary); margin-bottom: 16px; }
+.news-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.news-item { display: flex; gap: 14px; }
+.news-rank { font-family: var(--font-numeric); font-size: 13px; font-weight: 700; color: var(--glow); flex-shrink: 0; width: 18px; padding-top: 2px; }
+.news-body { flex: 1; min-width: 0; }
+.news-category { font-size: 9.5px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--glow); margin-bottom: 4px; }
+.news-headline { font-family: var(--font-display); font-style: italic; font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 5px; line-height: 1.3; }
+.news-summary { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; }
+.news-source { font-size: 10.5px; color: var(--text-tertiary); margin-top: 5px; }
+.news-empty, .news-loading, .news-error { font-size: 12.5px; color: var(--text-tertiary); font-style: italic; text-align: center; padding: 20px 0; }
+.news-error { color: var(--text-secondary); }
 
 /* ===== BENTO GRID ===== */
 .bento {
@@ -378,17 +427,21 @@ body::after {
     <div class="today-card">
       <div class="today-card-label">Readiness</div>
       <div class="readiness-ring-wrap">
-        <svg class="readiness-ring" viewBox="0 0 120 120">
-          <circle class="ring-track" cx="60" cy="60" r="52"/>
-          <circle class="ring-fill" id="readinessRingFill" cx="60" cy="60" r="52"/>
-          <circle class="ring-track-inner" cx="60" cy="60" r="41"/>
-          <circle class="ring-fill-inner" id="sleepRingFill" cx="60" cy="60" r="41"/>
+        <svg class="readiness-ring" viewBox="0 0 140 140">
+          <circle class="ring-track" cx="70" cy="70" r="60"/>
+          <circle class="ring-fill" id="readinessRingFill" cx="70" cy="70" r="60"/>
+          <circle class="ring-track-inner" cx="70" cy="70" r="47"/>
+          <circle class="ring-fill-inner" id="sleepRingFill" cx="70" cy="70" r="47"/>
         </svg>
         <div class="readiness-center">
-          <div class="readiness-pct" id="readinessPct">—</div>
+          <div class="readiness-pct-row">
+            <span class="readiness-pct" id="readinessPct">—</span>
+            <span class="readiness-trend" id="readinessTrend"></span>
+          </div>
           <div class="readiness-sub" id="readinessSub">Connect WHOOP</div>
         </div>
       </div>
+      <div class="readiness-headline" id="readinessHeadline">Connect WHOOP in Settings</div>
       <div class="ring-legend">
         <span class="ring-legend-item"><span class="ring-legend-dot recovery"></span>Recovery</span>
         <span class="ring-legend-item"><span class="ring-legend-dot sleep"></span>Sleep</span>
@@ -397,6 +450,7 @@ body::after {
         <div><span id="readinessSleep">—</span><label>Sleep</label></div>
         <div><span id="readinessRhr">—</span><label>Rest HR</label></div>
         <div><span id="readinessHrv">—</span><label>HRV</label></div>
+        <div><span id="readinessStrain">—</span><label>Strain</label></div>
       </div>
     </div>
 
@@ -408,12 +462,28 @@ body::after {
       </div>
       <div class="weather-desc" id="weatherDesc">Getting your location…</div>
       <div class="weather-rain" id="weatherRain">Checking today's forecast…</div>
+      <div class="weather-details">
+        <div><span id="weatherWind">—</span><label>Wind</label></div>
+        <div><span id="weatherUv">—</span><label>UV</label></div>
+        <div><span id="weatherSunset">—</span><label>Sunset</label></div>
+      </div>
     </div>
 
     <div class="today-card tips-card">
       <div class="today-card-label">Tips for today</div>
       <ul class="tips-list" id="tipsList"></ul>
     </div>
+  </div>
+
+  <div class="news-card">
+    <div class="news-head">
+      <div class="today-card-label" style="margin-bottom:0">Today's top news · worldwide</div>
+      <button class="news-refresh-btn" id="newsRefreshBtn" type="button" aria-label="Refresh news">
+        <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
+      </button>
+    </div>
+    <div class="news-meta" id="newsMeta"></div>
+    <ul class="news-list" id="newsList"></ul>
   </div>
 
   <div class="bento">
@@ -745,8 +815,13 @@ body::after {
   }
 
   /* ---------- Readiness ring (home screen) ---------- */
-  const RING_CIRCUMFERENCE = 2 * Math.PI * 52;
-  const RING_CIRCUMFERENCE_INNER = 2 * Math.PI * 41;
+  const RING_CIRCUMFERENCE = 2 * Math.PI * 60;
+  const RING_CIRCUMFERENCE_INNER = 2 * Math.PI * 47;
+  function readinessHeadlineFor(rec) {
+    if (rec >= 67) return 'Well Recovered';
+    if (rec >= 34) return 'Adequately Recovered';
+    return 'Take It Easy Today';
+  }
   function updateReadinessRing() {
     const fill = $('readinessRingFill');
     const fillInner = $('sleepRingFill');
@@ -756,17 +831,21 @@ body::after {
     const rec = whStats && whStats.rec;
     if (!t || !t.access) {
       $('readinessPct').textContent = '—';
+      $('readinessTrend').textContent = '';
       $('readinessSub').textContent = 'Connect WHOOP';
+      $('readinessHeadline').textContent = 'Connect WHOOP in Settings';
       fill.style.strokeDashoffset = RING_CIRCUMFERENCE;
       fillInner.style.strokeDashoffset = RING_CIRCUMFERENCE_INNER;
       $('readinessSleep').textContent = '—';
       $('readinessRhr').textContent = '—';
       $('readinessHrv').textContent = '—';
+      $('readinessStrain').textContent = '—';
       return;
     }
     if (rec == null) {
       $('readinessPct').textContent = '—';
       $('readinessSub').textContent = 'Syncing…';
+      $('readinessHeadline').textContent = 'Syncing your WHOOP data…';
       fill.style.strokeDashoffset = RING_CIRCUMFERENCE;
       fillInner.style.strokeDashoffset = RING_CIRCUMFERENCE_INNER;
       return;
@@ -775,11 +854,24 @@ body::after {
     fill.style.stroke = rec >= 67 ? '#6BE3A4' : rec >= 34 ? '#F2C063' : '#FF6B6B';
     $('readinessPct').textContent = rec + '%';
     $('readinessSub').textContent = 'Recovery';
+    $('readinessHeadline').textContent = readinessHeadlineFor(rec);
+
+    const trendEl = $('readinessTrend');
+    if (whStats.recPrev != null) {
+      const delta = rec - whStats.recPrev;
+      if (delta > 0) { trendEl.textContent = '▲' + delta; trendEl.className = 'readiness-trend up'; }
+      else if (delta < 0) { trendEl.textContent = '▼' + Math.abs(delta); trendEl.className = 'readiness-trend down'; }
+      else { trendEl.textContent = '– same'; trendEl.className = 'readiness-trend flat'; }
+    } else {
+      trendEl.textContent = '';
+    }
+
     const sleepPct = whStats.sleep != null ? whStats.sleep : 0;
     fillInner.style.strokeDashoffset = RING_CIRCUMFERENCE_INNER * (1 - sleepPct / 100);
     $('readinessSleep').textContent = whStats.sleep != null ? whStats.sleep + '%' : '—';
     $('readinessRhr').textContent = whStats.rhr != null ? whStats.rhr : '—';
     $('readinessHrv').textContent = whStats.hrv != null ? whStats.hrv : '—';
+    $('readinessStrain').textContent = whStats.strain != null ? whStats.strain : '—';
   }
 
   /* ---------- Weather (Open-Meteo, geolocation-based, no API key) ---------- */
@@ -830,7 +922,8 @@ body::after {
     }
     try {
       const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + geo.lat + '&longitude=' + geo.lon +
-        '&current=temperature_2m,precipitation,weather_code&daily=precipitation_probability_max&timezone=auto';
+        '&current=temperature_2m,precipitation,weather_code,wind_speed_10m' +
+        '&daily=precipitation_probability_max,uv_index_max,sunrise,sunset&timezone=auto';
       const r = await fetch(url);
       const j = await r.json();
       const cur = j.current || {};
@@ -840,10 +933,18 @@ body::after {
         code: cur.weather_code,
         isRainingNow: (cur.precipitation || 0) > 0,
         rainProb: (daily.precipitation_probability_max && daily.precipitation_probability_max[0] != null) ? daily.precipitation_probability_max[0] : null,
+        wind: cur.wind_speed_10m != null ? Math.round(cur.wind_speed_10m) : null,
+        uv: (daily.uv_index_max && daily.uv_index_max[0] != null) ? Math.round(daily.uv_index_max[0]) : null,
+        sunset: (daily.sunset && daily.sunset[0]) ? daily.sunset[0] : null,
       };
       $('weatherIcon').innerHTML = weatherIconFor(weatherData.code);
       $('weatherTemp').textContent = weatherData.temp + '°';
       $('weatherDesc').textContent = weatherDescFor(weatherData.code);
+      $('weatherWind').textContent = weatherData.wind != null ? weatherData.wind + ' km/h' : '—';
+      $('weatherUv').textContent = weatherData.uv != null ? weatherData.uv : '—';
+      $('weatherSunset').textContent = weatherData.sunset
+        ? new Date(weatherData.sunset).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : '—';
       const rainEl = $('weatherRain');
       const prob = weatherData.rainProb;
       if (weatherData.isRainingNow) {
@@ -864,6 +965,119 @@ body::after {
       $('weatherDesc').textContent = 'Weather unavailable';
     }
   }
+
+  /* ---------- Today's top news (Claude + live web search, bring-your-own key) ----------
+     Reuses the same Anthropic key already saved for the Nova tile — no new
+     key to manage. Auto-loads once per calendar day (cached), plus a manual
+     refresh button; each load costs a small amount on the user's own
+     Anthropic account (web search is billed per search), so it deliberately
+     doesn't re-fetch on every visit. */
+  const NEWS_KEY = 'news_today_v1';
+  function newsSavedKey() { try { return cleanApiKeyValue(localStorage.getItem('nova_lite_api_key') || '', 'nova_lite_api_key'); } catch (e) { return ''; } }
+  function cleanApiKeyValue(v, storeKey) {
+    if (typeof v !== 'string' || v.length < 2) return v;
+    if (v[0] === '"' && v[v.length - 1] === '"') {
+      let cleaned;
+      try { cleaned = JSON.parse(v); } catch (e) { cleaned = v.slice(1, -1); }
+      if (typeof cleaned === 'string' && storeKey) { try { localStorage.setItem(storeKey, cleaned); } catch (e) {} }
+      return cleaned;
+    }
+    return v;
+  }
+  function loadNewsCache() { try { return JSON.parse(localStorage.getItem(NEWS_KEY)); } catch (e) { return null; } }
+  function saveNewsCache(v) { try { localStorage.setItem(NEWS_KEY, JSON.stringify(v)); } catch (e) {} }
+
+  const NEWS_SYS =
+    'You are a global news briefing assistant with live web search. Find the most important, most globally ' +
+    'influential news stories from TODAY across all major areas — world politics and conflict, economy and ' +
+    'markets, technology and science, and any major breaking story — and pick the 6 most significant ones, ' +
+    'ranked by real-world impact and influence, not by even coverage across categories. Reply with ONLY a ' +
+    'valid JSON array, no markdown, no commentary, in exactly this shape: ' +
+    '[{"category":"short category label","headline":"short headline","summary":"one or two plain sentences",' +
+    '"source":"publisher name"}], ordered from most to least important.';
+
+  function extractJSONArray(text) {
+    try { return JSON.parse(text); } catch (e) {}
+    const m = String(text).match(/\[[\s\S]*\]/);
+    if (m) { try { return JSON.parse(m[0]); } catch (e) {} }
+    return null;
+  }
+
+  function renderNewsMessage(msg, cls) {
+    $('newsMeta').textContent = '';
+    $('newsList').innerHTML = '<li class="' + (cls || 'news-empty') + '"></li>';
+    $('newsList').firstChild.textContent = msg;
+  }
+  function renderNews(items, fetchedAt) {
+    $('newsMeta').textContent = 'Updated ' + relTime(fetchedAt);
+    const el = $('newsList');
+    el.innerHTML = '';
+    if (!items || !items.length) { renderNewsMessage('No stories available.'); return; }
+    items.slice(0, 6).forEach((item, i) => {
+      const li = document.createElement('li');
+      li.className = 'news-item';
+      const rank = document.createElement('span'); rank.className = 'news-rank'; rank.textContent = String(i + 1).padStart(2, '0');
+      const body = document.createElement('div'); body.className = 'news-body';
+      const cat = document.createElement('div'); cat.className = 'news-category'; cat.textContent = item.category || 'News';
+      const hl = document.createElement('div'); hl.className = 'news-headline'; hl.textContent = item.headline || '';
+      const sum = document.createElement('div'); sum.className = 'news-summary'; sum.textContent = item.summary || '';
+      const src = document.createElement('div'); src.className = 'news-source'; src.textContent = item.source || '';
+      body.append(cat, hl, sum, src);
+      li.append(rank, body);
+      el.appendChild(li);
+    });
+  }
+
+  let newsBusy = false;
+  async function fetchNews(force) {
+    if (newsBusy) return;
+    const cache = loadNewsCache();
+    const today = calendarDateKey();
+    if (!force && cache && cache.date === today && cache.items && cache.items.length) {
+      renderNews(cache.items, cache.fetchedAt);
+      return;
+    }
+    const key = newsSavedKey();
+    if (!key) {
+      renderNewsMessage('Paste your Anthropic key on the Nova tile to see today’s top stories here.');
+      return;
+    }
+    newsBusy = true;
+    $('newsRefreshBtn').classList.add('spinning');
+    renderNewsMessage('Reading today’s headlines…', 'news-loading');
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-opus-4-8',
+          max_tokens: 1500,
+          system: NEWS_SYS,
+          messages: [{ role: 'user', content: 'Give me today’s top global news, prioritized by importance.' }],
+          tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 5 }],
+        }),
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error.message || 'Request failed.');
+      const text = (json.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('\n');
+      const items = extractJSONArray(text);
+      if (!items || !items.length) throw new Error('Could not read a news list from the reply.');
+      const fetchedAt = Date.now();
+      saveNewsCache({ date: today, items, fetchedAt });
+      renderNews(items, fetchedAt);
+    } catch (e) {
+      renderNewsMessage('Could not load news: ' + (e && e.message ? e.message : 'unknown error'), 'news-error');
+    } finally {
+      newsBusy = false;
+      $('newsRefreshBtn').classList.remove('spinning');
+    }
+  }
+  $('newsRefreshBtn').addEventListener('click', () => fetchNews(true));
 
   /* ---------- Water progress (mirrors topbar.js's formula) ---------- */
   function calendarDateKey() {
@@ -953,17 +1167,22 @@ body::after {
     if (!t || !t.access) return;
     if (t.expires && Date.now() > t.expires - 60000) { const n = await wRefresh(t); if (n) t = n; }
     try {
-      const [rec, sleep] = await Promise.all([
-        wFetch('/recovery?limit=1', t).catch(()=>null),
+      const [rec, sleep, cycle] = await Promise.all([
+        wFetch('/recovery?limit=2', t).catch(()=>null),
         wFetch('/activity/sleep?limit=1', t).catch(()=>null),
+        wFetch('/cycle?limit=1', t).catch(()=>null),
       ]);
       const r0 = rec && rec.records && rec.records[0];
+      const r1 = rec && rec.records && rec.records[1];
       const s0 = sleep && sleep.records && sleep.records[0];
+      const c0 = cycle && cycle.records && cycle.records[0];
       whStats = {
-        rec:   r0 && r0.score && r0.score.recovery_score != null ? Math.round(r0.score.recovery_score) : null,
-        rhr:   r0 && r0.score && r0.score.resting_heart_rate != null ? Math.round(r0.score.resting_heart_rate) : null,
-        hrv:   r0 && r0.score && r0.score.hrv_rmssd_milli != null ? Math.round(r0.score.hrv_rmssd_milli) : null,
-        sleep: s0 && s0.score && s0.score.sleep_performance_percentage != null ? Math.round(s0.score.sleep_performance_percentage) : null,
+        rec:     r0 && r0.score && r0.score.recovery_score != null ? Math.round(r0.score.recovery_score) : null,
+        recPrev: r1 && r1.score && r1.score.recovery_score != null ? Math.round(r1.score.recovery_score) : null,
+        rhr:     r0 && r0.score && r0.score.resting_heart_rate != null ? Math.round(r0.score.resting_heart_rate) : null,
+        hrv:     r0 && r0.score && r0.score.hrv_rmssd_milli != null ? Math.round(r0.score.hrv_rmssd_milli) : null,
+        sleep:   s0 && s0.score && s0.score.sleep_performance_percentage != null ? Math.round(s0.score.sleep_performance_percentage) : null,
+        strain:  c0 && c0.score && c0.score.strain != null ? Math.round(c0.score.strain * 10) / 10 : null,
       };
       localStorage.setItem(SYNC_KEY, String(Date.now()));
       renderWhoop();
@@ -981,6 +1200,7 @@ body::after {
   renderTips();
   syncWhoop();
   loadWeather();
+  fetchNews(false);
 })();
 </script>
 </body>
