@@ -10,7 +10,7 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Playfair+Display:ital,wght@1,500;1,600;1,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Playfair+Display:ital,wght@1,500;1,600;1,700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
@@ -25,6 +25,7 @@
   --glow: #7C3AED;
   --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-numeric: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 * { box-sizing: border-box; }
@@ -127,7 +128,7 @@ body::after {
   margin-bottom: 16px;
 }
 
-.readiness-ring-wrap { position: relative; width: 108px; height: 108px; margin: 0 auto 16px; }
+.readiness-ring-wrap { position: relative; width: 124px; height: 124px; margin: 0 auto 14px; }
 .readiness-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
 .ring-track { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 8; }
 .ring-fill {
@@ -135,15 +136,26 @@ body::after {
   transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;
   filter: drop-shadow(0 0 8px rgba(107,227,164,0.55));
 }
+.ring-track-inner { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 6; }
+.ring-fill-inner {
+  fill: none; stroke: #7DD3FC; stroke-width: 6; stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease;
+  filter: drop-shadow(0 0 6px rgba(125,211,252,0.45));
+}
 .readiness-center {
   position: absolute; inset: 0; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
 }
-.readiness-pct { font-size: 27px; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1; }
+.readiness-pct { font-family: var(--font-numeric); font-size: 30px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1; }
 .readiness-sub { font-size: 9.5px; color: var(--text-tertiary); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.08em; }
+.ring-legend { display: flex; justify-content: center; gap: 14px; margin-bottom: 14px; }
+.ring-legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; }
+.ring-legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.ring-legend-dot.recovery { background: #6BE3A4; box-shadow: 0 0 5px rgba(107,227,164,0.7); }
+.ring-legend-dot.sleep { background: #7DD3FC; box-shadow: 0 0 5px rgba(125,211,252,0.7); }
 .readiness-stats { display: flex; justify-content: space-around; text-align: center; }
-.readiness-stats span { display: block; font-size: 15px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
-.readiness-stats label { display: block; font-size: 9.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 3px; }
+.readiness-stats span { display: block; font-family: var(--font-numeric); font-size: 15px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.readiness-stats label { display: block; font-size: 9px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 3px; }
 
 .weather-icon svg {
   width: 34px; height: 34px; stroke: #7DD3FC; fill: none;
@@ -151,14 +163,14 @@ body::after {
   filter: drop-shadow(0 0 10px rgba(125,211,252,0.5));
 }
 .weather-main { display: flex; align-items: center; gap: 12px; }
-.weather-temp { font-size: 30px; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.weather-temp { font-family: var(--font-numeric); font-size: 32px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .weather-desc { font-size: 12.5px; color: var(--text-secondary); margin-top: 10px; }
 .weather-rain {
-  display: none; margin-top: 10px; font-size: 11.5px; padding: 8px 10px;
-  border-radius: 10px; background: rgba(125,211,252,0.10); border: 1px solid rgba(125,211,252,0.22);
-  color: #7DD3FC; line-height: 1.4;
+  margin-top: 10px; font-size: 11.5px; font-weight: 600; padding: 8px 10px;
+  border-radius: 10px; line-height: 1.4;
+  background: rgba(125,211,252,0.10); border: 1px solid rgba(125,211,252,0.22); color: #7DD3FC;
 }
-.weather-rain.show { display: block; }
+.weather-rain.dry { background: rgba(107,227,164,0.08); border-color: rgba(107,227,164,0.20); color: #6BE3A4; }
 
 .tips-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
 .tips-list li { display: flex; gap: 9px; align-items: flex-start; font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; }
@@ -369,15 +381,22 @@ body::after {
         <svg class="readiness-ring" viewBox="0 0 120 120">
           <circle class="ring-track" cx="60" cy="60" r="52"/>
           <circle class="ring-fill" id="readinessRingFill" cx="60" cy="60" r="52"/>
+          <circle class="ring-track-inner" cx="60" cy="60" r="41"/>
+          <circle class="ring-fill-inner" id="sleepRingFill" cx="60" cy="60" r="41"/>
         </svg>
         <div class="readiness-center">
           <div class="readiness-pct" id="readinessPct">—</div>
           <div class="readiness-sub" id="readinessSub">Connect WHOOP</div>
         </div>
       </div>
+      <div class="ring-legend">
+        <span class="ring-legend-item"><span class="ring-legend-dot recovery"></span>Recovery</span>
+        <span class="ring-legend-item"><span class="ring-legend-dot sleep"></span>Sleep</span>
+      </div>
       <div class="readiness-stats">
         <div><span id="readinessSleep">—</span><label>Sleep</label></div>
         <div><span id="readinessRhr">—</span><label>Rest HR</label></div>
+        <div><span id="readinessHrv">—</span><label>HRV</label></div>
       </div>
     </div>
 
@@ -388,7 +407,7 @@ body::after {
         <span class="weather-temp" id="weatherTemp">—</span>
       </div>
       <div class="weather-desc" id="weatherDesc">Getting your location…</div>
-      <div class="weather-rain" id="weatherRain"></div>
+      <div class="weather-rain" id="weatherRain">Checking today's forecast…</div>
     </div>
 
     <div class="today-card tips-card">
@@ -727,31 +746,40 @@ body::after {
 
   /* ---------- Readiness ring (home screen) ---------- */
   const RING_CIRCUMFERENCE = 2 * Math.PI * 52;
+  const RING_CIRCUMFERENCE_INNER = 2 * Math.PI * 41;
   function updateReadinessRing() {
     const fill = $('readinessRingFill');
+    const fillInner = $('sleepRingFill');
     fill.style.strokeDasharray = RING_CIRCUMFERENCE;
+    fillInner.style.strokeDasharray = RING_CIRCUMFERENCE_INNER;
     const t = loadJSON(WHOOP_KEY, null);
     const rec = whStats && whStats.rec;
     if (!t || !t.access) {
       $('readinessPct').textContent = '—';
       $('readinessSub').textContent = 'Connect WHOOP';
       fill.style.strokeDashoffset = RING_CIRCUMFERENCE;
+      fillInner.style.strokeDashoffset = RING_CIRCUMFERENCE_INNER;
       $('readinessSleep').textContent = '—';
       $('readinessRhr').textContent = '—';
+      $('readinessHrv').textContent = '—';
       return;
     }
     if (rec == null) {
       $('readinessPct').textContent = '—';
       $('readinessSub').textContent = 'Syncing…';
       fill.style.strokeDashoffset = RING_CIRCUMFERENCE;
+      fillInner.style.strokeDashoffset = RING_CIRCUMFERENCE_INNER;
       return;
     }
     fill.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - rec / 100);
     fill.style.stroke = rec >= 67 ? '#6BE3A4' : rec >= 34 ? '#F2C063' : '#FF6B6B';
     $('readinessPct').textContent = rec + '%';
     $('readinessSub').textContent = 'Recovery';
+    const sleepPct = whStats.sleep != null ? whStats.sleep : 0;
+    fillInner.style.strokeDashoffset = RING_CIRCUMFERENCE_INNER * (1 - sleepPct / 100);
     $('readinessSleep').textContent = whStats.sleep != null ? whStats.sleep + '%' : '—';
     $('readinessRhr').textContent = whStats.rhr != null ? whStats.rhr : '—';
+    $('readinessHrv').textContent = whStats.hrv != null ? whStats.hrv : '—';
   }
 
   /* ---------- Weather (Open-Meteo, geolocation-based, no API key) ---------- */
@@ -817,14 +845,19 @@ body::after {
       $('weatherTemp').textContent = weatherData.temp + '°';
       $('weatherDesc').textContent = weatherDescFor(weatherData.code);
       const rainEl = $('weatherRain');
+      const prob = weatherData.rainProb;
       if (weatherData.isRainingNow) {
         rainEl.textContent = 'Raining right now — grab an umbrella.';
-        rainEl.classList.add('show');
-      } else if (weatherData.rainProb != null && weatherData.rainProb >= 40) {
-        rainEl.textContent = weatherData.rainProb + '% chance of rain today.';
-        rainEl.classList.add('show');
+        rainEl.classList.remove('dry');
+      } else if (prob != null && prob >= 60) {
+        rainEl.textContent = 'Rain likely today (' + prob + '%) — plan for it.';
+        rainEl.classList.remove('dry');
+      } else if (prob != null && prob >= 30) {
+        rainEl.textContent = 'Slight chance of rain today (' + prob + '%).';
+        rainEl.classList.remove('dry');
       } else {
-        rainEl.classList.remove('show');
+        rainEl.textContent = prob != null ? 'No rain expected today (' + prob + '% chance).' : 'No rain expected today.';
+        rainEl.classList.add('dry');
       }
       renderTips();
     } catch (e) {
@@ -877,7 +910,8 @@ body::after {
 
     if (weatherData) {
       if (weatherData.isRainingNow) tips.push("It's raining right now — grab an umbrella before heading out.");
-      else if (weatherData.rainProb != null && weatherData.rainProb >= 40) tips.push(weatherData.rainProb + '% chance of rain today — keep a jacket handy.');
+      else if (weatherData.rainProb != null && weatherData.rainProb >= 60) tips.push('Rain is likely today (' + weatherData.rainProb + '%) — plan for it.');
+      else if (weatherData.rainProb != null && weatherData.rainProb >= 30) tips.push('Slight chance of rain today (' + weatherData.rainProb + '%) — keep a jacket handy.');
     }
 
     const wp = getWaterProgress();
@@ -928,6 +962,7 @@ body::after {
       whStats = {
         rec:   r0 && r0.score && r0.score.recovery_score != null ? Math.round(r0.score.recovery_score) : null,
         rhr:   r0 && r0.score && r0.score.resting_heart_rate != null ? Math.round(r0.score.resting_heart_rate) : null,
+        hrv:   r0 && r0.score && r0.score.hrv_rmssd_milli != null ? Math.round(r0.score.hrv_rmssd_milli) : null,
         sleep: s0 && s0.score && s0.score.sleep_performance_percentage != null ? Math.round(s0.score.sleep_performance_percentage) : null,
       };
       localStorage.setItem(SYNC_KEY, String(Date.now()));
