@@ -118,11 +118,18 @@
   transition: color 0.15s;
 }
 .bottombar-tab-icon {
-  font-size: 24px; line-height: 1;
+  font-size: 20px; line-height: 1;
+  width: 34px; height: 34px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
   filter: grayscale(100%) brightness(1.2);
   opacity: 0.55;
-  transition: opacity 0.15s, filter 0.15s, transform 0.10s;
+  background: rgba(255,255,255,0.05);
+  transition: opacity 0.15s, filter 0.15s, transform 0.10s, background 0.15s, box-shadow 0.15s;
 }
+.bottombar-tab[data-page="main"] .bottombar-tab-icon { background: rgba(167,139,250,0.14); }
+.bottombar-tab[data-page="health"] .bottombar-tab-icon { background: rgba(52,211,153,0.14); }
+.bottombar-tab[data-page="fitness"] .bottombar-tab-icon { background: rgba(56,189,248,0.14); }
+.bottombar-tab[data-page="nutrition"] .bottombar-tab-icon { background: rgba(251,146,60,0.14); }
 .bottombar-tab.active {
   color: #FAFAFA;
 }
@@ -130,6 +137,10 @@
   filter: grayscale(100%) brightness(1.6);
   opacity: 1;
 }
+.bottombar-tab.active[data-page="main"] .bottombar-tab-icon { background: rgba(167,139,250,0.30); box-shadow: 0 0 12px rgba(167,139,250,0.45); }
+.bottombar-tab.active[data-page="health"] .bottombar-tab-icon { background: rgba(52,211,153,0.30); box-shadow: 0 0 12px rgba(52,211,153,0.45); }
+.bottombar-tab.active[data-page="fitness"] .bottombar-tab-icon { background: rgba(56,189,248,0.30); box-shadow: 0 0 12px rgba(56,189,248,0.45); }
+.bottombar-tab.active[data-page="nutrition"] .bottombar-tab-icon { background: rgba(251,146,60,0.30); box-shadow: 0 0 12px rgba(251,146,60,0.45); }
 .bottombar-tab:active .bottombar-tab-icon { transform: scale(0.92); }
 
 /* Push page content above the fixed bottom bar */
@@ -224,6 +235,10 @@ body.topbar-modal-open {
     <span class="bottombar-tab-icon">💪</span>
     <span>Fitness</span>
   </a>
+  <a href="nutrition.html" class="bottombar-tab" data-page="nutrition">
+    <span class="bottombar-tab-icon">🍽️</span>
+    <span>Nutrition</span>
+  </a>
 </nav>
 `;
 
@@ -245,6 +260,7 @@ body.topbar-modal-open {
     const p = (window.location.pathname || '').toLowerCase();
     if (p.endsWith('health.html')) return 'health';
     if (p.endsWith('gym.html')) return 'fitness';
+    if (p.endsWith('nutrition.html')) return 'nutrition';
     return 'main'; // index.html, /, or anything else falls back to main
   }
 

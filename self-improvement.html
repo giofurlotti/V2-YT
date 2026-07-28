@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="lock.js"></script>
+<script src="/api/config"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#050506">
+<title>Growth · Dashboard</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Playfair+Display:ital,wght@1,500;1,600;1,700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="sync.js" defer></script>
+<script src="topbar.js" defer></script>
+
+<style>
+:root {
+  --text-primary: #FAFAFA;
+  --text-secondary: #B8B6B0;
+  --text-tertiary: #76746E;
+  --success: #6BE3A4;
+  --warning: #F2C063;
+  --danger:  #FF6B6B;
+  --glow: #2DD4BF;
+  --age-blue: #38BDF8;
+  --age-purple: #A78BFA;
+  --age-teal: #2DD4BF;
+  --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-numeric: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; background: #050506; color: var(--text-secondary);
+  font-family: var(--font); -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  min-height: 100vh; position: relative; overflow-x: hidden;
+  padding: max(28px, env(safe-area-inset-top)) 20px 60px;
+}
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background:
+    radial-gradient(circle at 14% 10%, color-mix(in srgb, var(--glow) 22%, transparent), transparent 48%),
+    radial-gradient(circle at 85% 78%, color-mix(in srgb, var(--glow) 10%, transparent), transparent 55%);
+  filter: blur(50px); pointer-events: none; z-index: -3;
+  animation: drift 40s ease-in-out infinite alternate;
+}
+.starfield {
+  position: fixed; inset: 0; pointer-events: none; z-index: -2;
+  background-image:
+    radial-gradient(1.6px 1.6px at 12% 22%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1.2px 1.2px at 24% 8%, rgba(255,255,255,0.38), transparent),
+    radial-gradient(1.4px 1.4px at 38% 34%, rgba(255,255,255,0.32), transparent),
+    radial-gradient(1px 1px at 52% 14%, rgba(255,255,255,0.42), transparent),
+    radial-gradient(1.6px 1.6px at 67% 26%, rgba(255,255,255,0.28), transparent),
+    radial-gradient(1.2px 1.2px at 78% 12%, rgba(255,255,255,0.38), transparent),
+    radial-gradient(1px 1px at 88% 30%, rgba(255,255,255,0.32), transparent),
+    radial-gradient(1.4px 1.4px at 6% 48%, rgba(255,255,255,0.28), transparent),
+    radial-gradient(1px 1px at 30% 58%, rgba(255,255,255,0.38), transparent),
+    radial-gradient(1.6px 1.6px at 46% 66%, rgba(255,255,255,0.28), transparent),
+    radial-gradient(1.2px 1.2px at 62% 46%, rgba(255,255,255,0.32), transparent),
+    radial-gradient(1px 1px at 74% 62%, rgba(255,255,255,0.38), transparent),
+    radial-gradient(1.4px 1.4px at 91% 52%, rgba(255,255,255,0.28), transparent),
+    radial-gradient(1.6px 1.6px at 18% 78%, rgba(255,255,255,0.32), transparent),
+    radial-gradient(1px 1px at 42% 84%, rgba(255,255,255,0.28), transparent),
+    radial-gradient(1.2px 1.2px at 58% 88%, rgba(255,255,255,0.38), transparent);
+}
+.horizon {
+  position: fixed; left: 0; right: 0; bottom: 0; height: 90px; pointer-events: none; z-index: -1;
+  background: color-mix(in srgb, var(--glow) 8%, #050506);
+  clip-path: polygon(0% 100%, 0% 55%, 6% 62%, 13% 40%, 20% 58%, 28% 35%, 36% 60%, 45% 30%, 54% 55%, 62% 42%, 70% 64%, 79% 38%, 87% 58%, 94% 45%, 100% 60%, 100% 100%);
+  opacity: 0.4;
+}
+body::after {
+  content: ''; position: fixed; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.01) 1px, transparent 1px);
+  background-size: 3px 3px; pointer-events: none; z-index: -2;
+}
+@keyframes drift { 0%{transform:translate3d(0,0,0)} 100%{transform:translate3d(-22px,14px,0)} }
+
+.page { max-width: 720px; margin: 0 auto; position: relative; z-index: 1; }
+.dash-title {
+  margin: 0 0 4px; font-family: var(--font-display); font-style: italic;
+  font-size: 32px; font-weight: 600; letter-spacing: -0.01em;
+  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.dash-sub { margin: 0 0 22px; font-size: 13.5px; color: var(--text-tertiary); font-weight: 500; }
+@media (max-width: 480px) { .dash-title { font-size: 24px; } }
+
+.section { margin-top: 8px; }
+.section-title {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text-tertiary); display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+}
+.section-title::before { content: ''; width: 18px; height: 1px; background: var(--text-tertiary); opacity: 0.6; }
+.section-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(255,255,255,0.08), transparent); }
+
+.gm-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 14px;
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  overflow: hidden;
+}
+.gm-eyebrow { font-size: 10.5px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 6px; }
+.empty-note { font-size: 12.5px; color: var(--text-tertiary); font-style: italic; line-height: 1.5; }
+.empty-note a { color: var(--age-teal); }
+
+/* ===== Fitness Age hero ===== */
+.fa-bg {
+  position: absolute; inset: -20%; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(circle at 22% 20%, color-mix(in srgb, var(--age-blue) 30%, transparent), transparent 55%),
+    radial-gradient(circle at 80% 82%, color-mix(in srgb, var(--age-purple) 30%, transparent), transparent 55%);
+  filter: blur(20px);
+  animation: fa-glow-drift 9s ease-in-out infinite alternate;
+}
+@keyframes fa-glow-drift { 0% { opacity: 0.7; } 100% { opacity: 1; transform: scale(1.05); } }
+.fa-content { position: relative; z-index: 1; }
+.fa-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.fa-number {
+  font-family: var(--font-numeric); font-weight: 800; font-size: 56px; line-height: 1;
+  letter-spacing: -0.03em; color: var(--text-primary); font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 24px color-mix(in srgb, var(--age-teal) 55%, transparent);
+}
+.fa-unit { font-size: 15px; color: var(--text-tertiary); font-weight: 600; }
+.fa-delta {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 6px 12px;
+  border-radius: 999px; font-size: 12.5px; font-weight: 700;
+}
+.fa-delta.younger { background: rgba(52,211,153,0.14); color: var(--success); }
+.fa-delta.older { background: rgba(255,107,107,0.14); color: var(--danger); }
+.fa-delta.same { background: rgba(255,255,255,0.08); color: var(--text-secondary); }
+.fa-factors { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 18px; text-align: center; }
+.fa-factor .v { font-family: var(--font-numeric); font-size: 15px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.fa-factor .l { font-size: 8.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 3px; }
+.fa-note { font-size: 11px; color: var(--text-tertiary); margin-top: 16px; line-height: 1.5; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
+.stat { background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 14px; }
+.stat-num-row { display: flex; align-items: baseline; gap: 4px; }
+.stat-num { font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; color: var(--text-primary); line-height: 1; }
+.stat-sub { font-size: 11px; color: var(--text-tertiary); }
+.stat-label { margin-top: 6px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+.stat-bar-track { height: 5px; border-radius: 999px; background: rgba(255,255,255,0.07); overflow: hidden; margin-top: 8px; }
+.stat-bar-fill { height: 100%; border-radius: 999px; }
+
+.tag-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.tag-pill {
+  padding: 6px 12px; border-radius: 999px; font-size: 11.5px; font-weight: 600;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); color: var(--text-secondary);
+}
+
+.reco-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.reco-list li { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+.reco-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--age-teal); margin-top: 5px; flex-shrink: 0; box-shadow: 0 0 6px var(--age-teal); }
+
+.attribution { text-align: center; font-size: 11px; color: var(--text-tertiary); margin-top: 24px; opacity: 0.6; }
+</style>
+</head>
+<body>
+<div class="starfield"></div>
+<div class="horizon"></div>
+<div class="page">
+
+  <h1 class="dash-title">Growth</h1>
+  <p class="dash-sub">Fitness age, nutrition patterns & habits — read from your own data.</p>
+
+  <div class="section">
+    <div class="section-title">Fitness age</div>
+    <div class="gm-card" id="faCard">
+      <div class="fa-bg" aria-hidden="true"></div>
+      <div class="fa-content">
+        <div class="gm-eyebrow">Estimated fitness age</div>
+        <div id="faBody">
+          <p class="empty-note">Connect WHOOP and fill in your age/sex/activity in the Settings on the <a href="index.html">Main</a> page to unlock this.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Nutrition patterns (last 14 days)</div>
+    <div class="gm-card" id="nutriCard">
+      <div id="nutriBody">
+        <p class="empty-note">No meals logged yet — start tracking on the <a href="nutrition.html">Nutrition</a> page and patterns will show up here.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Habits (last 14 days)</div>
+    <div class="gm-card" id="habitsCard">
+      <div id="habitsBody">
+        <p class="empty-note">Nothing to analyze yet — log water, supplements or connect WHOOP to build a habits picture.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Where to focus next</div>
+    <div class="gm-card">
+      <ul class="reco-list" id="recoList"></ul>
+    </div>
+  </div>
+
+  <div class="attribution">// analysis runs entirely in this browser — nothing is sent anywhere</div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  function loadJSON(k, f) { try { return JSON.parse(localStorage.getItem(k)) || f; } catch (e) { return f; } }
+
+  function dateKeyFor(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function lastNDates(n) {
+    const out = [];
+    const today = new Date();
+    for (let i = 0; i < n; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+      out.push(d);
+    }
+    return out;
+  }
+
+  /* ================= WHOOP fetch (mirrors index.html) ================= */
+  const WHOOP_KEY = 'whoop_tokens_v1';
+  async function wRefresh(t) {
+    if (!t.refresh) return null;
+    try {
+      const r = await fetch('/api/whoop-refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refresh_token: t.refresh }) });
+      const j = await r.json();
+      if (j.access_token) { const n = { access: j.access_token, refresh: j.refresh_token || t.refresh, expires: Date.now() + (j.expires_in || 3500) * 1000 }; localStorage.setItem(WHOOP_KEY, JSON.stringify(n)); return n; }
+    } catch (e) {}
+    return null;
+  }
+  async function wFetch(path, t) {
+    const [p, qs] = path.split('?');
+    const params = new URLSearchParams(qs || ''); params.set('path', p);
+    const r = await fetch('/api/whoop-data?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + t.access, 'Accept': 'application/json' } });
+    if (r.status === 401) { const n = await wRefresh(t); if (n) return wFetch(path, n); throw new Error('unauthorized'); }
+    if (!r.ok) throw new Error('whoop ' + r.status);
+    return r.json();
+  }
+  function mean(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null; }
+
+  async function loadWhoopAverages() {
+    let t = loadJSON(WHOOP_KEY, null);
+    if (!t || !t.access) return null;
+    if (t.expires && Date.now() > t.expires - 60000) { const n = await wRefresh(t); if (n) t = n; }
+    try {
+      const [rec, sleep] = await Promise.all([
+        wFetch('/recovery?limit=30', t).catch(() => null),
+        wFetch('/activity/sleep?limit=30', t).catch(() => null),
+      ]);
+      const recRecords = (rec && rec.records) || [];
+      const sleepRecords = (sleep && sleep.records) || [];
+      const rhrs = recRecords.map(r => r.score && r.score.resting_heart_rate).filter(v => v != null);
+      const hrvs = recRecords.map(r => r.score && r.score.hrv_rmssd_milli).filter(v => v != null);
+      const recoveries = recRecords.map(r => r.score && r.score.recovery_score).filter(v => v != null);
+      const sleeps = sleepRecords.map(r => r.score && r.score.sleep_performance_percentage).filter(v => v != null);
+      if (!rhrs.length && !hrvs.length && !recoveries.length) return null;
+      return {
+        avgRhr: mean(rhrs), avgHrv: mean(hrvs), avgRecovery: mean(recoveries), avgSleep: mean(sleeps),
+        sampleDays: recRecords.length,
+      };
+    } catch (e) { return null; }
+  }
+
+  /* ================= Fitness age ================= */
+  // A directional estimate, not a medical measure — deliberately has no
+  // floor or ceiling, so it can read well below (or above) chronological age.
+  function computeFitnessAge(inputs) {
+    const { chronoAge, avgRhr, avgHrv, avgRecovery, activityHrsPerWeek } = inputs;
+    const rhrAdjust = (avgRhr - 70) * 0.3;
+    const hrvBaseline = 65 - chronoAge * 0.75;
+    const hrvAdjust = (hrvBaseline - avgHrv) * 0.3;
+    const recoveryAdjust = (55 - avgRecovery) * 0.05;
+    const activityAdjust = -((activityHrsPerWeek != null ? activityHrsPerWeek : 3) - 3) * 0.3;
+    const fitnessAge = chronoAge + rhrAdjust + hrvAdjust + recoveryAdjust + activityAdjust;
+    return { fitnessAge, rhrAdjust, hrvAdjust, recoveryAdjust, activityAdjust };
+  }
+
+  async function renderFitnessAge() {
+    const water = loadJSON('po_water_v1', null);
+    const profile = (water && water.profile) || {};
+    const chronoAge = profile.age;
+    const whoop = await loadWhoopAverages();
+
+    if (!chronoAge || !whoop || whoop.avgRhr == null || whoop.avgHrv == null) {
+      return; // leave the default empty-state prompt in place
+    }
+
+    const { fitnessAge, rhrAdjust, hrvAdjust, recoveryAdjust, activityAdjust } = computeFitnessAge({
+      chronoAge,
+      avgRhr: whoop.avgRhr,
+      avgHrv: whoop.avgHrv,
+      avgRecovery: whoop.avgRecovery != null ? whoop.avgRecovery : 55,
+      activityHrsPerWeek: profile.activityHrsPerWeek,
+    });
+    const rounded = Math.round(fitnessAge);
+    const delta = rounded - chronoAge;
+
+    let deltaClass = 'same', deltaText = 'right on track for your age';
+    if (delta <= -1) { deltaClass = 'younger'; deltaText = Math.abs(delta) + (Math.abs(delta) === 1 ? ' year younger' : ' years younger') + ' than your actual age'; }
+    else if (delta >= 1) { deltaClass = 'older'; deltaText = delta + (delta === 1 ? ' year older' : ' years older') + ' than your actual age'; }
+
+    $('faBody').innerHTML =
+      '<div class="fa-row"><span class="fa-number">' + rounded + '</span><span class="fa-unit">years</span></div>' +
+      '<div class="fa-delta ' + deltaClass + '">' + deltaText + '</div>' +
+      '<div class="fa-factors">' +
+        '<div class="fa-factor"><div class="v">' + chronoAge + '</div><div class="l">Actual age</div></div>' +
+        '<div class="fa-factor"><div class="v">' + Math.round(whoop.avgRhr) + '</div><div class="l">Avg RHR</div></div>' +
+        '<div class="fa-factor"><div class="v">' + Math.round(whoop.avgHrv) + '</div><div class="l">Avg HRV</div></div>' +
+        '<div class="fa-factor"><div class="v">' + Math.round(whoop.avgRecovery != null ? whoop.avgRecovery : 0) + '%</div><div class="l">Avg recovery</div></div>' +
+      '</div>' +
+      '<div class="fa-note">Estimated from your resting heart rate, HRV, recovery and activity level vs. general population norms — a directional read for motivation, not a medical measurement. No floor or ceiling is applied, so it can land well outside your actual age in either direction.</div>';
+
+    window.__faResult = { fitnessAge: rounded, delta, chronoAge };
+  }
+
+  /* ================= Nutrition patterns ================= */
+  const MICRO_KEYS = ['fiber','sodium','potassium','calcium','iron','vitaminC','vitaminA','vitaminD','vitaminB12','magnesium','zinc','folate'];
+  const MICRO_LABELS = { fiber: 'Fiber', sodium: 'Sodium', potassium: 'Potassium', calcium: 'Calcium', iron: 'Iron', vitaminC: 'Vitamin C', vitaminA: 'Vitamin A', vitaminD: 'Vitamin D', vitaminB12: 'Vitamin B12', magnesium: 'Magnesium', zinc: 'Zinc', folate: 'Folate' };
+  const MICRO_FOOD_HINT = { fiber: 'legumes, oats or berries', potassium: 'potatoes, bananas or spinach', calcium: 'dairy, tofu or leafy greens', iron: 'red meat, lentils or spinach', vitaminC: 'citrus, peppers or berries', vitaminA: 'carrots, sweet potato or spinach', vitaminD: 'fatty fish or fortified milk', vitaminB12: 'meat, eggs or dairy', magnesium: 'nuts, seeds or leafy greens', zinc: 'meat, shellfish or seeds', folate: 'lentils, leafy greens or asparagus', sodium: null };
+
+  function analyzeNutrition() {
+    const state = loadJSON('nutrition:v1', null);
+    if (!state || !state.logs) return null;
+    const targets = state.targets || {};
+    const days = lastNDates(14);
+    const dayTotals = [];
+    const foodCount = {};
+    days.forEach((d) => {
+      const entries = state.logs[dateKeyFor(d)];
+      if (!entries || !entries.length) return;
+      const t = { cal: 0, protein: 0, carbs: 0, fat: 0 };
+      MICRO_KEYS.forEach((k) => { t[k] = 0; });
+      entries.forEach((e) => {
+        t.cal += (+e.calories || 0); t.protein += (+e.protein || 0); t.carbs += (+e.carbs || 0); t.fat += (+e.fat || 0);
+        MICRO_KEYS.forEach((k) => { t[k] += (+e[k] || 0); });
+        const cleanName = String(e.name || '').replace(/\s*\(\d+(\.\d+)?g\)\s*$/, '').trim();
+        if (cleanName) foodCount[cleanName] = (foodCount[cleanName] || 0) + 1;
+      });
+      dayTotals.push(t);
+    });
+    if (!dayTotals.length) return null;
+
+    const avgCal = mean(dayTotals.map(t => t.cal));
+    const avgProteinPct = targets.protein ? mean(dayTotals.map(t => t.protein / targets.protein * 100)) : null;
+    const avgCarbPct = targets.carbs ? mean(dayTotals.map(t => t.carbs / targets.carbs * 100)) : null;
+    const avgFatPct = targets.fat ? mean(dayTotals.map(t => t.fat / targets.fat * 100)) : null;
+
+    let weakest = null;
+    MICRO_KEYS.forEach((k) => {
+      if (!targets[k]) return;
+      const pct = mean(dayTotals.map(t => t[k] / targets[k] * 100));
+      if (pct == null) return;
+      if (!weakest || pct < weakest.pct) weakest = { key: k, pct };
+    });
+
+    const topFoods = Object.keys(foodCount).sort((a, b) => foodCount[b] - foodCount[a]).slice(0, 5);
+
+    return {
+      daysLogged: dayTotals.length, totalDays: days.length,
+      avgCal, avgProteinPct, avgCarbPct, avgFatPct, calTarget: targets.calories,
+      weakest, topFoods,
+    };
+  }
+
+  function renderNutrition() {
+    const a = analyzeNutrition();
+    if (!a) return;
+    const pct = (v) => v == null ? '—' : Math.round(v) + '%';
+    let html = '<div class="stat-grid">' +
+      '<div class="stat"><div class="stat-num-row"><span class="stat-num">' + a.daysLogged + '</span><span class="stat-sub">/ ' + a.totalDays + ' days</span></div><div class="stat-label">Logging streak</div></div>' +
+      '<div class="stat"><div class="stat-num-row"><span class="stat-num">' + Math.round(a.avgCal) + '</span><span class="stat-sub">' + (a.calTarget ? '/ ' + a.calTarget : '') + ' kcal</span></div><div class="stat-label">Avg calories</div></div>' +
+      '<div class="stat"><div class="stat-num-row"><span class="stat-num">' + pct(a.avgProteinPct) + '</span></div><div class="stat-label">Protein vs target</div></div>' +
+      '<div class="stat"><div class="stat-num-row"><span class="stat-num">' + pct(a.avgCarbPct) + '</span></div><div class="stat-label">Carbs vs target</div></div>' +
+      '</div>';
+    if (a.weakest) {
+      html += '<div class="empty-note" style="margin-top:14px">Your average <strong style="color:var(--text-primary)">' + MICRO_LABELS[a.weakest.key] + '</strong> intake runs lowest relative to target, at ' + Math.round(a.weakest.pct) + '%.</div>';
+    }
+    if (a.topFoods.length) {
+      html += '<div class="tag-list">' + a.topFoods.map(f => '<span class="tag-pill">' + f + '</span>').join('') + '</div>';
+    }
+    $('nutriBody').innerHTML = html;
+    window.__nutriResult = a;
+  }
+
+  /* ================= Habits ================= */
+  function analyzeHabits(whoop) {
+    const items = loadJSON('stack:items', []);
+    const days = lastNDates(14);
+    let supplementPct = null;
+    if (Array.isArray(items) && items.length) {
+      const dayPcts = days.map((d) => {
+        const taken = loadJSON('stack:taken:' + dateKeyFor(d), {});
+        const done = items.filter((i) => taken[i.id]).length;
+        return done / items.length * 100;
+      });
+      supplementPct = mean(dayPcts);
+    }
+
+    const water = loadJSON('po_water_v1', null);
+    let waterPct = null;
+    if (water && water.logs) {
+      const p = water.profile || { weightKg: 75 };
+      const wKg = water.weightUnit === 'lb' ? (p.weightKg || 0) / 2.20462 : (p.weightKg || 0);
+      const base = wKg * 35;
+      const exercise = (p.activityHrsPerWeek || 0) / 7 * 500;
+      const totalMl = base + exercise + (p.sex === 'm' ? 200 : 0) + ((p.age || 0) >= 50 ? 100 : 0);
+      let unitVol = water.unit === 'glass' ? (water.glassMl || 250) : water.unit === 'oz' ? 30 : water.unit === 'ml' ? 1 : (water.bottleMl || 500);
+      const target = Math.max(1, Math.ceil(totalMl / unitVol));
+      const dayPcts = days.map((d) => {
+        const done = (water.logs[dateKeyFor(d)] || 0);
+        return Math.min(100, done / target * 100);
+      });
+      waterPct = mean(dayPcts);
+    }
+
+    return { supplementPct, waterPct, avgSleep: whoop ? whoop.avgSleep : null, avgRecovery: whoop ? whoop.avgRecovery : null };
+  }
+
+  function renderHabits(whoop) {
+    const h = analyzeHabits(whoop);
+    if (h.supplementPct == null && h.waterPct == null && h.avgSleep == null && h.avgRecovery == null) return;
+    const pct = (v) => v == null ? '—' : Math.round(v) + '%';
+    const barColor = (v) => v == null ? 'rgba(255,255,255,0.2)' : v >= 70 ? 'var(--success)' : v >= 40 ? 'var(--warning)' : 'var(--danger)';
+    function tile(label, v) {
+      return '<div class="stat"><div class="stat-num-row"><span class="stat-num">' + pct(v) + '</span></div>' +
+        '<div class="stat-label">' + label + '</div>' +
+        '<div class="stat-bar-track"><div class="stat-bar-fill" style="width:' + (v || 0) + '%;background:' + barColor(v) + '"></div></div></div>';
+    }
+    $('habitsBody').innerHTML = '<div class="stat-grid">' +
+      tile('Supplement adherence', h.supplementPct) +
+      tile('Water adherence', h.waterPct) +
+      tile('Avg sleep performance', h.avgSleep) +
+      tile('Avg recovery', h.avgRecovery) +
+      '</div>';
+    window.__habitsResult = h;
+  }
+
+  /* ================= Recommendations (rule-based, deterministic) ================= */
+  function renderRecommendations() {
+    const tips = [];
+    const n = window.__nutriResult;
+    const h = window.__habitsResult;
+    const fa = window.__faResult;
+
+    if (n) {
+      if (n.daysLogged < n.totalDays * 0.5) {
+        tips.push({ score: 3, text: 'You only logged meals on ' + n.daysLogged + ' of the last ' + n.totalDays + ' days — more consistent logging will make these insights sharper.' });
+      }
+      if (n.weakest && n.weakest.pct < 60 && MICRO_FOOD_HINT[n.weakest.key]) {
+        tips.push({ score: 5 - n.weakest.pct / 20, text: MICRO_LABELS[n.weakest.key] + ' is averaging only ' + Math.round(n.weakest.pct) + '% of target — try working in more ' + MICRO_FOOD_HINT[n.weakest.key] + '.' });
+      }
+      if (n.avgProteinPct != null && n.avgProteinPct < 80) {
+        tips.push({ score: 4, text: 'Protein is averaging ' + Math.round(n.avgProteinPct) + '% of target — adding a source to breakfast is the easiest fix.' });
+      }
+    } else {
+      tips.push({ score: 2, text: 'Start logging meals on the Nutrition page — even a few days of data unlocks real patterns here.' });
+    }
+
+    if (h) {
+      if (h.supplementPct != null && h.supplementPct < 60) {
+        tips.push({ score: 4, text: "You're hitting your supplement stack only " + Math.round(h.supplementPct) + '% of days — try tying it to an existing habit, like your morning coffee.' });
+      }
+      if (h.waterPct != null && h.waterPct < 60) {
+        tips.push({ score: 3, text: 'Water intake is averaging ' + Math.round(h.waterPct) + '% of your target — keeping a bottle in sight helps more than reminders do.' });
+      }
+      if (h.avgSleep != null && h.avgSleep < 70) {
+        tips.push({ score: 4.5, text: 'Sleep performance has averaged ' + Math.round(h.avgSleep) + '% — an earlier wind-down is likely the highest-leverage change available to you right now.' });
+      }
+      if (h.avgRecovery != null && h.avgRecovery < 45) {
+        tips.push({ score: 4, text: 'Recovery has averaged ' + Math.round(h.avgRecovery) + '% — consider a lighter training week to let it rebound.' });
+      }
+    }
+
+    if (fa && fa.delta >= 3) {
+      tips.push({ score: 4, text: 'Your fitness age is trending ' + fa.delta + ' years older than your actual age — RHR and HRV are the fastest-moving levers, and both respond to consistent sleep and cardio.' });
+    } else if (fa && fa.delta <= -3) {
+      tips.push({ score: 1, text: 'Your fitness age is running ' + Math.abs(fa.delta) + ' years younger than your actual age — whatever you’re doing is working, keep it consistent.' });
+    }
+
+    if (!tips.length) {
+      tips.push({ score: 1, text: 'Nothing stands out yet — keep logging meals, habits and syncing WHOOP so this page has more to work with.' });
+    }
+
+    tips.sort((a, b) => b.score - a.score);
+    const el = $('recoList');
+    el.innerHTML = '';
+    tips.slice(0, 6).forEach((tip) => {
+      const li = document.createElement('li');
+      const dot = document.createElement('span'); dot.className = 'reco-dot';
+      const txt = document.createElement('span'); txt.textContent = tip.text;
+      li.append(dot, txt);
+      el.appendChild(li);
+    });
+  }
+
+  async function boot() {
+    const whoop = await loadWhoopAverages();
+    await renderFitnessAge();
+    renderNutrition();
+    renderHabits(whoop);
+    renderRecommendations();
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof initCloudSync === 'function') {
+      initCloudSync({ appKey: 'nutrition', syncedKeys: ['nutrition:v1'], onApplied: boot });
+      initCloudSync({
+        appKey: 'health',
+        syncedKeys: ['stack:items', 'stack:version', 'stack:low', 'po_water_v1'],
+        syncedPrefixes: ['stack:taken:'],
+        onApplied: boot,
+      });
+    }
+  });
+
+  boot();
+})();
+</script>
+</body>
+</html>

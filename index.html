@@ -236,6 +236,17 @@ body::after {
 .readiness-stats span { display: block; font-family: var(--font-numeric); font-size: 14px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .readiness-stats label { display: block; font-size: 8.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 3px; }
 
+.weather-label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.weather-label-row .today-card-label { margin-bottom: 0; }
+.weather-loc-btn {
+  width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.08);
+  color: #FAFAFA; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.weather-loc-btn:hover { background: rgba(255,255,255,0.16); }
+.weather-loc-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .weather-icon svg {
   width: 34px; height: 34px; stroke: #FAFAFA; fill: none;
   stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round;
@@ -244,6 +255,7 @@ body::after {
 .weather-main { display: flex; align-items: center; gap: 12px; }
 .weather-temp { font-family: var(--font-numeric); font-size: 32px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; text-shadow: 0 2px 10px rgba(0,0,0,0.4); }
 .weather-desc { font-size: 12.5px; color: var(--text-secondary); margin-top: 10px; text-shadow: 0 1px 6px rgba(0,0,0,0.4); }
+.weather-loc-label { font-size: 10.5px; color: var(--text-secondary); margin-top: 3px; text-shadow: 0 1px 6px rgba(0,0,0,0.4); opacity: 0.85; }
 .weather-rain {
   margin-top: 10px; font-size: 11.5px; font-weight: 600; padding: 8px 10px;
   border-radius: 10px; line-height: 1.4;
@@ -554,6 +566,27 @@ body::after {
 .whoop-stat .l { font-size: 9.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); margin-top: 5px; }
 .whoop-btn { width: 100%; margin-top: 14px; padding: 11px; border: 1px solid rgba(255,255,255,0.12); border-radius: 11px; background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: background 0.15s, color 0.15s; }
 .whoop-btn:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+
+/* ===== Location picker modal ===== */
+.loc-search-row { display: flex; gap: 8px; }
+.loc-results { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
+.loc-result {
+  display: flex; flex-direction: column; gap: 2px; padding: 10px 12px;
+  border-radius: 11px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03);
+  cursor: pointer; transition: background 0.15s, border-color 0.15s;
+}
+.loc-result:hover { background: rgba(255,255,255,0.07); border-color: rgba(255,255,255,0.16); }
+.loc-result-name { font-size: 13.5px; font-weight: 600; color: var(--text-primary); }
+.loc-result-sub { font-size: 11px; color: var(--text-tertiary); }
+.loc-empty, .loc-status { font-size: 12px; color: var(--text-tertiary); text-align: center; padding: 14px 0; font-style: italic; }
+.loc-current {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 11px 13px; border-radius: 11px; background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08); margin-bottom: 14px;
+}
+.loc-current-label { font-size: 12.5px; color: var(--text-secondary); }
+.loc-use-gps { border: 1px solid rgba(255,255,255,0.14); background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; padding: 7px 10px; border-radius: 9px; cursor: pointer; transition: background 0.15s, color 0.15s; white-space: nowrap; }
+.loc-use-gps:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
 </style>
 </head>
 <body>
@@ -621,12 +654,18 @@ body::after {
         <div class="weather-precip"></div>
         <div class="weather-flash"></div>
       </div>
-      <div class="today-card-label">Weather</div>
+      <div class="weather-label-row">
+        <div class="today-card-label">Weather</div>
+        <button class="weather-loc-btn" id="weatherLocBtn" type="button" aria-label="Change location">
+          <svg viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
+        </button>
+      </div>
       <div class="weather-main">
         <span class="weather-icon" id="weatherIcon"></span>
         <span class="weather-temp" id="weatherTemp">—</span>
       </div>
       <div class="weather-desc" id="weatherDesc">Getting your location…</div>
+      <div class="weather-loc-label" id="weatherLocLabel"></div>
       <div class="weather-rain" id="weatherRain">Checking today's forecast…</div>
       <div class="weather-details">
         <div><span id="weatherWind">—</span><label>Wind</label></div>
@@ -759,10 +798,26 @@ body::after {
       </div>
     </a>
 
+    <!-- Small tile — Self Improvement -->
+    <a class="tile" href="self-improvement.html" style="--accent:#2DD4BF">
+      <div class="tile-top">
+        <span class="tile-num">05</span>
+        <span class="tile-icon-badge">
+          <svg viewBox="0 0 24 24"><path d="M3 17 9 11 13 15 21 7"/><path d="M15 7h6v6"/></svg>
+        </span>
+      </div>
+      <div class="tile-spacer"></div>
+      <h2 class="tile-title">Growth</h2>
+      <div class="tile-foot">
+        <span class="tile-sub">Fitness age & habits</span>
+        <span class="tile-arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span>
+      </div>
+    </a>
+
     <!-- Wide tile — Nova -->
     <a class="tile wide" href="nova-lite.html" style="--accent:#A78BFA">
       <div class="tile-top">
-        <span class="tile-num">05</span>
+        <span class="tile-num">06</span>
         <span class="tile-icon-badge">
           <svg class="filled" viewBox="0 0 24 24"><path d="M12 2.5c.6 3.4 1.4 5.6 2.7 6.9 1.3 1.3 3.5 2.1 6.8 2.6-3.3.6-5.5 1.4-6.8 2.7-1.3 1.3-2.1 3.5-2.7 6.8-.6-3.3-1.4-5.5-2.7-6.8-1.3-1.3-3.5-2.1-6.8-2.7 3.3-.5 5.5-1.3 6.8-2.6C10.6 8.1 11.4 5.9 12 2.5Z"/></svg>
         </span>
@@ -845,6 +900,30 @@ body::after {
       </div>
       <button class="whoop-btn" id="whAction" type="button">Sync now</button>
     </div>
+  </div>
+</div>
+
+<!-- ===== Location picker (manual override — no geolocation permission needed) ===== -->
+<div class="modal-bg" id="locationBg">
+  <div class="modal" role="dialog" aria-label="Change location">
+    <div class="modal-head">
+      <span class="modal-title">Weather Location</span>
+      <button class="modal-close" id="locationClose" type="button" aria-label="Close">×</button>
+    </div>
+
+    <div class="loc-current" id="locCurrent" style="display:none">
+      <span class="loc-current-label" id="locCurrentLabel"></span>
+      <button class="loc-use-gps" id="locUseGps" type="button">Use my location</button>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Search a city</label>
+      <div class="loc-search-row">
+        <input class="set-input" id="locInput" type="text" inputmode="search" placeholder="e.g. Milan, Austin, Tokyo" autocomplete="off">
+      </div>
+    </div>
+
+    <ul class="loc-results" id="locResults"></ul>
   </div>
 </div>
 
@@ -1100,11 +1179,19 @@ body::after {
   }
   function loadGeo() { try { return JSON.parse(localStorage.getItem(GEO_KEY)); } catch (e) { return null; } }
   function saveGeo(v) { try { localStorage.setItem(GEO_KEY, JSON.stringify(v)); } catch (e) {} }
+  function friendlyTimezone(tz) {
+    if (!tz) return null;
+    const last = tz.split('/').pop() || tz;
+    return last.replace(/_/g, ' ');
+  }
 
   let weatherData = null;
   async function loadWeather() {
     let geo = loadGeo();
-    const fresh = geo && (Date.now() - geo.ts) < 6 * 3600 * 1000;
+    // A manual (searched) location never expires — only auto-detected
+    // GPS fixes get refreshed every 6h. This is what lets someone whose
+    // phone won't grant location permission just type their city once.
+    const fresh = geo && (geo.manual || (Date.now() - geo.ts) < 6 * 3600 * 1000);
     if (!fresh) {
       try {
         const pos = await new Promise((resolve, reject) => {
@@ -1115,7 +1202,10 @@ body::after {
         saveGeo(geo);
       } catch (e) {
         geo = loadGeo();
-        if (!geo) { $('weatherDesc').textContent = 'Location unavailable'; return; }
+        if (!geo) {
+          $('weatherDesc').textContent = "Location unavailable — tap the pin to set it.";
+          return;
+        }
       }
     }
     try {
@@ -1144,6 +1234,7 @@ body::after {
       $('weatherIcon').innerHTML = weatherIconFor(weatherData.code, weatherData.isNight);
       $('weatherTemp').textContent = weatherData.temp + '°';
       $('weatherDesc').textContent = weatherDescFor(weatherData.code);
+      $('weatherLocLabel').textContent = geo.label || friendlyTimezone(j.timezone) || '';
       $('weatherWind').textContent = weatherData.wind != null ? weatherData.wind + ' km/h' : '—';
       $('weatherUv').textContent = weatherData.uv != null ? weatherData.uv : '—';
       $('weatherSunset').textContent = weatherData.sunset
@@ -1169,6 +1260,90 @@ body::after {
       $('weatherDesc').textContent = 'Weather unavailable';
     }
   }
+
+  /* ---------- Location picker (manual override for phones that won't grant GPS) ---------- */
+  function openLocationModal() {
+    const geo = loadGeo();
+    const cur = $('locCurrent');
+    if (geo && geo.manual && geo.label) {
+      $('locCurrentLabel').textContent = 'Currently: ' + geo.label;
+      cur.style.display = '';
+    } else {
+      cur.style.display = 'none';
+    }
+    $('locResults').innerHTML = '';
+    $('locInput').value = '';
+    $('locationBg').classList.add('show');
+    setTimeout(() => $('locInput').focus(), 50);
+  }
+  function closeLocationModal() { $('locationBg').classList.remove('show'); }
+  $('weatherLocBtn').addEventListener('click', openLocationModal);
+  $('locationClose').addEventListener('click', closeLocationModal);
+  $('locationBg').addEventListener('click', (e) => { if (e.target === $('locationBg')) closeLocationModal(); });
+
+  $('locUseGps').addEventListener('click', () => {
+    try { localStorage.removeItem(GEO_KEY); } catch (e) {}
+    closeLocationModal();
+    $('weatherDesc').textContent = 'Getting your location…';
+    loadWeather();
+  });
+
+  function renderLocResults(list) {
+    const el = $('locResults');
+    el.innerHTML = '';
+    if (!list || !list.length) {
+      const li = document.createElement('li');
+      li.className = 'loc-empty';
+      li.textContent = 'No matching cities — try a different spelling.';
+      el.appendChild(li);
+      return;
+    }
+    list.forEach((place) => {
+      const li = document.createElement('li');
+      li.className = 'loc-result';
+      const name = document.createElement('div');
+      name.className = 'loc-result-name';
+      name.textContent = place.name;
+      const sub = document.createElement('div');
+      sub.className = 'loc-result-sub';
+      sub.textContent = [place.admin1, place.country].filter(Boolean).join(', ');
+      li.append(name, sub);
+      li.addEventListener('click', () => {
+        const label = [place.name, place.admin1, place.country].filter(Boolean).join(', ');
+        saveGeo({ lat: place.latitude, lon: place.longitude, label: label, manual: true, ts: Date.now() });
+        closeLocationModal();
+        $('weatherDesc').textContent = 'Loading weather…';
+        loadWeather();
+      });
+      el.appendChild(li);
+    });
+  }
+  let locSearchDebounce = null;
+  let locSearchSeq = 0;
+  async function searchLocations(query) {
+    const q = query.trim();
+    if (q.length < 2) { $('locResults').innerHTML = ''; return; }
+    const seq = ++locSearchSeq;
+    $('locResults').innerHTML = '<li class="loc-status">Searching…</li>';
+    try {
+      const url = 'https://geocoding-api.open-meteo.com/v1/search?count=8&language=en&format=json&name=' + encodeURIComponent(q);
+      const r = await fetch(url);
+      const j = await r.json();
+      if (seq !== locSearchSeq) return; // a newer query has since started
+      renderLocResults(j && j.results);
+    } catch (e) {
+      if (seq !== locSearchSeq) return;
+      $('locResults').innerHTML = '<li class="loc-empty">Search failed — check your connection.</li>';
+    }
+  }
+  $('locInput').addEventListener('input', (e) => {
+    clearTimeout(locSearchDebounce);
+    const v = e.target.value;
+    locSearchDebounce = setTimeout(() => searchLocations(v), 350);
+  });
+  $('locInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { clearTimeout(locSearchDebounce); searchLocations(e.target.value); }
+  });
 
   /* ---------- Today's top news (Claude + live web search, bring-your-own key) ----------
      Reuses the same Anthropic key already saved for the Nova tile — no new
