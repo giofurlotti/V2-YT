@@ -119,7 +119,7 @@ body::after {
 .empty-note { font-size: 12.5px; color: var(--text-tertiary); font-style: italic; line-height: 1.5; }
 .empty-note a { color: var(--age-teal); }
 
-/* ===== Fitness Age hero ===== */
+/* ===== Fitness Age hero — a WHOOP-style ring gauge ===== */
 .fa-bg {
   position: absolute; inset: -20%; z-index: 0; pointer-events: none;
   background:
@@ -130,21 +130,45 @@ body::after {
 }
 @keyframes fa-glow-drift { 0% { opacity: 0.7; } 100% { opacity: 1; transform: scale(1.05); } }
 .fa-content { position: relative; z-index: 1; }
-.fa-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.fa-number {
-  font-family: var(--font-numeric); font-weight: 800; font-size: 56px; line-height: 1;
-  letter-spacing: -0.03em; color: var(--text-primary); font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 24px color-mix(in srgb, var(--age-teal) 55%, transparent);
+
+.fa-ring-wrap { position: relative; width: 168px; height: 168px; margin: 4px auto 8px; }
+.fa-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.fa-ring-track { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 10; }
+.fa-ring-fill {
+  fill: none; stroke-width: 10; stroke-linecap: round;
+  stroke: var(--ring-color, var(--age-teal));
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--ring-color, var(--age-teal)) 65%, transparent));
+  transition: stroke-dashoffset 1.2s cubic-bezier(.16,1,.3,1), stroke 0.5s ease, filter 0.5s ease;
+  animation: fa-ring-pulse 3.2s ease-in-out infinite;
 }
-.fa-unit { font-size: 15px; color: var(--text-tertiary); font-weight: 600; }
+@keyframes fa-ring-pulse {
+  0%, 100% { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--ring-color, var(--age-teal)) 55%, transparent)); }
+  50% { filter: drop-shadow(0 0 15px color-mix(in srgb, var(--ring-color, var(--age-teal)) 80%, transparent)); }
+}
+.fa-ring-center {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.fa-number {
+  font-family: var(--font-numeric); font-weight: 800; font-size: 46px; line-height: 1;
+  letter-spacing: -0.03em; color: var(--text-primary); font-variant-numeric: tabular-nums;
+  transition: color 0.5s ease;
+}
+.fa-unit { font-size: 11px; color: var(--text-tertiary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; margin-top: 3px; }
+.fa-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .fa-delta {
-  display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 6px 12px;
-  border-radius: 999px; font-size: 12.5px; font-weight: 700;
+  display: inline-flex; align-items: center; gap: 6px; margin: 2px auto 0; padding: 6px 12px;
+  border-radius: 999px; font-size: 12.5px; font-weight: 700; width: fit-content;
+  opacity: 0; animation: fa-fade-up 0.6s ease 0.5s forwards;
 }
 .fa-delta.younger { background: rgba(52,211,153,0.14); color: var(--success); }
 .fa-delta.older { background: rgba(255,107,107,0.14); color: var(--danger); }
 .fa-delta.same { background: rgba(255,255,255,0.08); color: var(--text-secondary); }
-.fa-factors { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 18px; text-align: center; }
+@keyframes fa-fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.fa-factors {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 18px; text-align: center;
+  opacity: 0; animation: fa-fade-up 0.6s ease 0.7s forwards;
+}
 .fa-factor .v { font-family: var(--font-numeric); font-size: 15px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
 .fa-factor .l { font-size: 8.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 3px; }
 .fa-note { font-size: 11px; color: var(--text-tertiary); margin-top: 16px; line-height: 1.5; }
@@ -402,7 +426,16 @@ body::after {
     else if (delta >= 1) { deltaClass = 'older'; deltaText = delta + (delta === 1 ? ' year older' : ' years older') + ' than your actual age'; }
 
     $('faBody').innerHTML =
-      '<div class="fa-row"><span class="fa-number">' + rounded + '</span><span class="fa-unit">years</span></div>' +
+      '<div class="fa-ring-wrap">' +
+        '<svg class="fa-ring" viewBox="0 0 140 140">' +
+          '<circle class="fa-ring-track" cx="70" cy="70" r="60"/>' +
+          '<circle class="fa-ring-fill" id="faRingFill" cx="70" cy="70" r="60"/>' +
+        '</svg>' +
+        '<div class="fa-ring-center">' +
+          '<span class="fa-number" id="faNumber">0</span>' +
+          '<span class="fa-unit">years</span>' +
+        '</div>' +
+      '</div>' +
       '<div class="fa-delta ' + deltaClass + '">' + deltaText + '</div>' +
       '<div class="fa-factors">' +
         '<div class="fa-factor"><div class="v">' + chronoAge + '</div><div class="l">Actual age</div></div>' +
@@ -411,6 +444,34 @@ body::after {
         '<div class="fa-factor"><div class="v">' + Math.round(whoop.avgRecovery != null ? whoop.avgRecovery : 0) + '%</div><div class="l">Avg recovery</div></div>' +
       '</div>' +
       '<div class="fa-note">Estimated from your resting heart rate, HRV, recovery and activity level vs. general population norms — a directional read for motivation, not a medical measurement. No floor or ceiling is applied, so it can land well outside your actual age in either direction.</div>';
+
+    // Ring gauge: not a natural 0-100 metric like WHOOP's recovery score, so
+    // "same age" is centered at 50% fill and each year of delta nudges the
+    // arc — younger fills it out (green), older drains it (red).
+    const RING_C = 2 * Math.PI * 60;
+    const fillPct = Math.max(6, Math.min(100, 50 - delta * 4));
+    const bandColor = deltaClass === 'younger' ? 'var(--success)' : deltaClass === 'older' ? 'var(--danger)' : 'var(--warning)';
+    const ringFill = $('faRingFill');
+    ringFill.style.strokeDasharray = RING_C;
+    ringFill.style.strokeDashoffset = RING_C;
+    ringFill.style.setProperty('--ring-color', bandColor);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        ringFill.style.strokeDashoffset = String(RING_C * (1 - fillPct / 100));
+      });
+    });
+
+    // A quick count-up instead of the number just appearing — same idea as
+    // WHOOP's reveal animation on the recovery ring.
+    const numEl = $('faNumber');
+    const countStart = performance.now();
+    const countDuration = 900;
+    (function tick(now) {
+      const t = Math.min(1, (now - countStart) / countDuration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      numEl.textContent = Math.round(rounded * eased);
+      if (t < 1) requestAnimationFrame(tick);
+    })(countStart);
 
     window.__faResult = { fitnessAge: rounded, delta, chronoAge };
   }
