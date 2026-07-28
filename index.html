@@ -103,6 +103,76 @@ body::after {
 .dash-sub { margin: 0; font-size: 14px; color: var(--text-tertiary); font-weight: 500; }
 @media (max-width: 480px) { .dash-title { font-size: 28px; } }
 
+/* ===== TODAY PANEL (readiness, weather, tips) ===== */
+.today-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.today-card {
+  position: relative;
+  padding: 20px;
+  border-radius: 24px;
+  background: rgba(18,17,24,0.55);
+  border: 1px solid rgba(255,255,255,0.06);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  overflow: hidden;
+}
+.today-card-label {
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 600;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-tertiary);
+  margin-bottom: 16px;
+}
+
+.readiness-ring-wrap { position: relative; width: 108px; height: 108px; margin: 0 auto 16px; }
+.readiness-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring-track { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 8; }
+.ring-fill {
+  fill: none; stroke: #6BE3A4; stroke-width: 8; stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;
+  filter: drop-shadow(0 0 8px rgba(107,227,164,0.55));
+}
+.readiness-center {
+  position: absolute; inset: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.readiness-pct { font-size: 27px; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1; }
+.readiness-sub { font-size: 9.5px; color: var(--text-tertiary); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.08em; }
+.readiness-stats { display: flex; justify-content: space-around; text-align: center; }
+.readiness-stats span { display: block; font-size: 15px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.readiness-stats label { display: block; font-size: 9.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 3px; }
+
+.weather-icon svg {
+  width: 34px; height: 34px; stroke: #7DD3FC; fill: none;
+  stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round;
+  filter: drop-shadow(0 0 10px rgba(125,211,252,0.5));
+}
+.weather-main { display: flex; align-items: center; gap: 12px; }
+.weather-temp { font-size: 30px; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.weather-desc { font-size: 12.5px; color: var(--text-secondary); margin-top: 10px; }
+.weather-rain {
+  display: none; margin-top: 10px; font-size: 11.5px; padding: 8px 10px;
+  border-radius: 10px; background: rgba(125,211,252,0.10); border: 1px solid rgba(125,211,252,0.22);
+  color: #7DD3FC; line-height: 1.4;
+}
+.weather-rain.show { display: block; }
+
+.tips-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 11px; }
+.tips-list li { display: flex; gap: 9px; align-items: flex-start; font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; }
+.tip-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--glow); margin-top: 5px; flex-shrink: 0; box-shadow: 0 0 6px var(--glow); }
+
+@media (max-width: 820px) {
+  .today-grid { grid-template-columns: 1fr 1fr; }
+  .tips-card { grid-column: span 2; }
+}
+@media (max-width: 520px) {
+  .today-grid { grid-template-columns: 1fr; }
+  .tips-card { grid-column: span 1; }
+}
+
 /* ===== BENTO GRID ===== */
 .bento {
   display: grid;
@@ -292,28 +362,47 @@ body::after {
     </button>
   </div>
 
-  <div class="bento">
+  <div class="today-grid">
+    <div class="today-card">
+      <div class="today-card-label">Readiness</div>
+      <div class="readiness-ring-wrap">
+        <svg class="readiness-ring" viewBox="0 0 120 120">
+          <circle class="ring-track" cx="60" cy="60" r="52"/>
+          <circle class="ring-fill" id="readinessRingFill" cx="60" cy="60" r="52"/>
+        </svg>
+        <div class="readiness-center">
+          <div class="readiness-pct" id="readinessPct">—</div>
+          <div class="readiness-sub" id="readinessSub">Connect WHOOP</div>
+        </div>
+      </div>
+      <div class="readiness-stats">
+        <div><span id="readinessSleep">—</span><label>Sleep</label></div>
+        <div><span id="readinessRhr">—</span><label>Rest HR</label></div>
+      </div>
+    </div>
 
-    <!-- Big tile — Main -->
-    <a class="tile big" href="main.html" style="--accent:#818CF8">
-      <div class="tile-top">
-        <span class="tile-num">01</span>
-        <span class="tile-icon-badge">
-          <svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9a1 1 0 0 0 1 1H9a1 1 0 0 0 1-1v-4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v4a1 1 0 0 0 1 1h2.5a1 1 0 0 0 1-1v-9"/></svg>
-        </span>
+    <div class="today-card">
+      <div class="today-card-label">Weather</div>
+      <div class="weather-main">
+        <span class="weather-icon" id="weatherIcon"></span>
+        <span class="weather-temp" id="weatherTemp">—</span>
       </div>
-      <div class="tile-spacer"></div>
-      <h2 class="tile-title">Main</h2>
-      <div class="tile-foot">
-        <span class="tile-sub">Goals & daily plan</span>
-        <span class="tile-arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span>
-      </div>
-    </a>
+      <div class="weather-desc" id="weatherDesc">Getting your location…</div>
+      <div class="weather-rain" id="weatherRain"></div>
+    </div>
+
+    <div class="today-card tips-card">
+      <div class="today-card-label">Tips for today</div>
+      <ul class="tips-list" id="tipsList"></ul>
+    </div>
+  </div>
+
+  <div class="bento">
 
     <!-- Wide tile — Fitness -->
     <a class="tile wide" href="gym.html" style="--accent:#38BDF8">
       <div class="tile-top">
-        <span class="tile-num">02</span>
+        <span class="tile-num">01</span>
         <span class="tile-icon-badge">
           <svg viewBox="0 0 24 24"><rect x="1.5" y="9" width="3" height="6" rx="1"/><rect x="19.5" y="9" width="3" height="6" rx="1"/><line x1="6" y1="12" x2="18" y2="12"/><rect x="5.5" y="6.5" width="3" height="11" rx="1"/><rect x="15.5" y="6.5" width="3" height="11" rx="1"/></svg>
         </span>
@@ -329,7 +418,7 @@ body::after {
     <!-- Small tile — Health -->
     <a class="tile" href="health.html" style="--accent:#34D399">
       <div class="tile-top">
-        <span class="tile-num">03</span>
+        <span class="tile-num">02</span>
         <span class="tile-icon-badge">
           <svg viewBox="0 0 24 24"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>
         </span>
@@ -345,7 +434,7 @@ body::after {
     <!-- Small tile — Nutrition -->
     <a class="tile" href="nutrition.html" style="--accent:#FB923C">
       <div class="tile-top">
-        <span class="tile-num">04</span>
+        <span class="tile-num">03</span>
         <span class="tile-icon-badge">
           <svg viewBox="0 0 24 24"><path d="M3 2v7a2 2 0 0 0 2 2h.5a2 2 0 0 0 2-2V2"/><path d="M6.5 11v11"/><path d="M17.5 2c-2 0-3.5 2.5-3.5 6s1 5 3.5 5 1 8 1 8"/></svg>
         </span>
@@ -361,7 +450,7 @@ body::after {
     <!-- Wide tile — Finance -->
     <a class="tile wide" href="finance.html" style="--accent:#F2C063">
       <div class="tile-top">
-        <span class="tile-num">05</span>
+        <span class="tile-num">04</span>
         <span class="tile-icon-badge">
           <svg viewBox="0 0 24 24">
             <line x1="4.5" y1="12" x2="4.5" y2="19"/><rect x="3" y="8.5" width="3" height="4.5" rx="1"/>
@@ -382,7 +471,7 @@ body::after {
     <!-- Small tile — Caffeine -->
     <a class="tile" href="caffeine.html" style="--accent:#C9A36B">
       <div class="tile-top">
-        <span class="tile-num">06</span>
+        <span class="tile-num">05</span>
         <span class="tile-icon-badge">
           <svg viewBox="0 0 24 24"><path d="M17 8h1.5a3.5 3.5 0 0 1 0 7H17"/><path d="M2.5 8h14.5v8a4 4 0 0 1-4 4H6.5a4 4 0 0 1-4-4Z"/><line x1="6.5" y1="2.5" x2="6.5" y2="4.5"/><line x1="10" y1="1.5" x2="10" y2="4"/><line x1="13.5" y1="2.5" x2="13.5" y2="4.5"/></svg>
         </span>
@@ -398,7 +487,7 @@ body::after {
     <!-- Wide tile — Nova -->
     <a class="tile wide" href="nova-lite.html" style="--accent:#A78BFA">
       <div class="tile-top">
-        <span class="tile-num">07</span>
+        <span class="tile-num">06</span>
         <span class="tile-icon-badge">
           <svg class="filled" viewBox="0 0 24 24"><path d="M12 2.5c.6 3.4 1.4 5.6 2.7 6.9 1.3 1.3 3.5 2.1 6.8 2.6-3.3.6-5.5 1.4-6.8 2.7-1.3 1.3-2.1 3.5-2.7 6.8-.6-3.3-1.4-5.5-2.7-6.8-1.3-1.3-3.5-2.1-6.8-2.7 3.3-.5 5.5-1.3 6.8-2.6C10.6 8.1 11.4 5.9 12 2.5Z"/></svg>
         </span>
@@ -620,6 +709,7 @@ body::after {
       statusEl.classList.remove('on'); txt.textContent = 'Not connected';
       syncEl.textContent = ''; $('whStats').style.display = 'none';
       action.textContent = 'Connect on Health page';
+      updateReadinessRing();
       return;
     }
     statusEl.classList.add('on'); txt.textContent = err ? 'Connected (sync failed)' : 'Connected';
@@ -632,6 +722,180 @@ body::after {
       $('whSleep').textContent = whStats.sleep != null ? whStats.sleep + '%' : '—';
       $('whRhr').textContent   = whStats.rhr   != null ? whStats.rhr         : '—';
     }
+    updateReadinessRing();
+  }
+
+  /* ---------- Readiness ring (home screen) ---------- */
+  const RING_CIRCUMFERENCE = 2 * Math.PI * 52;
+  function updateReadinessRing() {
+    const fill = $('readinessRingFill');
+    fill.style.strokeDasharray = RING_CIRCUMFERENCE;
+    const t = loadJSON(WHOOP_KEY, null);
+    const rec = whStats && whStats.rec;
+    if (!t || !t.access) {
+      $('readinessPct').textContent = '—';
+      $('readinessSub').textContent = 'Connect WHOOP';
+      fill.style.strokeDashoffset = RING_CIRCUMFERENCE;
+      $('readinessSleep').textContent = '—';
+      $('readinessRhr').textContent = '—';
+      return;
+    }
+    if (rec == null) {
+      $('readinessPct').textContent = '—';
+      $('readinessSub').textContent = 'Syncing…';
+      fill.style.strokeDashoffset = RING_CIRCUMFERENCE;
+      return;
+    }
+    fill.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - rec / 100);
+    fill.style.stroke = rec >= 67 ? '#6BE3A4' : rec >= 34 ? '#F2C063' : '#FF6B6B';
+    $('readinessPct').textContent = rec + '%';
+    $('readinessSub').textContent = 'Recovery';
+    $('readinessSleep').textContent = whStats.sleep != null ? whStats.sleep + '%' : '—';
+    $('readinessRhr').textContent = whStats.rhr != null ? whStats.rhr : '—';
+  }
+
+  /* ---------- Weather (Open-Meteo, geolocation-based, no API key) ---------- */
+  const GEO_KEY = 'geo_pos_v1';
+  const WEATHER_ICONS = {
+    sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8l1.8-1.8M18 6l1.8-1.8"/></svg>',
+    cloud: '<svg viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.2 9.1 4.5 4.5 0 0 0 7 18Z"/></svg>',
+    rain: '<svg viewBox="0 0 24 24"><path d="M7 15h9a4 4 0 0 0 .6-7.96A6 6 0 0 0 5.2 6.1 4.5 4.5 0 0 0 6 15Z"/><path d="M8 19l-1 2M12 19l-1 2M16 19l-1 2"/></svg>',
+    snow: '<svg viewBox="0 0 24 24"><path d="M7 14h9a4 4 0 0 0 .6-7.96A6 6 0 0 0 5.2 5.1 4.5 4.5 0 0 0 6 14Z"/><path d="M8 18v3M8 18l-1.5 1M8 18l1.5 1M12 18v3M12 18l-1.5 1M12 18l1.5 1M16 18v3M16 18l-1.5 1M16 18l1.5 1"/></svg>',
+    storm: '<svg viewBox="0 0 24 24"><path d="M7 13h9a4 4 0 0 0 .6-7.96A6 6 0 0 0 5.2 4.1 4.5 4.5 0 0 0 6 13Z"/><path d="M13 13l-3 5h3l-2 4"/></svg>',
+  };
+  function weatherIconFor(code) {
+    if (code === 0 || code === 1) return WEATHER_ICONS.sun;
+    if ([2, 3, 45, 48].includes(code)) return WEATHER_ICONS.cloud;
+    if ([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(code)) return WEATHER_ICONS.rain;
+    if ([71,73,75,77,85,86].includes(code)) return WEATHER_ICONS.snow;
+    if ([95,96,99].includes(code)) return WEATHER_ICONS.storm;
+    return WEATHER_ICONS.cloud;
+  }
+  function weatherDescFor(code) {
+    const map = {0:'Clear sky',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Fog',
+      51:'Light drizzle',53:'Drizzle',55:'Dense drizzle',56:'Freezing drizzle',57:'Freezing drizzle',
+      61:'Light rain',63:'Rain',65:'Heavy rain',66:'Freezing rain',67:'Freezing rain',
+      71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',
+      80:'Rain showers',81:'Rain showers',82:'Violent showers',
+      85:'Snow showers',86:'Snow showers',95:'Thunderstorm',96:'Thunderstorm + hail',99:'Thunderstorm + hail'};
+    return map[code] || 'Weather';
+  }
+  function loadGeo() { try { return JSON.parse(localStorage.getItem(GEO_KEY)); } catch (e) { return null; } }
+  function saveGeo(v) { try { localStorage.setItem(GEO_KEY, JSON.stringify(v)); } catch (e) {} }
+
+  let weatherData = null;
+  async function loadWeather() {
+    let geo = loadGeo();
+    const fresh = geo && (Date.now() - geo.ts) < 6 * 3600 * 1000;
+    if (!fresh) {
+      try {
+        const pos = await new Promise((resolve, reject) => {
+          if (!navigator.geolocation) return reject(new Error('no geolocation'));
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000 });
+        });
+        geo = { lat: pos.coords.latitude, lon: pos.coords.longitude, ts: Date.now() };
+        saveGeo(geo);
+      } catch (e) {
+        geo = loadGeo();
+        if (!geo) { $('weatherDesc').textContent = 'Location unavailable'; return; }
+      }
+    }
+    try {
+      const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + geo.lat + '&longitude=' + geo.lon +
+        '&current=temperature_2m,precipitation,weather_code&daily=precipitation_probability_max&timezone=auto';
+      const r = await fetch(url);
+      const j = await r.json();
+      const cur = j.current || {};
+      const daily = j.daily || {};
+      weatherData = {
+        temp: Math.round(cur.temperature_2m),
+        code: cur.weather_code,
+        isRainingNow: (cur.precipitation || 0) > 0,
+        rainProb: (daily.precipitation_probability_max && daily.precipitation_probability_max[0] != null) ? daily.precipitation_probability_max[0] : null,
+      };
+      $('weatherIcon').innerHTML = weatherIconFor(weatherData.code);
+      $('weatherTemp').textContent = weatherData.temp + '°';
+      $('weatherDesc').textContent = weatherDescFor(weatherData.code);
+      const rainEl = $('weatherRain');
+      if (weatherData.isRainingNow) {
+        rainEl.textContent = 'Raining right now — grab an umbrella.';
+        rainEl.classList.add('show');
+      } else if (weatherData.rainProb != null && weatherData.rainProb >= 40) {
+        rainEl.textContent = weatherData.rainProb + '% chance of rain today.';
+        rainEl.classList.add('show');
+      } else {
+        rainEl.classList.remove('show');
+      }
+      renderTips();
+    } catch (e) {
+      $('weatherDesc').textContent = 'Weather unavailable';
+    }
+  }
+
+  /* ---------- Water progress (mirrors topbar.js's formula) ---------- */
+  function calendarDateKey() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function getWaterProgress() {
+    const state = loadJSON(WATER_KEY, defaultWater());
+    const done = (state.logs || {})[calendarDateKey()] || 0;
+    const p = state.profile || { weightKg: 75 };
+    const wKg = state.weightUnit === 'lb' ? (p.weightKg || 0) / 2.20462 : (p.weightKg || 0);
+    const base = wKg * 35;
+    const exercise = (p.activityHrsPerWeek || 0) / 7 * 500;
+    const caffeine = Math.max(0, (state.caffeineMgPerDay || 0) - 200) * 1.5;
+    const subs = (state.substances || []).reduce((s, x) => {
+      const dose = (x && x.dose != null ? x.dose : (x && x.defaultDose)) || 0;
+      return s + Math.max(0, dose * ((x && x.mlPerUnit) || 0));
+    }, 0);
+    let adjust = 0;
+    if (p.sex === 'm') adjust += 200;
+    if ((p.age || 0) >= 50) adjust += 100;
+    const totalMl = base + exercise + caffeine + subs + adjust;
+    let unitVol;
+    if (state.unit === 'glass') unitVol = state.glassMl || 250;
+    else if (state.unit === 'oz') unitVol = 30;
+    else if (state.unit === 'ml') unitVol = 1;
+    else unitVol = state.bottleMl || 500;
+    const total = Math.max(1, Math.ceil(totalMl / unitVol));
+    return { done, total };
+  }
+
+  /* ---------- Tips for today ---------- */
+  function renderTips() {
+    const tips = [];
+    const t = loadJSON(WHOOP_KEY, null);
+    if (!t || !t.access) {
+      tips.push('Connect WHOOP in Settings to see your Readiness score here.');
+    } else if (whStats && whStats.rec != null) {
+      if (whStats.rec < 34) tips.push('Recovery is low (' + whStats.rec + '%) — consider a lighter day or extra rest.');
+      else if (whStats.rec >= 67) tips.push('Recovery is strong (' + whStats.rec + '%) — good day to push training.');
+      else tips.push('Recovery is moderate (' + whStats.rec + '%) — train, but listen to your body.');
+      if (whStats.sleep != null && whStats.sleep < 70) tips.push('Sleep performance was ' + whStats.sleep + '% — try to get to bed earlier tonight.');
+    }
+
+    if (weatherData) {
+      if (weatherData.isRainingNow) tips.push("It's raining right now — grab an umbrella before heading out.");
+      else if (weatherData.rainProb != null && weatherData.rainProb >= 40) tips.push(weatherData.rainProb + '% chance of rain today — keep a jacket handy.');
+    }
+
+    const wp = getWaterProgress();
+    if (wp.total > 0 && wp.done < wp.total * 0.3 && new Date().getHours() >= 14) {
+      tips.push("You're behind on water today (" + wp.done + '/' + wp.total + ') — top up this afternoon.');
+    }
+
+    if (!tips.length) tips.push('Nothing urgent — have a good one.');
+
+    const el = $('tipsList');
+    el.innerHTML = '';
+    tips.slice(0, 4).forEach((tip) => {
+      const li = document.createElement('li');
+      const dot = document.createElement('span'); dot.className = 'tip-dot';
+      const txt = document.createElement('span'); txt.textContent = tip;
+      li.append(dot, txt);
+      el.appendChild(li);
+    });
   }
   async function wRefresh(t) {
     if (!t.refresh) return null;
@@ -669,12 +933,19 @@ body::after {
       localStorage.setItem(SYNC_KEY, String(Date.now()));
       renderWhoop();
     } catch (e) { renderWhoop(e); }
+    renderTips();
   }
   $('whAction').addEventListener('click', () => {
     const t = loadJSON(WHOOP_KEY, null);
     if (!t || !t.access) { window.location.href = 'health.html'; return; }
     $('whAction').textContent = 'Syncing…'; syncWhoop();
   });
+
+  /* ---------- Today panel: initial load ---------- */
+  updateReadinessRing();
+  renderTips();
+  syncWhoop();
+  loadWeather();
 })();
 </script>
 </body>
