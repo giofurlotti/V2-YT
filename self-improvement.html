@@ -141,41 +141,27 @@ body::after {
 .fa-gem-wrap {
   position: relative; width: 208px; height: 208px; margin: 6px auto 10px;
   display: flex; align-items: center; justify-content: center;
-}
-.fa-gem-halo {
-  position: absolute; inset: 0; border-radius: 50%;
-  background: conic-gradient(from 0deg,
-    transparent 0%,
-    color-mix(in srgb, var(--orb-color, var(--age-teal)) 75%, transparent) 12%,
-    transparent 30%, transparent 50%,
-    color-mix(in srgb, var(--orb-color, var(--age-teal)) 55%, transparent) 62%,
-    transparent 80%, transparent 100%);
-  -webkit-mask: radial-gradient(circle, transparent 60%, #000 63%, #000 100%);
-          mask: radial-gradient(circle, transparent 60%, #000 63%, #000 100%);
-  filter: blur(1px);
-  animation: fa-halo-spin 7s linear infinite;
-}
-@keyframes fa-halo-spin { to { transform: rotate(360deg); } }
-.fa-gem {
-  position: relative; width: 168px; height: 168px; z-index: 1;
-  display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center;
-  clip-path: polygon(50% 1%, 93% 25%, 93% 75%, 50% 99%, 7% 75%, 7% 25%);
+  border-radius: 42% 58% 63% 37% / 39% 44% 56% 61%;
+  overflow: hidden; text-align: center; flex-direction: column;
   background:
-    linear-gradient(150deg, color-mix(in srgb, var(--orb-color, var(--age-teal)) 88%, white 8%) 0%, color-mix(in srgb, var(--orb-color, var(--age-teal)) 50%, transparent) 48%, #0a0a0d 100%);
-  box-shadow: 0 0 46px color-mix(in srgb, var(--orb-color, var(--age-teal)) 55%, transparent);
-  animation: fa-gem-pulse 4s ease-in-out infinite;
+    radial-gradient(circle at 28% 24%, color-mix(in srgb, var(--age-purple) 70%, transparent), transparent 60%),
+    radial-gradient(circle at 74% 78%, color-mix(in srgb, var(--orb-color, var(--age-teal)) 75%, transparent), transparent 65%),
+    #0a0a0d;
+  box-shadow:
+    0 0 52px color-mix(in srgb, var(--orb-color, var(--age-teal)) 45%, transparent),
+    0 0 30px color-mix(in srgb, var(--age-purple) 30%, transparent),
+    inset 0 0 55px color-mix(in srgb, var(--orb-color, var(--age-teal)) 25%, transparent);
+  animation: fa-blob-morph 8.5s ease-in-out infinite alternate, fa-blob-pulse 4s ease-in-out infinite;
   transition: background 0.7s ease, box-shadow 0.7s ease;
 }
-@keyframes fa-gem-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.035); }
+@keyframes fa-blob-morph {
+  0% { border-radius: 42% 58% 63% 37% / 39% 44% 56% 61%; }
+  50% { border-radius: 60% 40% 38% 62% / 57% 63% 37% 43%; }
+  100% { border-radius: 46% 54% 58% 42% / 45% 58% 42% 55%; }
 }
-.fa-gem::before {
-  content: ''; position: absolute; inset: 0;
-  background:
-    linear-gradient(115deg, rgba(255,255,255,0.24) 0%, transparent 20%),
-    linear-gradient(250deg, rgba(255,255,255,0.14) 0%, transparent 26%);
-  mix-blend-mode: screen;
+@keyframes fa-blob-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.025); }
 }
 .fa-gem-specks {
   position: absolute; inset: 0; opacity: 0.9;
@@ -521,15 +507,12 @@ body::after {
     const bandColor = deltaClass === 'younger' ? '#6BE3A4' : deltaClass === 'older' ? '#FF8A8A' : '#F2C063';
 
     $('faBody').innerHTML =
-      '<div class="fa-gem-wrap">' +
-        '<div class="fa-gem-halo"></div>' +
-        '<div class="fa-gem" id="faOrb">' +
-          '<div class="fa-gem-specks"></div>' +
-          '<div class="fa-gem-content">' +
-            '<span class="fa-number" id="faNumber">0</span>' +
-            '<span class="fa-unit">fitness age</span>' +
-            '<div class="fa-delta ' + deltaClass + '" id="faDelta">' + deltaText + '</div>' +
-          '</div>' +
+      '<div class="fa-gem-wrap" id="faOrb">' +
+        '<div class="fa-gem-specks"></div>' +
+        '<div class="fa-gem-content">' +
+          '<span class="fa-number" id="faNumber">0</span>' +
+          '<span class="fa-unit">fitness age</span>' +
+          '<div class="fa-delta ' + deltaClass + '" id="faDelta">' + deltaText + '</div>' +
         '</div>' +
       '</div>' +
       '<div class="fa-factors">' +
