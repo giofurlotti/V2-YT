@@ -119,7 +119,7 @@ body::after {
 .empty-note { font-size: 12.5px; color: var(--text-tertiary); font-style: italic; line-height: 1.5; }
 .empty-note a { color: var(--age-teal); }
 
-/* ===== Fitness Age hero — a WHOOP-style ring gauge ===== */
+/* ===== Fitness Age hero — a WHOOP-Healthspan-style glowing orb ===== */
 .fa-bg {
   position: absolute; inset: -20%; z-index: 0; pointer-events: none;
   background:
@@ -131,39 +131,59 @@ body::after {
 @keyframes fa-glow-drift { 0% { opacity: 0.7; } 100% { opacity: 1; transform: scale(1.05); } }
 .fa-content { position: relative; z-index: 1; }
 
-.fa-ring-wrap { position: relative; width: 168px; height: 168px; margin: 4px auto 8px; }
-.fa-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
-.fa-ring-track { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 10; }
-.fa-ring-fill {
-  fill: none; stroke-width: 10; stroke-linecap: round;
-  stroke: var(--ring-color, var(--age-teal));
-  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--ring-color, var(--age-teal)) 65%, transparent));
-  transition: stroke-dashoffset 1.2s cubic-bezier(.16,1,.3,1), stroke 0.5s ease, filter 0.5s ease;
-  animation: fa-ring-pulse 3.2s ease-in-out infinite;
+.orb {
+  position: relative; width: 208px; height: 208px; margin: 6px auto 10px;
+  display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center;
+  overflow: hidden;
+  border-radius: 44% 56% 62% 38% / 41% 46% 54% 59%;
+  background:
+    radial-gradient(circle at 32% 26%, color-mix(in srgb, var(--orb-color, var(--age-teal)) 80%, transparent), transparent 60%),
+    radial-gradient(circle at 70% 76%, color-mix(in srgb, var(--orb-color, var(--age-teal)) 55%, transparent), transparent 68%),
+    #0a0a0d;
+  box-shadow:
+    0 0 50px color-mix(in srgb, var(--orb-color, var(--age-teal)) 50%, transparent),
+    inset 0 0 60px color-mix(in srgb, var(--orb-color, var(--age-teal)) 30%, transparent);
+  animation: orb-morph 9s ease-in-out infinite alternate, orb-pulse 4s ease-in-out infinite;
+  transition: background 0.7s ease, box-shadow 0.7s ease;
 }
-@keyframes fa-ring-pulse {
-  0%, 100% { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--ring-color, var(--age-teal)) 55%, transparent)); }
-  50% { filter: drop-shadow(0 0 15px color-mix(in srgb, var(--ring-color, var(--age-teal)) 80%, transparent)); }
+@keyframes orb-morph {
+  0% { border-radius: 44% 56% 62% 38% / 41% 46% 54% 59%; }
+  50% { border-radius: 58% 42% 40% 60% / 55% 60% 40% 45%; }
+  100% { border-radius: 48% 52% 55% 45% / 47% 55% 45% 53%; }
 }
-.fa-ring-center {
-  position: absolute; inset: 0; display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
+@keyframes orb-pulse {
+  0%, 100% { box-shadow: 0 0 50px color-mix(in srgb, var(--orb-color, var(--age-teal)) 50%, transparent), inset 0 0 60px color-mix(in srgb, var(--orb-color, var(--age-teal)) 30%, transparent); }
+  50%      { box-shadow: 0 0 68px color-mix(in srgb, var(--orb-color, var(--age-teal)) 65%, transparent), inset 0 0 75px color-mix(in srgb, var(--orb-color, var(--age-teal)) 38%, transparent); }
 }
+.orb-specks {
+  position: absolute; inset: 0; opacity: 0.9;
+  background-image:
+    radial-gradient(1.6px 1.6px at 18% 22%, rgba(255,255,255,0.9), transparent),
+    radial-gradient(1.1px 1.1px at 32% 12%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1.4px 1.4px at 48% 30%, rgba(255,255,255,0.75), transparent),
+    radial-gradient(1px 1px at 62% 14%, rgba(255,255,255,0.55), transparent),
+    radial-gradient(1.5px 1.5px at 78% 24%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1.1px 1.1px at 88% 40%, rgba(255,255,255,0.55), transparent),
+    radial-gradient(1.3px 1.3px at 12% 48%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 25% 65%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1.6px 1.6px at 40% 82%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1.1px 1.1px at 58% 88%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1.4px 1.4px at 74% 78%, rgba(255,255,255,0.65), transparent),
+    radial-gradient(1px 1px at 90% 62%, rgba(255,255,255,0.5), transparent);
+}
+.orb-content { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; }
 .fa-number {
-  font-family: var(--font-numeric); font-weight: 800; font-size: 46px; line-height: 1;
-  letter-spacing: -0.03em; color: var(--text-primary); font-variant-numeric: tabular-nums;
-  transition: color 0.5s ease;
+  font-family: var(--font); font-weight: 800; font-size: 42px; line-height: 1;
+  letter-spacing: -0.02em; color: #FAFAFA; font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.5);
 }
-.fa-unit { font-size: 11px; color: var(--text-tertiary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; margin-top: 3px; }
-.fa-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.fa-unit { font-size: 10.5px; color: rgba(255,255,255,0.6); font-weight: 700; text-transform: uppercase; letter-spacing: 0.16em; margin-top: 5px; }
 .fa-delta {
-  display: inline-flex; align-items: center; gap: 6px; margin: 2px auto 0; padding: 6px 12px;
-  border-radius: 999px; font-size: 12.5px; font-weight: 700; width: fit-content;
+  display: inline-flex; align-items: center; gap: 6px; margin: 8px auto 0; padding: 5px 12px;
+  border-radius: 999px; font-size: 12px; font-weight: 700; width: fit-content;
+  background: rgba(0,0,0,0.28); color: var(--orb-color, var(--age-teal));
   opacity: 0; animation: fa-fade-up 0.6s ease 0.5s forwards;
 }
-.fa-delta.younger { background: rgba(52,211,153,0.14); color: var(--success); }
-.fa-delta.older { background: rgba(255,107,107,0.14); color: var(--danger); }
-.fa-delta.same { background: rgba(255,255,255,0.08); color: var(--text-secondary); }
 @keyframes fa-fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 .fa-factors {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 18px; text-align: center;
@@ -421,22 +441,20 @@ body::after {
     const rounded = Math.round(fitnessAge);
     const delta = rounded - chronoAge;
 
-    let deltaClass = 'same', deltaText = 'right on track for your age';
-    if (delta <= -1) { deltaClass = 'younger'; deltaText = Math.abs(delta) + (Math.abs(delta) === 1 ? ' year younger' : ' years younger') + ' than your actual age'; }
-    else if (delta >= 1) { deltaClass = 'older'; deltaText = delta + (delta === 1 ? ' year older' : ' years older') + ' than your actual age'; }
+    let deltaClass = 'same', deltaText = 'right on your actual age';
+    if (delta <= -1) { deltaClass = 'younger'; deltaText = Math.abs(delta) + (Math.abs(delta) === 1 ? ' year younger' : ' years younger'); }
+    else if (delta >= 1) { deltaClass = 'older'; deltaText = delta + (delta === 1 ? ' year older' : ' years older'); }
+    const bandColor = deltaClass === 'younger' ? '#6BE3A4' : deltaClass === 'older' ? '#FF8A8A' : '#F2C063';
 
     $('faBody').innerHTML =
-      '<div class="fa-ring-wrap">' +
-        '<svg class="fa-ring" viewBox="0 0 140 140">' +
-          '<circle class="fa-ring-track" cx="70" cy="70" r="60"/>' +
-          '<circle class="fa-ring-fill" id="faRingFill" cx="70" cy="70" r="60"/>' +
-        '</svg>' +
-        '<div class="fa-ring-center">' +
+      '<div class="orb" id="faOrb">' +
+        '<div class="orb-specks"></div>' +
+        '<div class="orb-content">' +
           '<span class="fa-number" id="faNumber">0</span>' +
-          '<span class="fa-unit">years</span>' +
+          '<span class="fa-unit">fitness age</span>' +
+          '<div class="fa-delta ' + deltaClass + '" id="faDelta">' + deltaText + '</div>' +
         '</div>' +
       '</div>' +
-      '<div class="fa-delta ' + deltaClass + '">' + deltaText + '</div>' +
       '<div class="fa-factors">' +
         '<div class="fa-factor"><div class="v">' + chronoAge + '</div><div class="l">Actual age</div></div>' +
         '<div class="fa-factor"><div class="v">' + Math.round(whoop.avgRhr) + '</div><div class="l">Avg RHR</div></div>' +
@@ -445,24 +463,10 @@ body::after {
       '</div>' +
       '<div class="fa-note">Estimated from your resting heart rate, HRV, recovery and activity level vs. general population norms — a directional read for motivation, not a medical measurement. No floor or ceiling is applied, so it can land well outside your actual age in either direction.</div>';
 
-    // Ring gauge: not a natural 0-100 metric like WHOOP's recovery score, so
-    // "same age" is centered at 50% fill and each year of delta nudges the
-    // arc — younger fills it out (green), older drains it (red).
-    const RING_C = 2 * Math.PI * 60;
-    const fillPct = Math.max(6, Math.min(100, 50 - delta * 4));
-    const bandColor = deltaClass === 'younger' ? 'var(--success)' : deltaClass === 'older' ? 'var(--danger)' : 'var(--warning)';
-    const ringFill = $('faRingFill');
-    ringFill.style.strokeDasharray = RING_C;
-    ringFill.style.strokeDashoffset = RING_C;
-    ringFill.style.setProperty('--ring-color', bandColor);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        ringFill.style.strokeDashoffset = String(RING_C * (1 - fillPct / 100));
-      });
-    });
+    $('faOrb').style.setProperty('--orb-color', bandColor);
 
     // A quick count-up instead of the number just appearing — same idea as
-    // WHOOP's reveal animation on the recovery ring.
+    // WHOOP's reveal animation on its rings.
     const numEl = $('faNumber');
     const countStart = performance.now();
     const countDuration = 900;

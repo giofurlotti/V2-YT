@@ -555,15 +555,52 @@ main {
     .wh-refresh { width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform 0.4s, background 0.18s, color 0.18s; }
     .wh-refresh:hover { background:rgba(255,255,255,0.10); color:var(--text-primary); }
     .wh-refresh.spin { transform:rotate(360deg); }
-    /* Ring */
+    /* Ring — a WHOOP-Healthspan-style glowing orb instead of a plain arc */
     .wh-ring-wrap { position:relative; width:240px; max-width:78%; margin:0 auto 24px; aspect-ratio:1; }
-    .wh-ring { width:100%; height:100%; transform:rotate(-90deg); filter:drop-shadow(0 0 24px rgba(255,255,255,0.05)); }
-    .wh-ring-track { fill:none; stroke:rgba(255,255,255,0.06); stroke-width:12; }
-    .wh-ring-fill { fill:none; stroke:#FFF; stroke-width:12; stroke-linecap:round; stroke-dasharray:603.19; stroke-dashoffset:603.19; transition:stroke-dashoffset 0.8s cubic-bezier(0.22,1,0.36,1), stroke 0.4s; }
-    .wh-ring-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
-    .wh-ring-num { font-size:60px; font-weight:700; letter-spacing:-0.04em; color:var(--text-primary); line-height:1; font-variant-numeric:tabular-nums; }
-    .wh-ring-unit { font-size:10px; font-weight:700; letter-spacing:0.22em; text-transform:uppercase; color:var(--text-tertiary); margin-top:10px; }
-    .wh-ring-label { font-size:12.5px; font-weight:600; margin-top:6px; letter-spacing:-0.005em; }
+    .wh-orb {
+      position: relative; width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center;
+      overflow: hidden;
+      border-radius: 44% 56% 62% 38% / 41% 46% 54% 59%;
+      background:
+        radial-gradient(circle at 32% 26%, color-mix(in srgb, var(--orb-color, #6BE3A4) 80%, transparent), transparent 60%),
+        radial-gradient(circle at 70% 76%, color-mix(in srgb, var(--orb-color, #6BE3A4) 55%, transparent), transparent 68%),
+        #0a0a0d;
+      box-shadow:
+        0 0 50px color-mix(in srgb, var(--orb-color, #6BE3A4) 50%, transparent),
+        inset 0 0 60px color-mix(in srgb, var(--orb-color, #6BE3A4) 30%, transparent);
+      animation: wh-orb-morph 9s ease-in-out infinite alternate, wh-orb-pulse 4s ease-in-out infinite;
+      transition: background 0.7s ease, box-shadow 0.7s ease;
+    }
+    @keyframes wh-orb-morph {
+      0% { border-radius: 44% 56% 62% 38% / 41% 46% 54% 59%; }
+      50% { border-radius: 58% 42% 40% 60% / 55% 60% 40% 45%; }
+      100% { border-radius: 48% 52% 55% 45% / 47% 55% 45% 53%; }
+    }
+    @keyframes wh-orb-pulse {
+      0%, 100% { box-shadow: 0 0 50px color-mix(in srgb, var(--orb-color, #6BE3A4) 50%, transparent), inset 0 0 60px color-mix(in srgb, var(--orb-color, #6BE3A4) 30%, transparent); }
+      50%      { box-shadow: 0 0 68px color-mix(in srgb, var(--orb-color, #6BE3A4) 65%, transparent), inset 0 0 75px color-mix(in srgb, var(--orb-color, #6BE3A4) 38%, transparent); }
+    }
+    .wh-orb-specks {
+      position: absolute; inset: 0; opacity: 0.9;
+      background-image:
+        radial-gradient(1.6px 1.6px at 18% 22%, rgba(255,255,255,0.9), transparent),
+        radial-gradient(1.1px 1.1px at 32% 12%, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1.4px 1.4px at 48% 30%, rgba(255,255,255,0.75), transparent),
+        radial-gradient(1px 1px at 62% 14%, rgba(255,255,255,0.55), transparent),
+        radial-gradient(1.5px 1.5px at 78% 24%, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1.1px 1.1px at 88% 40%, rgba(255,255,255,0.55), transparent),
+        radial-gradient(1.3px 1.3px at 12% 48%, rgba(255,255,255,0.6), transparent),
+        radial-gradient(1px 1px at 25% 65%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1.6px 1.6px at 40% 82%, rgba(255,255,255,0.7), transparent),
+        radial-gradient(1.1px 1.1px at 58% 88%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(1.4px 1.4px at 74% 78%, rgba(255,255,255,0.65), transparent),
+        radial-gradient(1px 1px at 90% 62%, rgba(255,255,255,0.5), transparent);
+    }
+    .wh-ring-center { position: relative; z-index: 1; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; }
+    .wh-ring-num { font-family: var(--font); font-size:52px; font-weight:800; letter-spacing:-0.02em; color:#FAFAFA; line-height:1; font-variant-numeric:tabular-nums; text-shadow: 0 2px 12px rgba(0,0,0,0.5); }
+    .wh-ring-unit { font-size:10px; font-weight:700; letter-spacing:0.22em; text-transform:uppercase; color:rgba(255,255,255,0.6); margin-top:10px; }
+    .wh-ring-label { font-size:12.5px; font-weight:700; margin-top:8px; letter-spacing:-0.005em; padding: 4px 12px; border-radius: 999px; background: rgba(0,0,0,0.28); }
     /* Stages */
     .wh-stages { margin-bottom:22px; padding-top:22px; border-top:1px solid rgba(255,255,255,0.05); }
     .wh-stages-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
@@ -638,14 +675,13 @@ main {
         </div>
         <div id="whErr" class="wh-err" style="display:none"></div>
         <div class="wh-ring-wrap">
-          <svg class="wh-ring" viewBox="0 0 220 220" aria-hidden="true">
-            <circle class="wh-ring-track" cx="110" cy="110" r="96"/>
-            <circle class="wh-ring-fill" cx="110" cy="110" r="96" id="whRingFill"/>
-          </svg>
-          <div class="wh-ring-center">
-            <div id="whRecNum" class="wh-ring-num">—</div>
-            <div class="wh-ring-unit">recovery</div>
-            <div id="whRecLabel" class="wh-ring-label">—</div>
+          <div class="wh-orb" id="whOrb">
+            <div class="wh-orb-specks"></div>
+            <div class="wh-ring-center">
+              <div id="whRecNum" class="wh-ring-num">—</div>
+              <div class="wh-ring-unit">recovery</div>
+              <div id="whRecLabel" class="wh-ring-label">—</div>
+            </div>
           </div>
         </div>
         <div id="whStages" class="wh-stages" style="display:none">
@@ -833,16 +869,21 @@ main {
           spo2 = r0.score.spo2_percentage != null ? r0.score.spo2_percentage : null;
         }
 
-        // Ring
-        const fill = $('whRingFill');
-        const C = 603.19;
+        // Orb
         if (recScore != null) {
-          fill.style.strokeDashoffset = String(C * (1 - recScore/100));
-          fill.style.stroke = ringStroke(recScore);
-          $('whRecNum').textContent = String(recScore);
+          const color = ringStroke(recScore);
+          $('whOrb').style.setProperty('--orb-color', color);
+          const numEl = $('whRecNum');
+          const countStart = performance.now(), countDuration = 900;
+          (function tick(now) {
+            const t = Math.min(1, (now - countStart) / countDuration);
+            const eased = 1 - Math.pow(1 - t, 3);
+            numEl.textContent = String(Math.round(recScore * eased));
+            if (t < 1) requestAnimationFrame(tick);
+          })(countStart);
           const labelEl = $('whRecLabel');
           labelEl.textContent = recoveryLabel(recScore);
-          labelEl.style.color = ringStroke(recScore);
+          labelEl.style.color = color;
         }
 
         // Sleep
