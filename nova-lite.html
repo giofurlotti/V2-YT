@@ -127,7 +127,21 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: 
   function setOrb(s){ orb.className = 'orb' + (s ? ' ' + s : ''); }
 
   // ---- key handling ----
-  function savedKey(){ try { return localStorage.getItem(KEY_LS) || ''; } catch(e){ return ''; } }
+  // Defensive cleanup: an older, now-removed sync path stored these keys via
+  // JSON.stringify(), which wraps a plain string in literal quote characters
+  // ("sk-ant-..." instead of sk-ant-...). If a key still has that shape from
+  // before, strip it and re-save the clean value so it self-heals on read.
+  function cleanKeyValue(v, storeKey) {
+    if (typeof v !== 'string' || v.length < 2) return v;
+    if (v[0] === '"' && v[v.length - 1] === '"') {
+      let cleaned;
+      try { cleaned = JSON.parse(v); } catch (e) { cleaned = v.slice(1, -1); }
+      if (typeof cleaned === 'string' && storeKey) { try { localStorage.setItem(storeKey, cleaned); } catch (e) {} }
+      return cleaned;
+    }
+    return v;
+  }
+  function savedKey(){ try { return cleanKeyValue(localStorage.getItem(KEY_LS) || '', KEY_LS); } catch(e){ return ''; } }
   function refreshKeyUI(){
     if (savedKey()) {
       hint.classList.add('saved'); hint.innerHTML = '✓ Key saved in this browser. Ask away.';
@@ -159,7 +173,7 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: 
   const USDA_KEY_LS = 'usda_fdc_api_key';
   const KS_URL = (window.DASH_SUPABASE_URL) || 'https://srajryooffirbroltjmg.supabase.co';
   const KS_KEY = (window.DASH_SUPABASE_KEY) || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
-  function usdaSavedKey() { try { return localStorage.getItem(USDA_KEY_LS) || ''; } catch (e) { return ''; } }
+  function usdaSavedKey() { try { return cleanKeyValue(localStorage.getItem(USDA_KEY_LS) || '', USDA_KEY_LS); } catch (e) { return ''; } }
   async function pullApiKeysIfMissing() {
     if (savedKey() && usdaSavedKey()) return;
     try {
@@ -181,10 +195,21 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: 
     const uk = usdaSavedKey(); if (uk) payload.usda_fdc_api_key = uk;
     if (!Object.keys(payload).length) return;
     try {
+      // Fetch-merge-push so a device that only has one of the two keys
+      // locally doesn't wipe the other one out of the shared row.
+      let current = {};
+      try {
+        const r = await fetch(KS_URL + '/rest/v1/app_state?select=data&key=eq.apikeys', {
+          headers: { apikey: KS_KEY, Authorization: 'Bearer ' + KS_KEY },
+        });
+        const rows = await r.json();
+        current = (rows && rows[0] && rows[0].data) || {};
+      } catch (e) {}
+      const merged = Object.assign({}, current, payload);
       await fetch(KS_URL + '/rest/v1/app_state?on_conflict=key', {
         method: 'POST',
         headers: { apikey: KS_KEY, Authorization: 'Bearer ' + KS_KEY, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' },
-        body: JSON.stringify({ key: 'apikeys', data: payload, updated_at: new Date().toISOString() }),
+        body: JSON.stringify({ key: 'apikeys', data: merged, updated_at: new Date().toISOString() }),
       });
     } catch (e) {}
   }
