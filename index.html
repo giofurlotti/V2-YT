@@ -1078,6 +1078,8 @@ body::after {
 
   /* ---------- WHOOP ---------- */
   let whStats = null;
+  let whSyncAttempted = false;
+  let whSyncFailed = false;
   function relTime(ts) {
     if (!ts) return 'never';
     const s = Math.floor((Date.now() - ts) / 1000);
@@ -1140,7 +1142,9 @@ body::after {
     if (rec == null) {
       $('readinessPct').textContent = '—';
       $('readinessPctSleep').textContent = '—';
-      $('readinessHeadline').textContent = 'Syncing your WHOOP data…';
+      $('readinessHeadline').textContent = (whSyncAttempted && whSyncFailed)
+        ? 'WHOOP sync failed — reconnect on the Health page'
+        : 'Syncing your WHOOP data…';
       fill.style.strokeDashoffset = RING_CIRCUMFERENCE;
       fillInner.style.strokeDashoffset = RING_CIRCUMFERENCE_INNER;
       return;
@@ -1642,11 +1646,12 @@ body::after {
     let t = loadJSON(WHOOP_KEY, null);
     if (!t || !t.access) return;
     if (t.expires && Date.now() > t.expires - 60000) { const n = await wRefresh(t); if (n) t = n; }
+    let recErr = null, sleepErr = null, cycleErr = null;
     try {
       const [rec, sleep, cycle] = await Promise.all([
-        wFetch('/recovery?limit=2', t).catch(()=>null),
-        wFetch('/activity/sleep?limit=1', t).catch(()=>null),
-        wFetch('/cycle?limit=1', t).catch(()=>null),
+        wFetch('/recovery?limit=2', t).catch((e) => { recErr = e; return null; }),
+        wFetch('/activity/sleep?limit=1', t).catch((e) => { sleepErr = e; return null; }),
+        wFetch('/cycle?limit=1', t).catch((e) => { cycleErr = e; return null; }),
       ]);
       const r0 = rec && rec.records && rec.records[0];
       const r1 = rec && rec.records && rec.records[1];
@@ -1660,9 +1665,19 @@ body::after {
         sleep:   s0 && s0.score && s0.score.sleep_performance_percentage != null ? Math.round(s0.score.sleep_performance_percentage) : null,
         strain:  c0 && c0.score && c0.score.strain != null ? Math.round(c0.score.strain * 10) / 10 : null,
       };
+      // The three calls above are individually caught (so one failing
+      // endpoint doesn't blank the whole card), which means a total auth
+      // failure would otherwise resolve "successfully" with everything
+      // null and no visible error — exactly what left the readiness ring
+      // stuck on "Syncing…" forever instead of surfacing a real failure.
+      whSyncFailed = !!recErr;
+      if (recErr) console.warn('[whoop] recovery sync failed:', recErr);
+      if (sleepErr) console.warn('[whoop] sleep sync failed:', sleepErr);
+      if (cycleErr) console.warn('[whoop] cycle sync failed:', cycleErr);
       localStorage.setItem(SYNC_KEY, String(Date.now()));
-      renderWhoop();
-    } catch (e) { renderWhoop(e); }
+      whSyncAttempted = true;
+      renderWhoop(whSyncFailed);
+    } catch (e) { whSyncFailed = true; whSyncAttempted = true; renderWhoop(e); }
     renderTips();
     loadBedtime();
   }
