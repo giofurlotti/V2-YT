@@ -1276,7 +1276,7 @@ img, video, canvas, svg { max-width: 100%; }
     <span class="po-day-split" id="dayPillSplit">—</span>
   </button>
 
-  <!-- RUNNING COACH (Nova AI, bring-your-own Anthropic key — shared with the rest of the dashboard) -->
+  <!-- RUNNING COACH (Nova AI, bring-your-own free Gemini key — shared with the rest of the dashboard) -->
   <style>
     .rc-card { padding-bottom: 14px; }
     .rc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
@@ -3626,7 +3626,7 @@ img, video, canvas, svg { max-width: 100%; }
 })();
 </script>
 
-<!-- ===== Nova gym coach (top-right avatar, bring-your-own Anthropic key) ===== -->
+<!-- ===== Nova gym coach (top-right avatar, bring-your-own free Gemini key) ===== -->
 <style>
   /* Anchor the avatar to the top-right of the page content, not the far corner. */
   .po-shell { position: relative; }
@@ -3763,20 +3763,25 @@ img, video, canvas, svg { max-width: 100%; }
     text = (text||'').trim(); if (!text || busy) return;
     const key = savedKey();
     addMsg('user', md(text));
-    if (!key){ addMsg('coach', md("Paste your **Anthropic API key** on the Nova page first (the 🧠 tile on the home screen) — it's saved in this browser and I'll use it here too.")); return; }
+    if (!key){ addMsg('coach', md("Paste your **free Gemini API key** on the Nova page first (the 🧠 tile on the home screen) — it's saved in this browser and I'll use it here too.")); return; }
     busy = true;
     const loading = addMsg('coach', '<span class="nv-dots"><i></i><i></i><i></i></span>');
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + encodeURIComponent(key), {
         method: 'POST',
-        headers: { 'content-type':'application/json', 'x-api-key':key, 'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true' },
-        body: JSON.stringify({ model:'claude-opus-4-8', max_tokens:1024, system: SYS + gymContext(), messages:[{role:'user', content:text}] }),
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: SYS + gymContext() }] },
+          contents: [{ role: 'user', parts: [{ text: text }] }],
+          generationConfig: { maxOutputTokens: 1024 },
+        }),
       });
       const json = await res.json();
       if (json.error){ loading.innerHTML = md('- ' + (json.error.message || 'Something went wrong — check your API key.')); busy=false; return; }
-      const reply = (json.content && json.content[0] && json.content[0].text) || 'Hmm, no reply.';
+      const parts = (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts) || [];
+      const reply = parts.map((p) => p.text || '').join('\n').trim() || 'Hmm, no reply.';
       loading.innerHTML = md(reply);
-    } catch(e){ loading.innerHTML = md('- Could not reach Anthropic — check your connection and key.'); }
+    } catch(e){ loading.innerHTML = md('- Could not reach Gemini — check your connection and key.'); }
     body.scrollTop = body.scrollHeight; busy = false;
   }
 
@@ -3795,7 +3800,7 @@ img, video, canvas, svg { max-width: 100%; }
 })();
 </script>
 
-<!-- ===== Running Coach (Nova AI, inline card — shares the Anthropic key above) ===== -->
+<!-- ===== Running Coach (Nova AI, inline card — shares the Gemini key above) ===== -->
 <script>
 (function () {
   'use strict';
@@ -3867,21 +3872,26 @@ img, video, canvas, svg { max-width: 100%; }
     text = (text || '').trim(); if (!text || busy) return;
     const key = savedKey();
     addMsg('user', md(text));
-    if (!key) { addMsg('coach', md("Paste your **Anthropic API key** on the Nova page first (the 🧠 tile on the home screen) — it's saved in this browser and I'll use it here too.")); return; }
+    if (!key) { addMsg('coach', md("Paste your **free Gemini API key** on the Nova page first (the 🧠 tile on the home screen) — it's saved in this browser and I'll use it here too.")); return; }
     busy = true;
     const loading = addMsg('coach', '<span class="rc-dots"><i></i><i></i><i></i></span>');
     try {
       const ctx = await runningContext();
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + encodeURIComponent(key), {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({ model: 'claude-opus-4-8', max_tokens: 1024, system: SYS + ctx, messages: [{ role: 'user', content: text }] }),
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: SYS + ctx }] },
+          contents: [{ role: 'user', parts: [{ text: text }] }],
+          generationConfig: { maxOutputTokens: 1024 },
+        }),
       });
       const json = await res.json();
       if (json.error) { loading.innerHTML = md('- ' + (json.error.message || 'Something went wrong — check your API key.')); busy = false; return; }
-      const reply = (json.content && json.content[0] && json.content[0].text) || 'Hmm, no reply.';
+      const parts = (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts) || [];
+      const reply = parts.map((p) => p.text || '').join('\n').trim() || 'Hmm, no reply.';
       loading.innerHTML = md(reply);
-    } catch (e) { loading.innerHTML = md('- Could not reach Anthropic — check your connection and key.'); }
+    } catch (e) { loading.innerHTML = md('- Could not reach Gemini — check your connection and key.'); }
     body.scrollTop = body.scrollHeight; busy = false;
   }
 

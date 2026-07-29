@@ -453,12 +453,13 @@ body::after {
         <input class="gm-input" id="novaInput" type="text" placeholder="Describe a meal… e.g. “2 eggs and a slice of toast”" autocomplete="off">
         <button class="gm-add" id="novaAsk" type="button">Estimate</button>
       </div>
-      <div class="nova-hint">Uses the same Anthropic key as the Nova tile — stored only in this browser, sent straight to Anthropic.</div>
+      <div class="nova-hint">Uses the same free Gemini key as the Nova tile — stored only in this browser, sent straight to Google.</div>
 
       <div class="nova-key-row" id="novaKeyRow">
-        <input class="gm-input" id="novaKeyInput" type="password" placeholder="paste your Anthropic API key (sk-ant-…)" autocomplete="off">
+        <input class="gm-input" id="novaKeyInput" type="password" placeholder="paste your free Gemini API key (AIza…)" autocomplete="off">
         <button class="gm-ghost" id="novaKeySave" type="button">Save key</button>
       </div>
+      <div class="nova-hint">Free, no credit card — get one at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a>.</div>
 
       <div class="nova-loading" id="novaLoading"><span class="dots"><i></i><i></i><i></i></span> Estimating…</div>
       <div class="nova-error" id="novaError"></div>
@@ -1140,7 +1141,7 @@ body::after {
   }
   $('foodSearch').addEventListener('input', renderFoodIndex);
 
-  /* ---------- Ask Nova (AI macro estimator, bring-your-own Anthropic key) ---------- */
+  /* ---------- Ask Nova (AI macro estimator, bring-your-own free Gemini key) ---------- */
   // Defensive cleanup: an older, now-removed sync path stored these keys via
   // JSON.stringify(), which wraps a plain string in literal quote characters
   // ("sk-ant-..." instead of sk-ant-...). If a key still has that shape from
@@ -1254,24 +1255,19 @@ body::after {
     $('novaLoading').classList.add('show');
 
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + encodeURIComponent(key), {
         method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-api-key': key,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
+        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-opus-4-8',
-          max_tokens: 500,
-          system: NOVA_SYS,
-          messages: [{ role: 'user', content: desc }],
+          systemInstruction: { parts: [{ text: NOVA_SYS }] },
+          contents: [{ role: 'user', parts: [{ text: desc }] }],
+          generationConfig: { maxOutputTokens: 500, responseMimeType: 'application/json' },
         }),
       });
       const json = await res.json();
       if (json.error) throw new Error(json.error.message || 'Request failed.');
-      const text = (json.content && json.content[0] && json.content[0].text) || '';
+      const parts = (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts) || [];
+      const text = parts.map((p) => p.text || '').join('');
       const data = extractJSON(text);
       if (!data || typeof data.calories === 'undefined') throw new Error('Could not read a nutrition estimate from the reply.');
 
