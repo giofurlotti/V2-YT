@@ -10,11 +10,12 @@
  * Single self-contained file. No backend, no build step.
  *
  * HOW IT WORKS (bring-your-own-key):
- *   • The viewer pastes their OWN free Google Gemini API key (stored only
- *     in their browser's localStorage — never sent anywhere but Google).
+ *   • The viewer pastes their OWN free Groq API key (stored only in their
+ *     browser's localStorage — never sent anywhere but Groq).
  *   • Nova reads whatever the dashboard saved in localStorage for context.
- *   • Calls the Gemini API directly from the browser (Google's API key
- *     scheme supports direct client-side calls; no proxy needed).
+ *   • Calls the Groq API directly from the browser (Groq's API sets
+ *     Access-Control-Allow-Origin: * — direct client-side calls work,
+ *     no proxy needed).
  *
  * This is the lightweight version: a flat CSS orb (no 3D), basic chat.
  * The premium build (3D avatar, Spark voice scheduler, secure server
@@ -94,12 +95,12 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: 
 
     <div class="keypanel" id="keypanel">
       <div class="keybar">
-        <input id="keyInput" type="password" placeholder="paste your free Gemini API key (AIza…)" autocomplete="off" />
+        <input id="keyInput" type="password" placeholder="paste your free Groq API key (gsk_…)" autocomplete="off" />
         <button id="keySave">Save</button>
       </div>
       <div class="hint" id="hint">
-        Your key is stored only in <b>this browser</b> and sent straight to Google — never to us.
-        Get a free one at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a>.
+        Your key is stored only in <b>this browser</b> and sent straight to Groq — never to us.
+        Get a free one at <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com</a>.
       </div>
     </div>
 
@@ -148,8 +149,8 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: 
       keyInput.placeholder = '•••• key saved ••••'; keyToggle.classList.add('has-key');
     } else {
       hint.classList.remove('saved');
-      hint.innerHTML = 'Your key is stored only in <b>this browser</b> and sent straight to Google — never to us. Get a free one at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com</a>.';
-      keyInput.placeholder = 'paste your free Gemini API key (AIza…)'; keyToggle.classList.remove('has-key');
+      hint.innerHTML = 'Your key is stored only in <b>this browser</b> and sent straight to Groq — never to us. Get a free one at <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com</a>.';
+      keyInput.placeholder = 'paste your free Groq API key (gsk_…)'; keyToggle.classList.remove('has-key');
     }
   }
   refreshKeyUI();
@@ -256,28 +257,27 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: 
   async function ask(text){
     text = (text||'').trim(); if (!text || busy) return;
     const key = savedKey();
-    if (!key){ addCoach('- Paste your **free Gemini API key** above first, then ask me again.'); return; }
+    if (!key){ addCoach('- Paste your **free Groq API key** above first, then ask me again.'); return; }
     busy = true; addUser(text); input.value = '';
     setOrb('think');
     const loading = addCoach('<span class="dots"><i></i><i></i><i></i></span>');
     try {
-      const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + encodeURIComponent(key), {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYS + JSON.stringify(dashboardData()) }] },
-          contents: [{ role: 'user', parts: [{ text: text }] }],
-          generationConfig: { maxOutputTokens: 1024 },
+          model: 'llama-3.3-70b-versatile',
+          max_tokens: 1024,
+          messages: [{ role: 'system', content: SYS + JSON.stringify(dashboardData()) }, { role: 'user', content: text }],
         }),
       });
       const json = await res.json();
       if (json.error){ loading.querySelector('div:last-child').innerHTML = render('- ' + (json.error.message || 'Something went wrong — check your API key.')); setOrb(''); busy = false; return; }
-      const parts = (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts) || [];
-      const reply = parts.map((p) => p.text || '').join('\n').trim() || 'Hmm, no reply.';
+      const reply = (json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || 'Hmm, no reply.';
       loading.querySelector('div:last-child').innerHTML = render(reply);
       setOrb('happy'); setTimeout(() => setOrb(''), 2500);
     } catch(e){
-      loading.querySelector('div:last-child').innerHTML = render('- Could not reach Gemini — check your connection and key.');
+      loading.querySelector('div:last-child').innerHTML = render('- Could not reach Groq — check your connection and key.');
       setOrb('');
     }
     busy = false;

@@ -1561,11 +1561,12 @@ body::after {
     if (e.key === 'Enter') { clearTimeout(locSearchDebounce); searchLocations(e.target.value); }
   });
 
-  /* ---------- Today's top news (Gemini + Google Search grounding, bring-your-own key) ----------
-     Reuses the same free Gemini key already saved for the Nova tile — no new
+  /* ---------- Today's top news (Groq Compound + built-in web search, bring-your-own key) ----------
+     Reuses the same free Groq key already saved for the Nova tile — no new
      key to manage. Auto-loads once per calendar day (cached), plus a manual
-     refresh button; grounding requests count against the free tier's daily
-     quota, so it deliberately doesn't re-fetch on every visit. */
+     refresh button; the compound model's web-search tool counts against the
+     free tier's daily quota (250/day), so it deliberately doesn't re-fetch
+     on every visit. */
   const NEWS_KEY = 'news_today_v1';
   function newsSavedKey() { try { return cleanApiKeyValue(localStorage.getItem('nova_lite_api_key') || '', 'nova_lite_api_key'); } catch (e) { return ''; } }
   function cleanApiKeyValue(v, storeKey) {
@@ -1633,27 +1634,28 @@ body::after {
     }
     const key = newsSavedKey();
     if (!key) {
-      renderNewsMessage('Paste your free Gemini key on the Nova tile to see today’s top stories here.');
+      renderNewsMessage('Paste your free Groq key on the Nova tile to see today’s top stories here.');
       return;
     }
     newsBusy = true;
     $('newsRefreshBtn').classList.add('spinning');
     renderNewsMessage('Reading today’s headlines…', 'news-loading');
     try {
-      const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + encodeURIComponent(key), {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: NEWS_SYS }] },
-          contents: [{ role: 'user', parts: [{ text: 'Give me today’s top global news, prioritized by importance.' }] }],
-          tools: [{ google_search: {} }],
-          generationConfig: { maxOutputTokens: 1500 },
+          model: 'groq/compound',
+          max_tokens: 1500,
+          messages: [
+            { role: 'system', content: NEWS_SYS },
+            { role: 'user', content: 'Search the web for today’s top global news, then give me the top stories prioritized by importance.' },
+          ],
         }),
       });
       const json = await res.json();
       if (json.error) throw new Error(json.error.message || 'Request failed.');
-      const parts = (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts) || [];
-      const text = parts.map((p) => p.text || '').join('\n');
+      const text = (json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || '';
       const items = extractJSONArray(text);
       if (!items || !items.length) throw new Error('Could not read a news list from the reply.');
       const fetchedAt = Date.now();
