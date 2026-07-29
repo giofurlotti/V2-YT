@@ -3759,6 +3759,11 @@ img, video, canvas, svg { max-width: 100%; }
     + "Coach concisely and specifically. For an overview, cover: bodyweight trend, training consistency, standout progress, and 1-2 concrete next steps. "
     + "Use short markdown bullets, be encouraging but honest. Weights may be kg or lb per their profile. Keep replies under ~180 words. Their data as JSON: ";
 
+  /* Free OpenRouter models are each backed by a single upstream host, so any
+     one of them can be flaky or briefly reject a request ("Provider returned
+     error"). Try a short list in order and fall through to the next on failure. */
+  const OPENROUTER_MODELS = ['google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-3-nano-30b-a3b:free'];
+
   async function ask(text){
     text = (text||'').trim(); if (!text || busy) return;
     const key = savedKey();
@@ -3767,18 +3772,27 @@ img, video, canvas, svg { max-width: 100%; }
     busy = true;
     const loading = addMsg('coach', '<span class="nv-dots"><i></i><i></i><i></i></span>');
     try {
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
-        body: JSON.stringify({
-          model: 'google/gemma-4-31b-it:free',
-          max_tokens: 1024,
-          messages: [{ role: 'system', content: SYS + gymContext() }, { role: 'user', content: text }],
-        }),
-      });
-      const json = await res.json();
-      if (json.error){ loading.innerHTML = md('- ' + (json.error.message || 'Something went wrong — check your API key.')); busy=false; return; }
-      const reply = (json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || 'Hmm, no reply.';
+      let reply = null, lastErrMsg = 'Something went wrong — check your API key.';
+      for (const model of OPENROUTER_MODELS) {
+        try {
+          const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
+            body: JSON.stringify({
+              model: model,
+              max_tokens: 1024,
+              messages: [{ role: 'system', content: SYS + gymContext() }, { role: 'user', content: text }],
+            }),
+          });
+          const json = await res.json();
+          if (json.error) { lastErrMsg = json.error.message || lastErrMsg; continue; }
+          const content = json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content;
+          if (!content) continue;
+          reply = content;
+          break;
+        } catch (e) { lastErrMsg = 'Could not reach OpenRouter — check your connection and key.'; }
+      }
+      if (!reply) { loading.innerHTML = md('- ' + lastErrMsg); busy = false; return; }
       loading.innerHTML = md(reply);
     } catch(e){ loading.innerHTML = md('- Could not reach OpenRouter — check your connection and key.'); }
     body.scrollTop = body.scrollHeight; busy = false;
@@ -3867,6 +3881,11 @@ img, video, canvas, svg { max-width: 100%; }
     + "Give concrete, encouraging running guidance — whether today suits a hard effort, an easy run, or rest, plus pacing and weekly mileage progression. "
     + "If WHOOP isn't connected, coach from the profile alone and general training principles. Use short markdown bullets. Keep replies under ~180 words. Their data as JSON: ";
 
+  /* Free OpenRouter models are each backed by a single upstream host, so any
+     one of them can be flaky or briefly reject a request ("Provider returned
+     error"). Try a short list in order and fall through to the next on failure. */
+  const OPENROUTER_MODELS = ['google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-3-nano-30b-a3b:free'];
+
   async function ask(text) {
     text = (text || '').trim(); if (!text || busy) return;
     const key = savedKey();
@@ -3876,18 +3895,27 @@ img, video, canvas, svg { max-width: 100%; }
     const loading = addMsg('coach', '<span class="rc-dots"><i></i><i></i><i></i></span>');
     try {
       const ctx = await runningContext();
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
-        body: JSON.stringify({
-          model: 'google/gemma-4-31b-it:free',
-          max_tokens: 1024,
-          messages: [{ role: 'system', content: SYS + ctx }, { role: 'user', content: text }],
-        }),
-      });
-      const json = await res.json();
-      if (json.error) { loading.innerHTML = md('- ' + (json.error.message || 'Something went wrong — check your API key.')); busy = false; return; }
-      const reply = (json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || 'Hmm, no reply.';
+      let reply = null, lastErrMsg = 'Something went wrong — check your API key.';
+      for (const model of OPENROUTER_MODELS) {
+        try {
+          const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
+            body: JSON.stringify({
+              model: model,
+              max_tokens: 1024,
+              messages: [{ role: 'system', content: SYS + ctx }, { role: 'user', content: text }],
+            }),
+          });
+          const json = await res.json();
+          if (json.error) { lastErrMsg = json.error.message || lastErrMsg; continue; }
+          const content = json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content;
+          if (!content) continue;
+          reply = content;
+          break;
+        } catch (e) { lastErrMsg = 'Could not reach OpenRouter — check your connection and key.'; }
+      }
+      if (!reply) { loading.innerHTML = md('- ' + lastErrMsg); busy = false; return; }
       loading.innerHTML = md(reply);
     } catch (e) { loading.innerHTML = md('- Could not reach OpenRouter — check your connection and key.'); }
     body.scrollTop = body.scrollHeight; busy = false;

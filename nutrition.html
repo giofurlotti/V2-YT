@@ -1220,6 +1220,11 @@ body::after {
   }
   pullApiKeysIfMissing();
 
+  /* Free OpenRouter models are each backed by a single upstream host, so any
+     one of them can be flaky or briefly reject a request ("Provider returned
+     error"). Try a short list in order and fall through to the next on failure. */
+  const OPENROUTER_MODELS = ['google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-3-nano-30b-a3b:free'];
+
   const NOVA_SYS =
     'You are a nutrition estimator embedded in a food-tracking app. The user describes a food or meal in ' +
     'plain language, possibly with quantities. Estimate its total nutrition and reply with ONLY a single ' +
@@ -1255,21 +1260,28 @@ body::after {
     $('novaLoading').classList.add('show');
 
     try {
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
-        body: JSON.stringify({
-          model: 'google/gemma-4-31b-it:free',
-          max_tokens: 700,
-          response_format: { type: 'json_object' },
-          messages: [{ role: 'system', content: NOVA_SYS }, { role: 'user', content: desc }],
-        }),
-      });
-      const json = await res.json();
-      if (json.error) throw new Error(json.error.message || 'Request failed.');
-      const text = (json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || '';
-      const data = extractJSON(text);
-      if (!data || typeof data.calories === 'undefined') throw new Error('Could not read a nutrition estimate from the reply.');
+      let data = null, lastErr = null;
+      for (const model of OPENROUTER_MODELS) {
+        try {
+          const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
+            body: JSON.stringify({
+              model: model,
+              max_tokens: 700,
+              messages: [{ role: 'system', content: NOVA_SYS }, { role: 'user', content: desc }],
+            }),
+          });
+          const json = await res.json();
+          if (json.error) { lastErr = new Error(json.error.message || 'Request failed.'); continue; }
+          const text = (json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || '';
+          const parsed = extractJSON(text);
+          if (!parsed || typeof parsed.calories === 'undefined') { lastErr = new Error('Could not read a nutrition estimate from the reply.'); continue; }
+          data = parsed;
+          break;
+        } catch (e) { lastErr = e; }
+      }
+      if (!data) throw (lastErr || new Error('Could not read a nutrition estimate from the reply.'));
 
       novaPreviewData = { name: data.name || desc, calories: Math.round(+data.calories || 0), protein: Math.round(+data.protein || 0), carbs: Math.round(+data.carbs || 0), fat: Math.round(+data.fat || 0) };
       MICRO_KEYS.forEach((k) => { novaPreviewData[k] = Math.round((+data[k] || 0) * 10) / 10; });
