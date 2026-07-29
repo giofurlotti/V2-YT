@@ -1259,8 +1259,8 @@ body::after {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
         body: JSON.stringify({
-          model: 'openai/gpt-oss-20b:free',
-          max_tokens: 500,
+          model: 'google/gemma-4-31b-it:free',
+          max_tokens: 700,
           response_format: { type: 'json_object' },
           messages: [{ role: 'system', content: NOVA_SYS }, { role: 'user', content: desc }],
         }),

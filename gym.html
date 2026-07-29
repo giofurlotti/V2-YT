@@ -3771,7 +3771,7 @@ img, video, canvas, svg { max-width: 100%; }
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
         body: JSON.stringify({
-          model: 'openai/gpt-oss-20b:free',
+          model: 'google/gemma-4-31b-it:free',
           max_tokens: 1024,
           messages: [{ role: 'system', content: SYS + gymContext() }, { role: 'user', content: text }],
         }),
@@ -3880,7 +3880,7 @@ img, video, canvas, svg { max-width: 100%; }
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
         body: JSON.stringify({
-          model: 'openai/gpt-oss-20b:free',
+          model: 'google/gemma-4-31b-it:free',
           max_tokens: 1024,
           messages: [{ role: 'system', content: SYS + ctx }, { role: 'user', content: text }],
         }),
