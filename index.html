@@ -165,13 +165,13 @@ body::after {
   overflow: hidden;
 }
 /* Purple glow backdrop for cards that don't carry their own accent colour. */
-.today-card::before, .news-card::before {
+.today-card::before {
   content: ''; position: absolute; inset: -25%; pointer-events: none; z-index: 0;
   background: radial-gradient(circle at 50% 32%, color-mix(in srgb, var(--glow) 32%, transparent), transparent 65%);
   filter: blur(30px);
   opacity: 0.85;
 }
-.today-card > *, .news-card > * { position: relative; z-index: 1; }
+.today-card > * { position: relative; z-index: 1; }
 .sun-card::before {
   background: radial-gradient(circle at 50% 28%, color-mix(in srgb, #FBBF24 30%, transparent), transparent 65%);
 }
@@ -379,37 +379,6 @@ body::after {
 @media (max-width: 640px) {
   .today-grid { grid-template-columns: 1fr; }
 }
-
-/* ===== News card ===== */
-.news-card {
-  position: relative; padding: 20px; border-radius: 24px; margin-bottom: 18px;
-  background: rgba(18,17,24,0.55); border: 1px solid rgba(255,255,255,0.06);
-  backdrop-filter: blur(24px) saturate(1.2); -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
-  overflow: hidden;
-}
-.news-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-.news-refresh-btn {
-  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
-  border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.04); color: var(--text-secondary);
-  display: flex; align-items: center; justify-content: center; cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.news-refresh-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
-.news-refresh-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.news-refresh-btn.spinning svg { animation: news-spin 0.9s linear infinite; }
-@keyframes news-spin { to { transform: rotate(360deg); } }
-.news-meta { font-size: 11px; color: var(--text-tertiary); margin-bottom: 16px; }
-.news-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
-.news-item { display: flex; gap: 14px; }
-.news-rank { font-family: var(--font-numeric); font-size: 13px; font-weight: 700; color: var(--glow); flex-shrink: 0; width: 18px; padding-top: 2px; }
-.news-body { flex: 1; min-width: 0; }
-.news-category { font-size: 9.5px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: var(--glow); margin-bottom: 4px; }
-.news-headline { font-family: var(--font-display); font-style: italic; font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 5px; line-height: 1.3; }
-.news-summary { font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; }
-.news-source { font-size: 10.5px; color: var(--text-tertiary); margin-top: 5px; }
-.news-empty, .news-loading, .news-error { font-size: 12.5px; color: var(--text-tertiary); font-style: italic; text-align: center; padding: 20px 0; }
-.news-error { color: var(--text-secondary); }
 
 /* ===== BENTO GRID ===== */
 .bento {
@@ -734,17 +703,6 @@ body::after {
         </div>
       </div>
     </div>
-  </div>
-
-  <div class="news-card">
-    <div class="news-head">
-      <div class="today-card-label" style="margin-bottom:0">Today's top news · worldwide</div>
-      <button class="news-refresh-btn" id="newsRefreshBtn" type="button" aria-label="Refresh news">
-        <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
-      </button>
-    </div>
-    <div class="news-meta" id="newsMeta"></div>
-    <ul class="news-list" id="newsList"></ul>
   </div>
 
   <div class="bento">
@@ -1561,116 +1519,6 @@ body::after {
     if (e.key === 'Enter') { clearTimeout(locSearchDebounce); searchLocations(e.target.value); }
   });
 
-  /* ---------- Today's top news (Groq Compound + built-in web search, bring-your-own key) ----------
-     Reuses the same free Groq key already saved for the Nova tile — no new
-     key to manage. Auto-loads once per calendar day (cached), plus a manual
-     refresh button; the compound model's web-search tool counts against the
-     free tier's daily quota (250/day), so it deliberately doesn't re-fetch
-     on every visit. */
-  const NEWS_KEY = 'news_today_v1';
-  function newsSavedKey() { try { return cleanApiKeyValue(localStorage.getItem('nova_lite_api_key') || '', 'nova_lite_api_key'); } catch (e) { return ''; } }
-  function cleanApiKeyValue(v, storeKey) {
-    if (typeof v !== 'string' || v.length < 2) return v;
-    if (v[0] === '"' && v[v.length - 1] === '"') {
-      let cleaned;
-      try { cleaned = JSON.parse(v); } catch (e) { cleaned = v.slice(1, -1); }
-      if (typeof cleaned === 'string' && storeKey) { try { localStorage.setItem(storeKey, cleaned); } catch (e) {} }
-      return cleaned;
-    }
-    return v;
-  }
-  function loadNewsCache() { try { return JSON.parse(localStorage.getItem(NEWS_KEY)); } catch (e) { return null; } }
-  function saveNewsCache(v) { try { localStorage.setItem(NEWS_KEY, JSON.stringify(v)); } catch (e) {} }
-
-  const NEWS_SYS =
-    'You are a global news briefing assistant with live web search. Find the most important, most globally ' +
-    'influential news stories from TODAY across all major areas — world politics and conflict, economy and ' +
-    'markets, technology and science, and any major breaking story — and pick the 6 most significant ones, ' +
-    'ranked by real-world impact and influence, not by even coverage across categories. Reply with ONLY a ' +
-    'valid JSON array, no markdown, no commentary, in exactly this shape: ' +
-    '[{"category":"short category label","headline":"short headline","summary":"one or two plain sentences",' +
-    '"source":"publisher name"}], ordered from most to least important.';
-
-  function extractJSONArray(text) {
-    try { return JSON.parse(text); } catch (e) {}
-    const m = String(text).match(/\[[\s\S]*\]/);
-    if (m) { try { return JSON.parse(m[0]); } catch (e) {} }
-    return null;
-  }
-
-  function renderNewsMessage(msg, cls) {
-    $('newsMeta').textContent = '';
-    $('newsList').innerHTML = '<li class="' + (cls || 'news-empty') + '"></li>';
-    $('newsList').firstChild.textContent = msg;
-  }
-  function renderNews(items, fetchedAt) {
-    $('newsMeta').textContent = 'Updated ' + relTime(fetchedAt);
-    const el = $('newsList');
-    el.innerHTML = '';
-    if (!items || !items.length) { renderNewsMessage('No stories available.'); return; }
-    items.slice(0, 6).forEach((item, i) => {
-      const li = document.createElement('li');
-      li.className = 'news-item';
-      const rank = document.createElement('span'); rank.className = 'news-rank'; rank.textContent = String(i + 1).padStart(2, '0');
-      const body = document.createElement('div'); body.className = 'news-body';
-      const cat = document.createElement('div'); cat.className = 'news-category'; cat.textContent = item.category || 'News';
-      const hl = document.createElement('div'); hl.className = 'news-headline'; hl.textContent = item.headline || '';
-      const sum = document.createElement('div'); sum.className = 'news-summary'; sum.textContent = item.summary || '';
-      const src = document.createElement('div'); src.className = 'news-source'; src.textContent = item.source || '';
-      body.append(cat, hl, sum, src);
-      li.append(rank, body);
-      el.appendChild(li);
-    });
-  }
-
-  let newsBusy = false;
-  async function fetchNews(force) {
-    if (newsBusy) return;
-    const cache = loadNewsCache();
-    const today = calendarDateKey();
-    if (!force && cache && cache.date === today && cache.items && cache.items.length) {
-      renderNews(cache.items, cache.fetchedAt);
-      return;
-    }
-    const key = newsSavedKey();
-    if (!key) {
-      renderNewsMessage('Paste your free Groq key on the Nova tile to see today’s top stories here.');
-      return;
-    }
-    newsBusy = true;
-    $('newsRefreshBtn').classList.add('spinning');
-    renderNewsMessage('Reading today’s headlines…', 'news-loading');
-    try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
-        body: JSON.stringify({
-          model: 'groq/compound',
-          max_tokens: 1500,
-          messages: [
-            { role: 'system', content: NEWS_SYS },
-            { role: 'user', content: 'Search the web for today’s top global news, then give me the top stories prioritized by importance.' },
-          ],
-        }),
-      });
-      const json = await res.json();
-      if (json.error) throw new Error(json.error.message || 'Request failed.');
-      const text = (json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || '';
-      const items = extractJSONArray(text);
-      if (!items || !items.length) throw new Error('Could not read a news list from the reply.');
-      const fetchedAt = Date.now();
-      saveNewsCache({ date: today, items, fetchedAt });
-      renderNews(items, fetchedAt);
-    } catch (e) {
-      renderNewsMessage('Could not load news: ' + (e && e.message ? e.message : 'unknown error'), 'news-error');
-    } finally {
-      newsBusy = false;
-      $('newsRefreshBtn').classList.remove('spinning');
-    }
-  }
-  $('newsRefreshBtn').addEventListener('click', () => fetchNews(true));
-
-
   function calendarDateKey() {
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
@@ -1810,7 +1658,6 @@ body::after {
   updateReadinessRing();
   syncWhoop();
   loadWeather();
-  fetchNews(false);
   loadProductivityWindow();
   loadBedtime();
   renderSunCard();
