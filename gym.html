@@ -1276,7 +1276,7 @@ img, video, canvas, svg { max-width: 100%; }
     <span class="po-day-split" id="dayPillSplit">—</span>
   </button>
 
-  <!-- RUNNING COACH (Nova AI, bring-your-own free Groq key — shared with the rest of the dashboard) -->
+  <!-- RUNNING COACH (Nova AI, bring-your-own free OpenRouter key — shared with the rest of the dashboard) -->
   <style>
     .rc-card { padding-bottom: 14px; }
     .rc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
@@ -3626,7 +3626,7 @@ img, video, canvas, svg { max-width: 100%; }
 })();
 </script>
 
-<!-- ===== Nova gym coach (top-right avatar, bring-your-own free Groq key) ===== -->
+<!-- ===== Nova gym coach (top-right avatar, bring-your-own free OpenRouter key) ===== -->
 <style>
   /* Anchor the avatar to the top-right of the page content, not the far corner. */
   .po-shell { position: relative; }
@@ -3763,15 +3763,15 @@ img, video, canvas, svg { max-width: 100%; }
     text = (text||'').trim(); if (!text || busy) return;
     const key = savedKey();
     addMsg('user', md(text));
-    if (!key){ addMsg('coach', md("Paste your **free Groq API key** on the Nova page first (the 🧠 tile on the home screen) — it's saved in this browser and I'll use it here too.")); return; }
+    if (!key){ addMsg('coach', md("Paste your **free OpenRouter API key** on the Nova page first (the 🧠 tile on the home screen) — it's saved in this browser and I'll use it here too.")); return; }
     busy = true;
     const loading = addMsg('coach', '<span class="nv-dots"><i></i><i></i><i></i></span>');
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'openai/gpt-oss-20b:free',
           max_tokens: 1024,
           messages: [{ role: 'system', content: SYS + gymContext() }, { role: 'user', content: text }],
         }),
@@ -3780,7 +3780,7 @@ img, video, canvas, svg { max-width: 100%; }
       if (json.error){ loading.innerHTML = md('- ' + (json.error.message || 'Something went wrong — check your API key.')); busy=false; return; }
       const reply = (json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || 'Hmm, no reply.';
       loading.innerHTML = md(reply);
-    } catch(e){ loading.innerHTML = md('- Could not reach Groq — check your connection and key.'); }
+    } catch(e){ loading.innerHTML = md('- Could not reach OpenRouter — check your connection and key.'); }
     body.scrollTop = body.scrollHeight; busy = false;
   }
 
@@ -3799,7 +3799,7 @@ img, video, canvas, svg { max-width: 100%; }
 })();
 </script>
 
-<!-- ===== Running Coach (Nova AI, inline card — shares the Groq key above) ===== -->
+<!-- ===== Running Coach (Nova AI, inline card — shares the OpenRouter key above) ===== -->
 <script>
 (function () {
   'use strict';
@@ -3871,16 +3871,16 @@ img, video, canvas, svg { max-width: 100%; }
     text = (text || '').trim(); if (!text || busy) return;
     const key = savedKey();
     addMsg('user', md(text));
-    if (!key) { addMsg('coach', md("Paste your **free Groq API key** on the Nova page first (the 🧠 tile on the home screen) — it's saved in this browser and I'll use it here too.")); return; }
+    if (!key) { addMsg('coach', md("Paste your **free OpenRouter API key** on the Nova page first (the 🧠 tile on the home screen) — it's saved in this browser and I'll use it here too.")); return; }
     busy = true;
     const loading = addMsg('coach', '<span class="rc-dots"><i></i><i></i><i></i></span>');
     try {
       const ctx = await runningContext();
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'openai/gpt-oss-20b:free',
           max_tokens: 1024,
           messages: [{ role: 'system', content: SYS + ctx }, { role: 'user', content: text }],
         }),
@@ -3889,7 +3889,7 @@ img, video, canvas, svg { max-width: 100%; }
       if (json.error) { loading.innerHTML = md('- ' + (json.error.message || 'Something went wrong — check your API key.')); busy = false; return; }
       const reply = (json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || 'Hmm, no reply.';
       loading.innerHTML = md(reply);
-    } catch (e) { loading.innerHTML = md('- Could not reach Groq — check your connection and key.'); }
+    } catch (e) { loading.innerHTML = md('- Could not reach OpenRouter — check your connection and key.'); }
     body.scrollTop = body.scrollHeight; busy = false;
   }
 

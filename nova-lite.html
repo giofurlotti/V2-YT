@@ -10,10 +10,10 @@
  * Single self-contained file. No backend, no build step.
  *
  * HOW IT WORKS (bring-your-own-key):
- *   • The viewer pastes their OWN free Groq API key (stored only in their
- *     browser's localStorage — never sent anywhere but Groq).
+ *   • The viewer pastes their OWN free OpenRouter API key (stored only in
+ *     their browser's localStorage — never sent anywhere but OpenRouter).
  *   • Nova reads whatever the dashboard saved in localStorage for context.
- *   • Calls the Groq API directly from the browser (Groq's API sets
+ *   • Calls the OpenRouter API directly from the browser (OpenRouter sets
  *     Access-Control-Allow-Origin: * — direct client-side calls work,
  *     no proxy needed).
  *
@@ -95,12 +95,12 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: 
 
     <div class="keypanel" id="keypanel">
       <div class="keybar">
-        <input id="keyInput" type="password" placeholder="paste your free Groq API key (gsk_…)" autocomplete="off" />
+        <input id="keyInput" type="password" placeholder="paste your free OpenRouter API key (sk-or-…)" autocomplete="off" />
         <button id="keySave">Save</button>
       </div>
       <div class="hint" id="hint">
-        Your key is stored only in <b>this browser</b> and sent straight to Groq — never to us.
-        Get a free one at <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com</a>.
+        Your key is stored only in <b>this browser</b> and sent straight to OpenRouter — never to us.
+        Get a free one at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai</a>.
       </div>
     </div>
 
@@ -149,8 +149,8 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: 
       keyInput.placeholder = '•••• key saved ••••'; keyToggle.classList.add('has-key');
     } else {
       hint.classList.remove('saved');
-      hint.innerHTML = 'Your key is stored only in <b>this browser</b> and sent straight to Groq — never to us. Get a free one at <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com</a>.';
-      keyInput.placeholder = 'paste your free Groq API key (gsk_…)'; keyToggle.classList.remove('has-key');
+      hint.innerHTML = 'Your key is stored only in <b>this browser</b> and sent straight to OpenRouter — never to us. Get a free one at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai</a>.';
+      keyInput.placeholder = 'paste your free OpenRouter API key (sk-or-…)'; keyToggle.classList.remove('has-key');
     }
   }
   refreshKeyUI();
@@ -257,16 +257,16 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: 
   async function ask(text){
     text = (text||'').trim(); if (!text || busy) return;
     const key = savedKey();
-    if (!key){ addCoach('- Paste your **free Groq API key** above first, then ask me again.'); return; }
+    if (!key){ addCoach('- Paste your **free OpenRouter API key** above first, then ask me again.'); return; }
     busy = true; addUser(text); input.value = '';
     setOrb('think');
     const loading = addCoach('<span class="dots"><i></i><i></i><i></i></span>');
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'openai/gpt-oss-20b:free',
           max_tokens: 1024,
           messages: [{ role: 'system', content: SYS + JSON.stringify(dashboardData()) }, { role: 'user', content: text }],
         }),
@@ -277,7 +277,7 @@ body { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; color: 
       loading.querySelector('div:last-child').innerHTML = render(reply);
       setOrb('happy'); setTimeout(() => setOrb(''), 2500);
     } catch(e){
-      loading.querySelector('div:last-child').innerHTML = render('- Could not reach Groq — check your connection and key.');
+      loading.querySelector('div:last-child').innerHTML = render('- Could not reach OpenRouter — check your connection and key.');
       setOrb('');
     }
     busy = false;

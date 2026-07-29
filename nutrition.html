@@ -453,13 +453,13 @@ body::after {
         <input class="gm-input" id="novaInput" type="text" placeholder="Describe a meal… e.g. “2 eggs and a slice of toast”" autocomplete="off">
         <button class="gm-add" id="novaAsk" type="button">Estimate</button>
       </div>
-      <div class="nova-hint">Uses the same free Groq key as the Nova tile — stored only in this browser, sent straight to Groq.</div>
+      <div class="nova-hint">Uses the same free OpenRouter key as the Nova tile — stored only in this browser, sent straight to OpenRouter.</div>
 
       <div class="nova-key-row" id="novaKeyRow">
-        <input class="gm-input" id="novaKeyInput" type="password" placeholder="paste your free Groq API key (gsk_…)" autocomplete="off">
+        <input class="gm-input" id="novaKeyInput" type="password" placeholder="paste your free OpenRouter API key (sk-or-…)" autocomplete="off">
         <button class="gm-ghost" id="novaKeySave" type="button">Save key</button>
       </div>
-      <div class="nova-hint">Free, no credit card — get one at <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com</a>.</div>
+      <div class="nova-hint">Free, no credit card — get one at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">openrouter.ai</a>.</div>
 
       <div class="nova-loading" id="novaLoading"><span class="dots"><i></i><i></i><i></i></span> Estimating…</div>
       <div class="nova-error" id="novaError"></div>
@@ -1141,7 +1141,7 @@ body::after {
   }
   $('foodSearch').addEventListener('input', renderFoodIndex);
 
-  /* ---------- Ask Nova (AI macro estimator, bring-your-own free Groq key) ---------- */
+  /* ---------- Ask Nova (AI macro estimator, bring-your-own free OpenRouter key) ---------- */
   // Defensive cleanup: an older, now-removed sync path stored these keys via
   // JSON.stringify(), which wraps a plain string in literal quote characters
   // ("sk-ant-..." instead of sk-ant-...). If a key still has that shape from
@@ -1255,11 +1255,11 @@ body::after {
     $('novaLoading').classList.add('show');
 
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'openai/gpt-oss-20b:free',
           max_tokens: 500,
           response_format: { type: 'json_object' },
           messages: [{ role: 'system', content: NOVA_SYS }, { role: 'user', content: desc }],
