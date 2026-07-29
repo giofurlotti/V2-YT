@@ -661,7 +661,7 @@ body::after {
       <div class="today-card-label">Sun & vitamin D</div>
       <div class="sun-stat-row">
         <div class="sun-stat"><div class="sun-stat-num" id="sunSteps">0</div><div class="sun-stat-label">Steps</div></div>
-        <div class="sun-stat"><div class="sun-stat-num" id="sunUv">—</div><div class="sun-stat-label">UV index</div></div>
+        <div class="sun-stat"><div class="sun-stat-num" id="sunUv">—</div><div class="sun-stat-label">UV now</div></div>
         <div class="sun-stat"><div class="sun-stat-num" id="sunVitD">—</div><div class="sun-stat-label">Vitamin D</div></div>
       </div>
       <button class="sun-track-btn" id="sunTrackBtn" type="button">🚶 Start live step tracking</button>
@@ -676,7 +676,7 @@ body::after {
         </div>
       </div>
       <div class="sun-hint" id="sunMinutesHint"></div>
-      <div class="sun-note">Estimated from today's UV index and time outdoors — a rough guide, not a clinical measurement. Live tracking only counts steps while this tab stays open. Added automatically to today's Vitamin D in Nutrition.</div>
+      <div class="sun-note">Live tracking weighs each minute by the UV index during that exact hour, so it adapts as UV rises and falls through the day. Manually typed minutes use the current hour's UV instead. A rough guide, not a clinical measurement — only counts while this tab stays open. Added automatically to today's Vitamin D in Nutrition.</div>
     </div>
 
     <div class="today-card">
@@ -1264,11 +1264,13 @@ body::after {
     try {
       const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + geo.lat + '&longitude=' + geo.lon +
         '&current=temperature_2m,precipitation,weather_code,wind_speed_10m' +
+        '&hourly=uv_index&forecast_days=1' +
         '&daily=precipitation_probability_max,uv_index_max,sunrise,sunset&timezone=auto';
       const r = await fetch(url);
       const j = await r.json();
       const cur = j.current || {};
       const daily = j.daily || {};
+      const hourly = j.hourly || {};
       weatherData = {
         temp: Math.round(cur.temperature_2m),
         code: cur.weather_code,
@@ -1276,6 +1278,9 @@ body::after {
         rainProb: (daily.precipitation_probability_max && daily.precipitation_probability_max[0] != null) ? daily.precipitation_probability_max[0] : null,
         wind: cur.wind_speed_10m != null ? Math.round(cur.wind_speed_10m) : null,
         uv: (daily.uv_index_max && daily.uv_index_max[0] != null) ? Math.round(daily.uv_index_max[0]) : null,
+        // Hour-by-hour UV for today, so sun-exposure tracking can use the UV
+        // that was actually out at the moment instead of the flat daily max.
+        hourlyUv: (hourly.time && hourly.uv_index) ? { times: hourly.time, values: hourly.uv_index } : null,
         sunrise: (daily.sunrise && daily.sunrise[0]) ? daily.sunrise[0] : null,
         sunset: (daily.sunset && daily.sunset[0]) ? daily.sunset[0] : null,
       };
@@ -1319,29 +1324,47 @@ body::after {
      API exists for either), so this can't be a true all-day pedometer.
      Instead: a live in-browser step counter (DeviceMotion) that only
      counts while this tab is open and visible, plus manual fields for
-     the real daily totals. Vitamin D is estimated from today's UV
-     index x minutes outdoors and merged into nutrition:v1 as a
-     synthetic, clearly-labeled log entry so the Nutrition page's
-     existing Vitamin D total picks it up automatically. (calendarDateKey
-     is defined further down, reused here — function declarations hoist.) */
+     the real daily totals. Vitamin D is estimated from UV index x
+     minutes outdoors and merged into nutrition:v1 as a synthetic,
+     clearly-labeled log entry so the Nutrition page's existing Vitamin D
+     total picks it up automatically. (calendarDateKey is defined further
+     down, reused here — function declarations hoist.) */
   function loadSunState() {
     const s = loadJSON(SUN_KEY, null);
     const today = calendarDateKey();
-    if (!s || s.date !== today) return { date: today, steps: 0, outdoorMinutes: null };
+    if (!s || s.date !== today) return { date: today, steps: 0, outdoorMinutes: null, liveMinutes: 0, liveVitD: 0 };
     return s;
   }
   function saveSunState(s) { saveJSON(SUN_KEY, s); }
   let sunState = loadSunState();
 
-  function estimateVitaminD(uvIndex, minutes) {
+  // Today's UV index for the hour we're actually in right now, falling back
+  // to the daily max if hourly data hasn't loaded yet — this is what lets
+  // both live tracking and manual entry reflect the UV that's really out,
+  // instead of a single flat number for the whole day.
+  function currentUvIndex() {
+    const hourly = weatherData && weatherData.hourlyUv;
+    if (hourly && hourly.times && hourly.values) {
+      const now = new Date();
+      const key = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0') +
+        'T' + String(now.getHours()).padStart(2, '0') + ':00';
+      const idx = hourly.times.indexOf(key);
+      if (idx !== -1 && hourly.values[idx] != null) return Math.round(hourly.values[idx] * 10) / 10;
+    }
+    return weatherData && weatherData.uv != null ? weatherData.uv : null;
+  }
+
+  // Rough model, calibrated so UV index 6 for 30 min ≈ 15µg (≈ the full
+  // daily adult RDA) — matches common "15-30 min midday sun" public-health
+  // guidance. Not a clinical measurement. Raw/uncapped so live tracking can
+  // accumulate small per-tick amounts before the final total gets capped.
+  function vitaminDMicrogramsRaw(uvIndex, minutes) {
     if (!uvIndex || !minutes) return 0;
-    // Rough model, calibrated so UV index 6 for 30 min ≈ 15µg (≈ the
-    // full daily adult RDA) — matches common "15-30 min midday sun"
-    // public-health guidance. Not a clinical measurement.
     const iuPerMinute = 20 * (uvIndex / 6);
-    const totalIU = iuPerMinute * minutes;
-    const micrograms = totalIU / 40;
-    return Math.min(100, Math.round(micrograms * 10) / 10);
+    return (iuPerMinute * minutes) / 40;
+  }
+  function estimateVitaminD(uvIndex, minutes) {
+    return Math.min(100, Math.round(vitaminDMicrogramsRaw(uvIndex, minutes) * 10) / 10);
   }
 
   function syncVitaminDToNutrition(vitD) {
@@ -1365,14 +1388,26 @@ body::after {
   }
 
   function renderSunCard() {
-    const uv = weatherData && weatherData.uv != null ? weatherData.uv : null;
+    const uv = currentUvIndex();
     $('sunSteps').textContent = sunState.steps || 0;
     $('sunUv').textContent = uv != null ? uv : '—';
     $('sunStepsInput').value = sunState.steps || '';
     $('sunMinutesInput').value = sunState.outdoorMinutes != null ? sunState.outdoorMinutes : '';
     const suggested = sunState.steps ? Math.round(sunState.steps / 100) : null;
     $('sunMinutesHint').textContent = suggested ? ('≈ ' + suggested + ' min outside based on your steps') : '';
-    const vitD = (uv != null && sunState.outdoorMinutes != null) ? estimateVitaminD(uv, sunState.outdoorMinutes) : null;
+
+    // Live-tracked minutes already have precise, time-weighted Vitamin D
+    // (accumulated per-tick against whatever UV was actually out then).
+    // Only the portion of manually-typed minutes beyond that gets estimated
+    // from the current hour's UV, so tracked time is never double-counted.
+    const liveMinutes = sunState.liveMinutes || 0;
+    const hasData = liveMinutes > 0 || sunState.outdoorMinutes != null;
+    let vitD = null;
+    if (hasData) {
+      const extraMinutes = Math.max(0, (sunState.outdoorMinutes || 0) - liveMinutes);
+      const extraRaw = (uv != null && extraMinutes > 0) ? vitaminDMicrogramsRaw(uv, extraMinutes) : 0;
+      vitD = Math.min(100, Math.round(((sunState.liveVitD || 0) + extraRaw) * 10) / 10);
+    }
     $('sunVitD').textContent = vitD != null ? vitD + 'µg' : '—';
     syncVitaminDToNutrition(vitD);
   }
@@ -1411,10 +1446,27 @@ body::after {
       sunSyncDebounce = setTimeout(renderSunCard, 2500);
     }
   }
+  // Ticks every 15s while live tracking is active, adding minutes and
+  // Vitamin D weighted by whatever UV is out at that exact moment — so a
+  // session that runs from, say, 11am into a hazier 1pm automatically
+  // reflects the changing UV instead of one flat number for the whole day.
+  const LIVE_TICK_SECONDS = 15;
+  let liveTickTimer = null;
+  function liveSunTick() {
+    const uv = currentUvIndex();
+    const minutesElapsed = LIVE_TICK_SECONDS / 60;
+    sunState.liveMinutes = (sunState.liveMinutes || 0) + minutesElapsed;
+    sunState.liveVitD = (sunState.liveVitD || 0) + vitaminDMicrogramsRaw(uv, minutesElapsed);
+    sunState.outdoorMinutes = Math.max(sunState.outdoorMinutes || 0, Math.round(sunState.liveMinutes));
+    saveSunState(sunState);
+    renderSunCard();
+  }
   async function toggleStepTracking() {
     const btn = $('sunTrackBtn');
     if (stepTrackingActive) {
       window.removeEventListener('devicemotion', handleDeviceMotion);
+      clearInterval(liveTickTimer);
+      liveTickTimer = null;
       stepTrackingActive = false;
       btn.textContent = '🚶 Start live step tracking';
       btn.classList.remove('active');
@@ -1429,6 +1481,7 @@ body::after {
       } catch (e) { btn.textContent = 'Motion not available'; return; }
     }
     window.addEventListener('devicemotion', handleDeviceMotion);
+    liveTickTimer = setInterval(liveSunTick, LIVE_TICK_SECONDS * 1000);
     stepTrackingActive = true;
     btn.textContent = '⏹ Stop tracking (only counts while open)';
     btn.classList.add('active');
