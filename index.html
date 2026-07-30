@@ -164,6 +164,11 @@ body.jarvis-voice-active .hub-head { opacity: 0.2; }
 
 .sun-card { --accent: #38BDF8; }
 .sun-stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; }
+.sun-stat { position: relative; }
+.sun-stat + .sun-stat::before {
+  content: ''; position: absolute; left: -3px; top: 10%; bottom: 10%; width: 1px;
+  background: linear-gradient(180deg, transparent, rgba(56,189,248,0.3), transparent);
+}
 .sun-stat-num { font-family: var(--font-numeric); font-size: 18px; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 .sun-stat-label { font-size: 8.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 3px; }
 .sun-track-btn {
@@ -189,9 +194,25 @@ body.jarvis-voice-active .hub-head { opacity: 0.2; }
 .today-card-label {
   font-family: var(--font-mono); font-size: 10.5px; font-weight: 600;
   letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-tertiary);
-  margin-bottom: 16px;
+  margin-bottom: 16px; display: flex; align-items: center; gap: 6px;
+}
+.today-card-label::before { content: ''; width: 6px; height: 6px; background: color-mix(in srgb, var(--glow) 70%, transparent); flex-shrink: 0; }
+
+/* Angular instrument-panel silhouette — a sharp diagonal cut on the top
+   right corner instead of a fully rounded box, so the cards read as
+   technical readouts rather than soft consumer-app tiles. Combines with
+   the existing corner-bracket ::after on the two other corners. */
+.today-card {
+  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%);
 }
 
+/* Tick marks around the readiness ring, like a dial/gauge bezel. */
+.readiness-ring-wrap::before {
+  content: ''; position: absolute; inset: -9px; border-radius: 50%; pointer-events: none; opacity: 0.5;
+  background: repeating-conic-gradient(rgba(255,255,255,0.5) 0deg 1deg, transparent 1deg 15deg);
+  -webkit-mask: radial-gradient(circle, transparent 92%, #000 93%, #000 97%, transparent 98%);
+          mask: radial-gradient(circle, transparent 92%, #000 93%, #000 97%, transparent 98%);
+}
 .readiness-ring-wrap { position: relative; width: 152px; height: 152px; margin: 0 auto 6px; }
 .readiness-ring { width: 100%; height: 100%; transform: rotate(-90deg); }
 .ring-track { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 9; }

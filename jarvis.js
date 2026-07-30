@@ -813,12 +813,16 @@
     "answer can stay short. Never include this for anything else, and never show the block itself as visible prose.\n" +
     "Dashboard data as JSON:\n";
 
-  // A bigger, sharper model tried first for quality; the smaller/faster ones
-  // stay as fallbacks for reliability if it's rate-limited or unavailable.
-  // Deliberately NOT using a "-reasoning"-suffixed or gpt-oss model here —
-  // those burn hidden thinking tokens before answering, which was already
-  // tried and reverted for the nutrition estimator for being slow/flaky.
-  const MODELS = ['nvidia/nemotron-3-super-120b-a12b:free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-3-nano-30b-a3b:free'];
+  // gemma-4-31b first — it's the model that was actually stable before.
+  // nemotron-3-super-120b was tried as the primary for a smarter default,
+  // but it was put first right around when duplicate-answer reports
+  // started, and free/preview models are known to sometimes repeat
+  // themselves within a single completion — demoted to a fallback rather
+  // than risking it being the actual cause. Deliberately NOT using a
+  // "-reasoning"-suffixed or gpt-oss model — those burn hidden thinking
+  // tokens before answering, already tried and reverted for the nutrition
+  // estimator for being slow/flaky.
+  const MODELS = ['google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-3-super-120b-a12b:free', 'nvidia/nemotron-3-nano-30b-a3b:free'];
 
   /* ---------- Chat rendering ---------- */
   let messages = [];
@@ -993,6 +997,24 @@
     return { clean, action: data };
   }
 
+  // Defensive net against a free model repeating its entire answer back to
+  // back within one completion (a real failure mode, separate from the mic
+  // picking up his own voice) — if the text is essentially two identical
+  // halves, keep only the first. Deliberately narrow (only an exact match
+  // right around the midpoint) so it can't misfire on ordinary text that
+  // just happens to repeat a phrase.
+  function trimSelfDuplicate(text) {
+    const clean = text.trim();
+    const n = clean.length;
+    if (n < 40) return text;
+    for (let split = Math.floor(n * 0.45); split <= Math.ceil(n * 0.55); split++) {
+      const a = clean.slice(0, split).trim();
+      const b = clean.slice(split).trim();
+      if (a.length > 20 && a === b) return a;
+    }
+    return text;
+  }
+
   // Streams the reply token-by-token via OpenRouter's SSE format instead of
   // waiting for the whole thing — onDelta fires as text arrives so the chat
   // bubble (and, in ask(), the voice) can start well before the full reply
@@ -1077,6 +1099,12 @@
     try {
       const ctx = await buildContext();
       let full = '', spokenUpTo = 0, succeeded = false, lastErr = 'Something went wrong — check your API key.', authFailed = false;
+      // A model can also duplicate its own answer within a single
+      // completion (a real free-tier quirk, separate from the retry-loop
+      // one below) — track each sentence already spoken this turn so a
+      // repeat never gets queued to speech a second time, regardless of
+      // why it repeated. Reset per attempt, same as full/spokenUpTo.
+      let spokenSentences = new Set();
       for (const model of MODELS) {
         // A model can stream part of an answer (already spoken/displayed)
         // and then fail mid-stream — without this, the retry below would
@@ -1085,6 +1113,7 @@
         // replies stacked back to back from two different models.
         stopSpeaking();
         full = ''; spokenUpTo = 0; pending.text = ''; render();
+        spokenSentences = new Set();
         try {
           full = await streamChat(model, key, ctx, text, (delta, accumulated) => {
             full = accumulated;
@@ -1101,8 +1130,13 @@
               if ('.!?'.includes(unspoken[i]) && (i === unspoken.length - 1 || /\s/.test(unspoken[i + 1]))) { boundary = i; break; }
             }
             if (boundary !== -1) {
-              if (opts.viaVoice && !spokeAny) { spokeAny = true; setCaption('Speaking…'); }
-              enqueueSpeech(unspoken.slice(0, boundary + 1));
+              const sentence = unspoken.slice(0, boundary + 1);
+              const norm = sentence.trim().toLowerCase().replace(/\s+/g, ' ');
+              if (norm && !spokenSentences.has(norm)) {
+                spokenSentences.add(norm);
+                if (opts.viaVoice && !spokeAny) { spokeAny = true; setCaption('Speaking…'); }
+                enqueueSpeech(sentence);
+              }
               spokenUpTo += boundary + 1;
             }
           });
@@ -1131,6 +1165,7 @@
       pending.pending = false;
       if (authFailed) { $('jarvisKeyRow').classList.add('show'); }
       if (succeeded) {
+        full = trimSelfDuplicate(full);
         const { clean, action } = extractAddFood(full);
         pending.text = await extractShowInfo(clean || full);
         if (action && action.name) {
@@ -1140,7 +1175,11 @@
         const tagIdx = full.indexOf('<<<');
         const safeEnd = tagIdx === -1 ? full.length : tagIdx;
         const remainder = full.slice(spokenUpTo, safeEnd).trim();
-        if (remainder) { if (opts.viaVoice && !spokeAny) { spokeAny = true; setCaption('Speaking…'); } enqueueSpeech(remainder); }
+        const remainderNorm = remainder.toLowerCase().replace(/\s+/g, ' ');
+        if (remainder && !spokenSentences.has(remainderNorm)) {
+          if (opts.viaVoice && !spokeAny) { spokeAny = true; setCaption('Speaking…'); }
+          enqueueSpeech(remainder);
+        }
         render();
       } else {
         pending.text = lastErr;
@@ -1271,6 +1310,14 @@
         activateVoiceUI();
         if (after) {
           pendingCommand = false;
+          // Even with continuous:false, the session can stay open a beat
+          // past onresult (onend can lag well behind it) — if TTS audio
+          // starts playing into that still-open mic before it truly closes,
+          // the SAME session can pick up Jarvis's own voice and fire a
+          // second onresult, i.e. exactly what "he talks twice" turned out
+          // to be. Force it closed the instant we have what we need,
+          // instead of trusting it to close itself in time.
+          try { rec.stop(); } catch (e) {}
           ask(after, { viaVoice: true });
         } else {
           pendingCommand = true;
@@ -1280,8 +1327,10 @@
       } else if (mode === 'command') {
         $('jarvisInput').value = said;
         setHint('Heard: "' + said + '"', false);
-        if (document.body.classList.contains('jarvis-voice-active')) setCaption('Thinking…');
-        ask(said, { viaVoice: document.body.classList.contains('jarvis-voice-active') });
+        const viaVoice = document.body.classList.contains('jarvis-voice-active');
+        if (viaVoice) setCaption('Thinking…');
+        try { rec.stop(); } catch (e) {} // same reason as above
+        ask(said, { viaVoice });
       }
     };
     rec.onend = () => {
