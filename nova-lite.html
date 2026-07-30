@@ -294,7 +294,15 @@ body { min-height: 100vh; padding: 0; }
             }),
           });
           const json = await res.json();
-          if (json.error) { lastErrMsg = json.error.message || lastErrMsg; continue; }
+          if (json.error) {
+            if (res.status === 401 || json.error.code === 401) {
+              try { localStorage.removeItem(KEY_LS); } catch (e2) {}
+              refreshKeyUI();
+              lastErrMsg = "That OpenRouter key isn't working (missing, mistyped, or revoked) — paste a fresh free one above.";
+              break;
+            }
+            lastErrMsg = json.error.message || lastErrMsg; continue;
+          }
           const content = json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content;
           if (!content) { continue; }
           reply = content;

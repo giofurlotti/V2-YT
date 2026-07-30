@@ -616,7 +616,7 @@
     document.querySelectorAll('#jarvisCore').forEach((el) => el.classList.add('thinking'));
     try {
       const ctx = await buildContext();
-      let reply = null, lastErr = 'Something went wrong — check your API key.';
+      let reply = null, lastErr = 'Something went wrong — check your API key.', authFailed = false;
       for (const model of MODELS) {
         try {
           const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -625,13 +625,22 @@
             body: JSON.stringify({ model, max_tokens: 700, messages: [{ role: 'system', content: SYS + ctx }, { role: 'user', content: text }] }),
           });
           const json = await res.json();
-          if (json.error) { lastErr = json.error.message || lastErr; continue; }
+          if (json.error) {
+            if (res.status === 401 || json.error.code === 401) {
+              authFailed = true;
+              try { localStorage.removeItem(OR_KEY); } catch (e2) {}
+              lastErr = "That OpenRouter key isn't working (missing, mistyped, or revoked) — paste a fresh free one below.";
+              break;
+            }
+            lastErr = json.error.message || lastErr; continue;
+          }
           const content = json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content;
           if (!content) continue;
           reply = content; break;
         } catch (e) { lastErr = 'Could not reach OpenRouter — check your connection.'; }
       }
       pending.pending = false;
+      if (authFailed) { $('jarvisKeyRow').classList.add('show'); }
       if (reply) {
         const { clean, action } = extractAddFood(reply);
         pending.text = clean || reply;

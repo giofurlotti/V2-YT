@@ -1221,7 +1221,15 @@
             }),
           });
           const json = await res.json();
-          if (json.error) { lastErr = new Error(json.error.message || 'Request failed.'); continue; }
+          if (json.error) {
+            if (res.status === 401 || json.error.code === 401) {
+              try { localStorage.removeItem(NOVA_KEY_LS); } catch (e2) {}
+              updateNovaKeyRow();
+              lastErr = new Error("That OpenRouter key isn't working (missing, mistyped, or revoked) — paste a fresh free one above.");
+              break;
+            }
+            lastErr = new Error(json.error.message || 'Request failed.'); continue;
+          }
           const text = (json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content) || '';
           const parsed = extractJSON(text);
           if (!parsed || typeof parsed.calories === 'undefined') { lastErr = new Error('Could not read a nutrition estimate from the reply.'); continue; }
