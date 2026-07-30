@@ -70,7 +70,56 @@
   -webkit-mask: radial-gradient(circle, transparent 70%, #000 72%, #000 76%, transparent 78%);
           mask: radial-gradient(circle, transparent 70%, #000 72%, #000 76%, transparent 78%);
 }
-.jarvis-core-icon { position: relative; z-index: 1; fill: #06282e; stroke: none; }
+.jarvis-core-icon { position: relative; z-index: 1; fill: #06282e; stroke: none; transition: opacity 0.4s ease, transform 0.4s ease; }
+
+/* Voice-triggered activation: a one-shot expanding ring (re-triggered by
+   toggling the class off/on with a forced reflow) so saying "Jarvis" gets an
+   immediate, satisfying visual acknowledgment even though the chat modal
+   never opens for this path. */
+.jarvis-core.wake-burst::after {
+  content: ''; position: absolute; inset: -10%; border-radius: 50%; pointer-events: none;
+  border: 2px solid var(--jarvis-cyan); opacity: 0.9;
+  animation: jarvis-burst 0.8s cubic-bezier(0.15, 0.7, 0.3, 1) forwards;
+}
+@keyframes jarvis-burst { from { transform: scale(0.7); opacity: 0.9; } to { transform: scale(1.7); opacity: 0; } }
+/* Held while a wake-triggered exchange is in progress — a livelier sweep and
+   deeper glow than idle, so the orb visibly feels "engaged." */
+.jarvis-core.voice-active { animation: jarvis-pulse 1.8s ease-in-out infinite; }
+.jarvis-core.voice-active .jarvis-ring-sweep { animation-duration: 1.6s; }
+
+/* ---------- Hologram face: shown only while voice-active, replacing the
+   sparkle icon with a small animated face (blinking eyes + a waveform
+   "mouth" that reacts while he's actually speaking) for a more alive,
+   sci-fi feel during hands-free conversations. ---------- */
+.jarvis-face {
+  position: absolute; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  opacity: 0; transform: scale(0.85); transition: opacity 0.45s ease, transform 0.45s ease; pointer-events: none;
+}
+.jarvis-core.voice-active .jarvis-face { opacity: 1; transform: scale(1); }
+.jarvis-core.voice-active .jarvis-core-icon { opacity: 0; transform: scale(0.7); }
+.jarvis-face-eyes { display: flex; gap: 10px; }
+.jarvis-face-eye {
+  width: 7px; height: 7px; border-radius: 50%; background: #06282e;
+  animation: jarvis-eye-blink 4.2s ease-in-out infinite;
+}
+.jarvis-face-eye.r { animation-delay: 0.05s; }
+@keyframes jarvis-eye-blink { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.12); } }
+.jarvis-face-mouth { display: flex; align-items: flex-end; gap: 2.5px; height: 11px; }
+.jarvis-face-mouth .bar { width: 2.5px; border-radius: 2px; background: #06282e; height: 3px; transition: height 0.12s ease; }
+.jarvis-core.speaking .jarvis-face-mouth .bar { animation: jarvis-mouth-bar 0.55s ease-in-out infinite; }
+.jarvis-core.speaking .jarvis-face-mouth .bar:nth-child(1) { animation-delay: 0.05s; }
+.jarvis-core.speaking .jarvis-face-mouth .bar:nth-child(2) { animation-delay: 0.18s; }
+.jarvis-core.speaking .jarvis-face-mouth .bar:nth-child(3) { animation-delay: 0s; }
+.jarvis-core.speaking .jarvis-face-mouth .bar:nth-child(4) { animation-delay: 0.24s; }
+.jarvis-core.speaking .jarvis-face-mouth .bar:nth-child(5) { animation-delay: 0.12s; }
+@keyframes jarvis-mouth-bar { 0%, 100% { height: 3px; } 50% { height: 11px; } }
+/* Faint scanline sweep across the face for a holographic-projection feel. */
+.jarvis-face::before {
+  content: ''; position: absolute; inset: -8px -16px; pointer-events: none; opacity: 0.4; mix-blend-mode: overlay;
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,0.5) 0px, transparent 1px, transparent 3px);
+  animation: jarvis-scan 2.2s linear infinite;
+}
+@keyframes jarvis-scan { 0% { transform: translateY(-40%); } 100% { transform: translateY(40%); } }
 
 /* Floating orb (every page except index.html, which has its own hero) */
 .jarvis-fab {
@@ -79,8 +128,14 @@
 }
 .jarvis-fab .jarvis-core-icon { width: 22px; height: 22px; }
 
-/* Hero variant (index.html) gets bigger icon via its own size */
+/* Hero variant (index.html) gets bigger icon/face via its own size */
 #jarvisCore:not(.jarvis-fab) .jarvis-core-icon { width: 30px; height: 30px; }
+#jarvisCore:not(.jarvis-fab) .jarvis-face-eye { width: 11px; height: 11px; }
+#jarvisCore:not(.jarvis-fab) .jarvis-face-eyes { gap: 16px; }
+#jarvisCore:not(.jarvis-fab) .jarvis-face-mouth { height: 17px; gap: 4px; }
+#jarvisCore:not(.jarvis-fab) .jarvis-face-mouth .bar { width: 4px; }
+@keyframes jarvis-mouth-bar-hero { 0%, 100% { height: 4px; } 50% { height: 17px; } }
+#jarvisCore:not(.jarvis-fab).speaking .jarvis-face-mouth .bar { animation-name: jarvis-mouth-bar-hero; }
 
 /* ---------- Chat modal ---------- */
 .jarvis-modal-bg { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,0.62); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
@@ -160,6 +215,12 @@
   styleEl.textContent = css;
   document.head.appendChild(styleEl);
 
+  const FACE_HTML =
+    '<div class="jarvis-face">' +
+      '<div class="jarvis-face-eyes"><div class="jarvis-face-eye l"></div><div class="jarvis-face-eye r"></div></div>' +
+      '<div class="jarvis-face-mouth"><span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span></div>' +
+    '</div>';
+
   /* ---------- Inject FAB if this page has no hero orb of its own ---------- */
   if (!$('jarvisCore')) {
     const fab = document.createElement('div');
@@ -169,6 +230,7 @@
         '<div class="jarvis-ring-ticks"></div>' +
         '<div class="jarvis-ring-sweep"></div>' +
         '<svg class="jarvis-core-icon" viewBox="0 0 24 24"><path d="M12 2.5c.6 3.4 1.4 5.6 2.7 6.9 1.3 1.3 3.5 2.1 6.8 2.6-3.3.6-5.5 1.4-6.8 2.7-1.3 1.3-2.1 3.5-2.7 6.8-.6-3.3-1.4-5.5-2.7-6.8-1.3-1.3-3.5-2.1-6.8-2.7 3.3-.5 5.5-1.3 6.8-2.6C10.6 8.1 11.4 5.9 12 2.5Z" fill="#06282e"/></svg>' +
+        FACE_HTML +
       '</div>';
     document.body.appendChild(fab.firstChild);
   } else {
@@ -181,6 +243,11 @@
       core.insertBefore(sweep, core.firstChild);
       core.insertBefore(ticks, core.firstChild);
       core.insertBefore(wake, core.firstChild);
+    }
+    if (!core.querySelector('.jarvis-face')) {
+      const face = document.createElement('div');
+      face.innerHTML = FACE_HTML;
+      core.appendChild(face.firstChild);
     }
   }
 
@@ -506,7 +573,12 @@
     "is shown automatically. Never include it unless the user actually wants something logged.\n" +
     "Dashboard data as JSON:\n";
 
-  const MODELS = ['google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-3-nano-30b-a3b:free'];
+  // A bigger, sharper model tried first for quality; the smaller/faster ones
+  // stay as fallbacks for reliability if it's rate-limited or unavailable.
+  // Deliberately NOT using a "-reasoning"-suffixed or gpt-oss model here —
+  // those burn hidden thinking tokens before answering, which was already
+  // tried and reverted for the nutrition estimator for being slow/flaky.
+  const MODELS = ['nvidia/nemotron-3-super-120b-a12b:free', 'google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-3-nano-30b-a3b:free'];
 
   /* ---------- Chat rendering ---------- */
   let messages = [];
@@ -593,9 +665,15 @@
   let speechPlaying = false;
   let currentAudio = null;
   let preloadedNext = null;
+  // Fires once, the next time the speech queue empties naturally (not on an
+  // interruption) — used to drop the voice-active UI only once Jarvis has
+  // actually finished saying his reply, not the instant the text arrives.
+  let onQueueDrained = null;
   function stopSpeaking() {
     speechQueue = [];
     speechPlaying = false;
+    onQueueDrained = null;
+    document.querySelectorAll('#jarvisCore').forEach((el) => el.classList.remove('speaking'));
     if (currentAudio) { try { currentAudio.pause(); } catch (e) {} currentAudio = null; }
     if (preloadedNext) { try { preloadedNext.src = ''; } catch (e) {} preloadedNext = null; }
     if ('speechSynthesis' in window) { try { window.speechSynthesis.cancel(); } catch (e) {} }
@@ -614,8 +692,13 @@
   function pumpSpeechQueue() {
     if (speechPlaying) return;
     const next = speechQueue.shift();
-    if (!next) return;
+    if (!next) {
+      document.querySelectorAll('#jarvisCore').forEach((el) => el.classList.remove('speaking'));
+      if (onQueueDrained) { const cb = onQueueDrained; onQueueDrained = null; cb(); }
+      return;
+    }
     speechPlaying = true;
+    document.querySelectorAll('#jarvisCore').forEach((el) => el.classList.add('speaking'));
     if (cloudVoiceEnabled()) {
       const audio = preloadedNext && preloadedNext.__text === next ? preloadedNext : new Audio(cloudTTSUrl(next));
       preloadedNext = null;
@@ -698,11 +781,16 @@
     return full;
   }
 
-  async function ask(text) {
+  async function ask(text, opts) {
+    opts = opts || {};
     text = (text || '').trim();
     if (!text || busy) return;
     const key = orKey();
-    if (!key) { $('jarvisKeyRow').classList.add('show'); return; }
+    if (!key) {
+      $('jarvisKeyRow').classList.add('show');
+      if (opts.viaVoice) { enqueueSpeech("I need a free OpenRouter key first — open my settings to add one."); onQueueDrained = deactivateVoiceUI; }
+      return;
+    }
     busy = true;
     stopSpeaking();
     messages.push({ role: 'user', text });
@@ -716,6 +804,7 @@
       const now = Date.now();
       if (now - lastRenderAt > 70) { lastRenderAt = now; render(); }
     }
+    let spokeAny = false;
     try {
       const ctx = await buildContext();
       let full = '', spokenUpTo = 0, succeeded = false, lastErr = 'Something went wrong — check your API key.', authFailed = false;
@@ -737,6 +826,7 @@
               if ('.!?'.includes(unspoken[i]) && (i === unspoken.length - 1 || /\s/.test(unspoken[i + 1]))) { boundary = i; break; }
             }
             if (boundary !== -1) {
+              if (opts.viaVoice && !spokeAny) { spokeAny = true; setCaption('Speaking…'); }
               enqueueSpeech(unspoken.slice(0, boundary + 1));
               spokenUpTo += boundary + 1;
             }
@@ -765,18 +855,24 @@
         const tagIdx = full.indexOf('<<<');
         const safeEnd = tagIdx === -1 ? full.length : tagIdx;
         const remainder = full.slice(spokenUpTo, safeEnd).trim();
-        if (remainder) enqueueSpeech(remainder);
+        if (remainder) { if (opts.viaVoice && !spokeAny) { spokeAny = true; setCaption('Speaking…'); } enqueueSpeech(remainder); }
         render();
       } else {
         pending.text = lastErr;
         render();
+        if (opts.viaVoice) { spokeAny = true; enqueueSpeech(lastErr); }
       }
     } catch (e) {
       pending.pending = false;
       pending.text = 'Something went wrong on my end.';
       render();
+      if (opts.viaVoice) { spokeAny = true; enqueueSpeech(pending.text); }
     }
     document.querySelectorAll('#jarvisCore').forEach((el) => el.classList.remove('thinking'));
+    if (opts.viaVoice) {
+      if (spokeAny) onQueueDrained = deactivateVoiceUI;
+      else deactivateVoiceUI();
+    }
     busy = false;
   }
 
@@ -817,6 +913,39 @@
     h.dataset.persistent = persistent ? '1' : '';
   }
   function clearHintUnlessPersistent() { if ($('jarvisVoiceHint').dataset.persistent !== '1') $('jarvisVoiceHint').textContent = ''; }
+
+  // ---- Wake-word UI: saying "Jarvis" no longer opens the chat modal — it
+  // stays hands-free. The orb itself becomes the whole interface: it shows a
+  // small animated face, the page's own hint line (if present, e.g. the
+  // Main-page caption under the orb) doubles as a live caption, and — on
+  // index.html only, via CSS reacting to this class — the side cards slide
+  // out of the way so he's the sole focus while a voice exchange is live.
+  // (The modal still opens normally on a tap/click — this only changes the
+  // voice path.)
+  function setCaption(text) {
+    const hint = document.querySelector('.jarvis-hint');
+    if (!hint) return;
+    if (hint.dataset.orig === undefined) hint.dataset.orig = hint.textContent;
+    hint.textContent = text;
+  }
+  function restoreCaption() {
+    const hint = document.querySelector('.jarvis-hint');
+    if (!hint || hint.dataset.orig === undefined) return;
+    hint.textContent = hint.dataset.orig;
+  }
+  function activateVoiceUI() {
+    document.body.classList.add('jarvis-voice-active');
+    document.querySelectorAll('#jarvisCore').forEach((el) => {
+      el.classList.add('voice-active');
+      el.classList.remove('wake-burst'); void el.offsetWidth; el.classList.add('wake-burst');
+    });
+    setCaption('Listening…');
+  }
+  function deactivateVoiceUI() {
+    document.body.classList.remove('jarvis-voice-active');
+    document.querySelectorAll('#jarvisCore').forEach((el) => el.classList.remove('voice-active', 'speaking', 'listening', 'thinking', 'wake-burst'));
+    restoreCaption();
+  }
   // A word-boundary-ish match rather than an exact "jarvis" substring — generic
   // speech-to-text regularly mangles proper nouns ("jarviss", "jarv is", a
   // trailing "jarvis," with punctuation already stripped by the API, etc.).
@@ -841,10 +970,10 @@
         const m = said.match(WAKE_RE);
         if (!m) { setHint('Heard: "' + said + '" (not my name)', true); return; } // keep passively listening
         const after = said.slice(m.index + m[0].length).replace(/^[,.!\s]+/, '').trim();
-        open();
+        activateVoiceUI();
         if (after) {
           pendingCommand = false;
-          ask(after);
+          ask(after, { viaVoice: true });
         } else {
           pendingCommand = true;
           setHint("Yes? I'm listening…", true);
@@ -853,14 +982,22 @@
       } else if (mode === 'command') {
         $('jarvisInput').value = said;
         setHint('Heard: "' + said + '"', false);
-        ask(said);
+        if (document.body.classList.contains('jarvis-voice-active')) setCaption('Thinking…');
+        ask(said, { viaVoice: document.body.classList.contains('jarvis-voice-active') });
       }
     };
     rec.onend = () => {
       document.querySelectorAll('#jarvisCore').forEach((el) => el.classList.remove('listening'));
       $('jarvisMicBtn').classList.remove('active');
       if (pendingCommand) { pendingCommand = false; setTimeout(() => safeStart('command'), 150); return; }
-      if (mode === 'command') { clearHintUnlessPersistent(); mode = 'idle'; }
+      if (mode === 'command') {
+        clearHintUnlessPersistent();
+        mode = 'idle';
+        // Command mode ended without ever calling ask() (silence, timeout) —
+        // if ask() had actually started, busy would already be true and
+        // deactivation is left to onQueueDrained once he's done speaking.
+        if (!busy && document.body.classList.contains('jarvis-voice-active')) deactivateVoiceUI();
+      }
       if (wakeEnabled) {
         if (wakeFailStreak >= 6) {
           // Something's persistently wrong (no mic, blocked permission that
@@ -878,6 +1015,7 @@
         wakeEnabled = false; saveJSON(WAKE_KEY, false); setWakeToggleUI(false); setWakeIndicator(false);
         setHint('Microphone permission denied — check your browser/site settings.', true);
         wakeFailStreak = 0;
+        if (!busy && document.body.classList.contains('jarvis-voice-active')) deactivateVoiceUI();
       } else if (e.error === 'no-speech' || e.error === 'aborted') {
         // Completely normal in wake mode (most restarts hear silence) — not a
         // real failure, don't count it against the fail streak.

@@ -106,19 +106,17 @@ body::after {
   position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
   min-height: 460px; padding: 32px 0;
 }
-.jarvis-center::before, .jarvis-center::after,
-.jarvis-bracket-l, .jarvis-bracket-r {
-  content: ''; position: absolute; width: 46px; height: 46px; pointer-events: none;
-  border-color: color-mix(in srgb, var(--glow) 55%, transparent); border-style: solid; border-width: 0;
-  opacity: 0.7;
-}
-.jarvis-center::before { top: 0; left: 50%; margin-left: -180px; border-top-width: 2px; border-left-width: 2px; }
-.jarvis-center::after { top: 0; right: 50%; margin-right: -180px; border-top-width: 2px; border-right-width: 2px; }
-.jarvis-bracket-l { bottom: 0; left: 50%; margin-left: -180px; border-bottom-width: 2px; border-left-width: 2px; }
-.jarvis-bracket-r { bottom: 0; right: 50%; margin-right: -180px; border-bottom-width: 2px; border-right-width: 2px; }
 .jarvis-center .jarvis-core { width: 320px; height: 320px; }
 .jarvis-particles { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
-.jarvis-center .jarvis-hint { position: relative; z-index: 1; margin-top: 28px; max-width: 320px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; }
+.jarvis-center .jarvis-hint { position: relative; z-index: 1; margin-top: 28px; max-width: 320px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; transition: opacity 0.4s ease; }
+
+/* Saying "Jarvis" no longer opens the chat modal — instead the side cards
+   smoothly slide out and fade so he's the sole focus during a hands-free
+   exchange, then glide back once he's done answering. */
+.jarvis-side { transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), filter 0.6s ease; }
+body.jarvis-voice-active .jarvis-side-left { opacity: 0.12; transform: translateX(-28px); filter: blur(2px); pointer-events: none; }
+body.jarvis-voice-active .jarvis-side-right { opacity: 0.12; transform: translateX(28px); filter: blur(2px); pointer-events: none; }
+body.jarvis-voice-active .hub-head { opacity: 0.2; }
 
 @media (min-width: 1000px) {
   .jarvis-stage { display: grid; grid-template-columns: 250px minmax(0, 1fr) 250px; gap: 30px; align-items: start; }
@@ -126,12 +124,6 @@ body::after {
   .jarvis-side-left { order: 1; }
   .jarvis-side-right { order: 3; }
   .jarvis-center .jarvis-core { width: 400px; height: 400px; }
-  .jarvis-center::before, .jarvis-center::after, .jarvis-bracket-l, .jarvis-bracket-r { width: 60px; height: 60px; opacity: 0.85; }
-  .jarvis-center::before, .jarvis-bracket-l { margin-left: -230px; }
-  .jarvis-center::after, .jarvis-bracket-r { margin-right: -230px; }
-}
-@media (max-width: 560px) {
-  .jarvis-center::before, .jarvis-center::after, .jarvis-bracket-l, .jarvis-bracket-r { display: none; }
 }
 .productivity-body { display: flex; align-items: center; gap: 14px; }
 .productivity-icon svg {
@@ -480,7 +472,7 @@ body::after {
 }
 
 /* ===== Header row + gear ===== */
-.hub-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
+.hub-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 22px; transition: opacity 0.6s ease; }
 .gear-btn {
   width: 44px; height: 44px; flex-shrink: 0; margin-top: 2px;
   display: inline-flex; align-items: center; justify-content: center;
@@ -592,8 +584,6 @@ body::after {
   <div class="jarvis-stage">
 
     <div class="jarvis-center">
-      <div class="jarvis-bracket-l"></div>
-      <div class="jarvis-bracket-r"></div>
       <canvas class="jarvis-particles" id="jarvisParticles" aria-hidden="true"></canvas>
       <div class="jarvis-core" id="jarvisCore" role="button" tabindex="0" aria-label="Talk to Jarvis">
         <svg class="jarvis-core-icon" viewBox="0 0 24 24"><path d="M12 2.5c.6 3.4 1.4 5.6 2.7 6.9 1.3 1.3 3.5 2.1 6.8 2.6-3.3.6-5.5 1.4-6.8 2.7-1.3 1.3-2.1 3.5-2.7 6.8-.6-3.3-1.4-5.5-2.7-6.8-1.3-1.3-3.5-2.1-6.8-2.7 3.3-.5 5.5-1.3 6.8-2.6C10.6 8.1 11.4 5.9 12 2.5Z"/></svg>
