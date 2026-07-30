@@ -274,7 +274,7 @@
         Natural cloud voice
         <span class="jarvis-toggle" id="jarvisVoiceToggle" role="switch" aria-checked="true"><span class="jarvis-toggle-knob"></span></span>
       </label>
-      <small>Free, no signup needed. Turn off to use your browser's built-in voice instead.</small>
+      <small>Free, no signup needed — but it's one fixed voice/accent. For the calm-British-AI "Jarvis" feel, turn this OFF and install a British voice: Windows Settings → Time &amp; Language → Speech → Manage voices → add "English (United Kingdom)". He'll pick the best natural one automatically.</small>
       <label style="margin-top:6px">Notes for Jarvis</label>
       <textarea id="jarvisNotesInput" rows="2" placeholder="Anything you want Jarvis to always know…"></textarea>
       <button class="jarvis-settings-save" id="jarvisSettingsSave" type="button">Save</button>
@@ -623,11 +623,23 @@
     refreshVoiceList();
     window.speechSynthesis.onvoiceschanged = refreshVoiceList;
   }
+  // Biased toward a calm British male voice — the closest a free system
+  // voice gets to the "Iron Man" Jarvis feel (Windows ships one as
+  // "Microsoft Ryan Online (Natural) — English (United Kingdom)" once
+  // installed via Settings > Time & Language > Speech > Manage voices).
+  // This can't and doesn't try to clone the actual movie character's voice
+  // (Paul Bettany's copyrighted performance) — it just prefers whatever
+  // real British-male-sounding free voice the OS already offers.
+  const JARVIS_NAME_HINTS = /ryan|george|daniel|arthur|oliver|thomas|male/i;
   function pickBestVoice() {
     if (!cachedVoices.length) return null;
     const pool = cachedVoices.filter((v) => /^en/i.test(v.lang));
     const candidates = pool.length ? pool : cachedVoices;
     const rank = [
+      (v) => /GB/i.test(v.lang) && /natural|neural|online/i.test(v.name) && JARVIS_NAME_HINTS.test(v.name),
+      (v) => /GB/i.test(v.lang) && /natural|neural|online/i.test(v.name),
+      (v) => /GB/i.test(v.lang) && JARVIS_NAME_HINTS.test(v.name),
+      (v) => /GB/i.test(v.lang),
       (v) => /natural/i.test(v.name),
       (v) => /neural/i.test(v.name),
       (v) => /online/i.test(v.name),
@@ -684,7 +696,9 @@
       const u = new SpeechSynthesisUtterance(text);
       const v = pickBestVoice();
       if (v) u.voice = v;
-      u.rate = 1.0; u.pitch = 0.95;
+      // Slightly slower and deeper than a neutral default — closer to
+      // Jarvis's unhurried, measured cadence than a typical assistant voice.
+      u.rate = 0.94; u.pitch = 0.85;
       u.onend = onDone; u.onerror = onDone;
       window.speechSynthesis.speak(u);
     } catch (e) { onDone(); }
