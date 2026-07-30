@@ -45,7 +45,7 @@
   background: radial-gradient(circle at 34% 28%, #eafeff 0%, var(--jarvis-cyan) 46%, var(--jarvis-cyan-deep) 100%);
   box-shadow: 0 0 34px color-mix(in srgb, var(--jarvis-cyan) 60%, transparent), inset 0 0 24px rgba(255,255,255,0.3);
   animation: jarvis-pulse 3.2s ease-in-out infinite;
-  transition: transform 0.15s ease, box-shadow 0.3s ease;
+  transition: transform 0.15s ease, box-shadow 0.5s ease, background 0.5s ease;
 }
 .jarvis-fab:hover, .jarvis-fab:focus-visible { transform: scale(1.06); }
 .jarvis-core.listening { animation: jarvis-pulse 3.2s ease-in-out infinite, jarvis-listen 1s ease-in-out infinite; }
@@ -55,13 +55,14 @@
   50% { box-shadow: 0 0 48px color-mix(in srgb, var(--jarvis-cyan) 75%, transparent), inset 0 0 30px rgba(255,255,255,0.4); }
 }
 @keyframes jarvis-listen { 0%,100% { box-shadow: 0 0 34px color-mix(in srgb, var(--jarvis-cyan) 70%, transparent); } 50% { box-shadow: 0 0 64px color-mix(in srgb, var(--jarvis-cyan) 95%, transparent); } }
-.jarvis-core::before { content: ''; position: absolute; inset: 15%; border: 1px solid rgba(255,255,255,0.55); border-radius: 50%; pointer-events: none; }
+.jarvis-core::before { content: ''; position: absolute; inset: 15%; border: 1px solid rgba(255,255,255,0.55); border-radius: 50%; pointer-events: none; transition: opacity 0.4s ease; }
 .jarvis-ring-sweep {
   position: absolute; inset: -12%; border-radius: 50%; pointer-events: none;
   background: conic-gradient(from 0deg, transparent 0%, color-mix(in srgb, var(--jarvis-cyan) 95%, white 10%) 6%, transparent 18%);
   -webkit-mask: radial-gradient(circle, transparent 63%, #000 65%, #000 100%);
           mask: radial-gradient(circle, transparent 63%, #000 65%, #000 100%);
   animation: jarvis-sweep 3.4s linear infinite;
+  transition: opacity 0.4s ease;
 }
 @keyframes jarvis-sweep { to { transform: rotate(360deg); } }
 .jarvis-ring-ticks {
@@ -69,6 +70,7 @@
   background: repeating-conic-gradient(rgba(255,255,255,0.4) 0deg 1deg, transparent 1deg 30deg);
   -webkit-mask: radial-gradient(circle, transparent 70%, #000 72%, #000 76%, transparent 78%);
           mask: radial-gradient(circle, transparent 70%, #000 72%, #000 76%, transparent 78%);
+  transition: opacity 0.4s ease;
 }
 .jarvis-core-icon { position: relative; z-index: 1; fill: #06282e; stroke: none; transition: opacity 0.4s ease, transform 0.4s ease; }
 
@@ -82,10 +84,22 @@
   animation: jarvis-burst 0.8s cubic-bezier(0.15, 0.7, 0.3, 1) forwards;
 }
 @keyframes jarvis-burst { from { transform: scale(0.7); opacity: 0.9; } to { transform: scale(1.7); opacity: 0; } }
-/* Held while a wake-triggered exchange is in progress — a livelier sweep and
-   deeper glow than idle, so the orb visibly feels "engaged." */
-.jarvis-core.voice-active { animation: jarvis-pulse 1.8s ease-in-out infinite; }
-.jarvis-core.voice-active .jarvis-ring-sweep { animation-duration: 1.6s; }
+/* Held while a wake-triggered exchange is in progress — the bright cyan
+   sphere itself fades away into a dark hologram-projection backdrop so the
+   glowing wireframe face (drawn on the canvas) reads as an actual floating
+   holographic face rather than a face awkwardly drawn on a solid ball. */
+.jarvis-core.voice-active {
+  background: radial-gradient(circle at 50% 45%, rgba(6,20,32,0.95) 0%, rgba(2,8,14,0.98) 65%, rgba(2,8,14,1) 100%);
+  box-shadow: 0 0 60px rgba(45,225,252,0.25), inset 0 0 50px rgba(0,0,0,0.55);
+  animation: jarvis-voice-glow 2.4s ease-in-out infinite;
+}
+@keyframes jarvis-voice-glow {
+  0%, 100% { box-shadow: 0 0 50px rgba(45,225,252,0.18), inset 0 0 50px rgba(0,0,0,0.55); }
+  50% { box-shadow: 0 0 74px rgba(45,225,252,0.32), inset 0 0 60px rgba(0,0,0,0.6); }
+}
+.jarvis-core.voice-active::before { opacity: 0; }
+.jarvis-core.voice-active .jarvis-ring-sweep { opacity: 0.3; animation-duration: 1.6s; }
+.jarvis-core.voice-active .jarvis-ring-ticks { opacity: 0.2; }
 
 /* ---------- Hologram face: shown only while voice-active, replacing the
    sparkle icon with a canvas-drawn wireframe/constellation face (glowing
@@ -181,6 +195,48 @@
 @keyframes jarvis-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
 @keyframes jarvis-dot { 0%,100% { opacity: 0.35; transform: scale(1); } 50% { opacity: 1; transform: scale(1.4); } }
 @media (max-width: 480px) { .jarvis-modal { padding: 16px; } }
+
+/* ---------- HUD info panel — a small futuristic readout that slides in
+   when Jarvis is showing you something (weather, the time) rather than
+   just saying it, instead of making you open the full chat log. ---------- */
+.jarvis-hud-wrap {
+  position: fixed; left: 50%; bottom: 22px; z-index: 250;
+  transform: translate(-50%, 140%); opacity: 0; pointer-events: none;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+  width: min(320px, calc(100vw - 32px));
+}
+.jarvis-hud-wrap.show { transform: translate(-50%, 0); opacity: 1; pointer-events: auto; }
+.jarvis-hud {
+  position: relative; padding: 16px 18px; border-radius: 4px;
+  background: linear-gradient(160deg, rgba(6,20,32,0.92), rgba(3,10,18,0.96));
+  border: 1px solid rgba(45,225,252,0.35);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.55), 0 0 30px rgba(45,225,252,0.12), inset 0 0 24px rgba(45,225,252,0.04);
+  font-family: var(--font-mono, monospace);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+}
+.jarvis-hud::before, .jarvis-hud::after {
+  content: ''; position: absolute; width: 16px; height: 16px; pointer-events: none;
+  border-color: var(--jarvis-cyan); border-style: solid; border-width: 0; opacity: 0.9;
+}
+.jarvis-hud::before { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
+.jarvis-hud::after { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; }
+.jarvis-hud-close {
+  position: absolute; top: 8px; right: 10px; border: 0; background: transparent; color: rgba(255,255,255,0.4);
+  font-size: 16px; line-height: 1; cursor: pointer; padding: 4px;
+}
+.jarvis-hud-close:hover { color: #fff; }
+.jarvis-hud-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--jarvis-cyan); margin-bottom: 10px; opacity: 0.85;
+}
+.jarvis-hud-main { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.jarvis-hud-value { font-size: 30px; font-weight: 700; color: #fff; letter-spacing: -0.01em; }
+.jarvis-hud-unit { font-size: 13px; color: rgba(255,255,255,0.5); }
+.jarvis-hud-sub { font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 2px; }
+.jarvis-hud-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); }
+.jarvis-hud-grid div { text-align: center; }
+.jarvis-hud-grid b { display: block; font-size: 14px; color: #fff; font-variant-numeric: tabular-nums; }
+.jarvis-hud-grid span { display: block; font-size: 9px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 2px; }
 `;
   const styleEl = document.createElement('style');
   styleEl.id = 'jarvis-style';
@@ -229,7 +285,7 @@
      get their own canvas + loop) but only actually draws while the orb has
      .voice-active, so it costs nothing the rest of the time. */
   const FACE_LANDMARKS = [
-    // face oval (20 pts)
+    // face oval (24 pts)
     [0.50,0.04],[0.61,0.06],[0.71,0.11],[0.79,0.19],[0.85,0.29],[0.88,0.40],[0.89,0.50],
     [0.88,0.60],[0.85,0.71],[0.79,0.81],[0.71,0.89],[0.61,0.94],[0.50,0.96],
     [0.39,0.94],[0.29,0.89],[0.21,0.81],[0.15,0.71],[0.12,0.60],[0.11,0.50],[0.12,0.40],
@@ -245,11 +301,38 @@
     // mouth (outer then inner)
     [0.34,0.76],[0.41,0.73],[0.50,0.72],[0.59,0.73],[0.66,0.76],[0.59,0.81],[0.50,0.83],[0.41,0.81],
     [0.41,0.76],[0.50,0.76],[0.59,0.76],[0.50,0.78],
-    // jaw/ears hint
+    // ears
     [0.10,0.45],[0.90,0.45],
+    // neck + shoulders — extends past the face box so the projection reads
+    // as a head-and-shoulders bust rather than a floating mask
+    [0.42,1.00],[0.58,1.00],[0.42,1.10],[0.58,1.10],
+    [0.22,1.22],[0.78,1.22],[0.05,1.34],[0.95,1.34],
   ];
   const MOUTH_START = 50; // index into FACE_LANDMARKS where the mouth points begin (24 oval + 8 brow + 12 eye + 6 nose)
   const MOUTH_COUNT = 12;
+  // Pupils are drawn as their own solid dots (not part of the connected
+  // mesh) for a recognizable "eyes" read, same as the reference image.
+  const PUPILS = [[0.34,0.42],[0.65,0.42]];
+  // Scattered filler nodes across the forehead/cheeks/chin so the mesh
+  // covers the whole face surface, not just rings around each feature —
+  // generated once (deterministic per page load, not per-frame) so the
+  // face doesn't reshuffle while animating.
+  function ovalDist(x, y) { const dx = (x - 0.5) / 0.40, dy = (y - 0.50) / 0.47; return Math.sqrt(dx * dx + dy * dy); }
+  const FILLER_POINTS = (function () {
+    const pts = [];
+    const rows = 10, cols = 8;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = 0.14 + (c / (cols - 1)) * 0.72 + (Math.random() - 0.5) * 0.035;
+        const y = 0.08 + (r / (rows - 1)) * 0.82 + (Math.random() - 0.5) * 0.03;
+        const od = ovalDist(x, y);
+        if (od > 0.94) continue; // stay inside the face oval
+        if (od > 0.8 && (y < 0.3 || y > 0.7)) continue; // thin out near the oval edge top/bottom, keep jaw/brow clean
+        pts.push([x, y]);
+      }
+    }
+    return pts;
+  })();
   function startFaceCanvas(core) {
     const canvas = core.querySelector('.jarvis-face-canvas');
     if (!canvas || !canvas.getContext || canvas.__jarvisFaceStarted) return;
@@ -266,7 +349,11 @@
     resize();
     window.addEventListener('resize', resize);
     let t = 0;
-    const FACE_COLOR = '#06282e';
+    // Bright glowing cyan/white — the orb's bright surface fades away while
+    // voice-active (see CSS), so the face needs to be the light source now,
+    // not a dark shape drawn on a bright ball.
+    const FACE_COLOR = '#8FF3FF';
+    const ALL_POINTS = FACE_LANDMARKS.concat(FILLER_POINTS);
     function draw() {
       requestAnimationFrame(draw);
       const active = core.classList.contains('voice-active');
@@ -274,8 +361,8 @@
       if (!w || !h) { resize(); if (!w || !h) return; }
       t++;
       ctx.clearRect(0, 0, w, h);
-      const box = Math.min(w, h) * 0.62;
-      const ox = (w - box) / 2, oy = (h - box) / 2 - box * 0.03;
+      const box = Math.min(w, h) * 0.72;
+      const ox = (w - box) / 2, oy = (h - box) / 2 - box * 0.12;
       const speaking = core.classList.contains('speaking');
       const thinking = core.classList.contains('thinking');
       // Talking mouth: pseudo-random-but-smooth openness while speaking,
@@ -283,7 +370,7 @@
       // brow/mouth drift instead of a flat neutral face.
       const talk = speaking ? (0.3 + 0.7 * Math.abs(Math.sin(t * 0.22) * 0.6 + Math.sin(t * 0.09) * 0.4)) : 0;
       const think = thinking ? Math.sin(t * 0.04) * 0.5 + 0.5 : 0;
-      const pts = FACE_LANDMARKS.map((p, i) => {
+      const pts = ALL_POINTS.map((p, i) => {
         let x = p[0], y = p[1];
         // Idle "alive" breathing jitter, tiny, on every point.
         x += Math.sin(t * 0.02 + i) * 0.003;
@@ -301,28 +388,41 @@
         return [ox + x * box, oy + y * box];
       });
       // Mesh lines: connect points within a distance threshold (scaled to
-      // box size) — concentrates naturally around dense feature clusters.
+      // box size) — concentrates naturally around dense feature clusters
+      // and now covers the whole face via the filler points, not just rings
+      // around each feature.
       const LINK = box * 0.11;
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 1.1;
+      ctx.shadowColor = FACE_COLOR;
+      ctx.shadowBlur = 5;
       for (let i = 0; i < pts.length; i++) {
         for (let j = i + 1; j < pts.length; j++) {
           const dx = pts[i][0] - pts[j][0], dy = pts[i][1] - pts[j][1];
           const d = Math.sqrt(dx * dx + dy * dy);
           if (d < LINK) {
-            ctx.globalAlpha = (1 - d / LINK) * 0.55;
+            ctx.globalAlpha = (1 - d / LINK) * 0.8;
             ctx.strokeStyle = FACE_COLOR;
             ctx.beginPath(); ctx.moveTo(pts[i][0], pts[i][1]); ctx.lineTo(pts[j][0], pts[j][1]); ctx.stroke();
           }
         }
       }
-      ctx.globalAlpha = 0.9;
+      ctx.globalAlpha = 0.95;
       ctx.fillStyle = FACE_COLOR;
       for (let i = 0; i < pts.length; i++) {
         ctx.beginPath();
-        ctx.arc(pts[i][0], pts[i][1], box * 0.008, 0, Math.PI * 2);
+        ctx.arc(pts[i][0], pts[i][1], box * 0.009, 0, Math.PI * 2);
         ctx.fill();
       }
+      // Pupils — solid, slightly bigger, dark (not glowing) so the eyes read
+      // as actual eyes rather than two more mesh nodes.
+      ctx.shadowBlur = 0;
       ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(4,14,22,0.9)';
+      PUPILS.forEach((p) => {
+        const x = ox + (p[0] + Math.sin(t * 0.02) * 0.003) * box;
+        const y = oy + (p[1] + Math.cos(t * 0.023) * 0.003) * box;
+        ctx.beginPath(); ctx.arc(x, y, box * 0.016, 0, Math.PI * 2); ctx.fill();
+      });
     }
     requestAnimationFrame(draw);
   }
@@ -378,6 +478,56 @@
   </div>
 </div>`;
   document.body.appendChild(modalWrap.firstElementChild);
+
+  /* ---------- Inject HUD info panel ---------- */
+  const hudWrap = document.createElement('div');
+  hudWrap.innerHTML =
+    '<div class="jarvis-hud-wrap" id="jarvisHudWrap">' +
+      '<div class="jarvis-hud" id="jarvisHud">' +
+        '<button class="jarvis-hud-close" id="jarvisHudClose" type="button" aria-label="Dismiss">×</button>' +
+        '<div id="jarvisHudBody"></div>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(hudWrap.firstElementChild);
+  let hudHideTimer = null;
+  function showHud(html) {
+    $('jarvisHudBody').innerHTML = html;
+    $('jarvisHudWrap').classList.add('show');
+    clearTimeout(hudHideTimer);
+    hudHideTimer = setTimeout(hideHud, 12000);
+  }
+  function hideHud() { $('jarvisHudWrap').classList.remove('show'); }
+  $('jarvisHudClose').addEventListener('click', hideHud);
+  function renderWeatherHud(w) {
+    if (!w) { showHud('<div class="jarvis-hud-label">Weather</div><div class="jarvis-hud-sub">No location saved yet — set one on the Main page.</div>'); return; }
+    showHud(
+      '<div class="jarvis-hud-label">' + (w.location || 'Weather') + '</div>' +
+      '<div class="jarvis-hud-main"><span class="jarvis-hud-value">' + w.tempC + '</span><span class="jarvis-hud-unit">°C</span></div>' +
+      '<div class="jarvis-hud-sub">' + (w.isRainingNow ? 'Raining now' : 'Clear right now') + '</div>' +
+      '<div class="jarvis-hud-grid">' +
+        '<div><b>' + (w.windKmh != null ? w.windKmh : '—') + '</b><span>Wind km/h</span></div>' +
+        '<div><b>' + (w.uvMax != null ? w.uvMax : '—') + '</b><span>UV max</span></div>' +
+        '<div><b>' + (w.sunset ? new Date(w.sunset).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—') + '</b><span>Sunset</span></div>' +
+      '</div>'
+    );
+  }
+  function renderTimeHud() {
+    const now = new Date();
+    showHud(
+      '<div class="jarvis-hud-label">Local time</div>' +
+      '<div class="jarvis-hud-main"><span class="jarvis-hud-value">' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + '</span></div>' +
+      '<div class="jarvis-hud-sub">' + now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' }) + '</div>'
+    );
+  }
+  async function extractShowInfo(text) {
+    const m = text.match(/<<<SHOW_INFO>>>([\s\S]*?)<<<END>>>/);
+    if (!m) return text;
+    const clean = text.slice(0, m.index).trim();
+    let data = null; try { data = JSON.parse(m[1]); } catch (e) {}
+    if (data && data.type === 'weather') { renderWeatherHud(await fetchWeatherSnapshot()); }
+    else if (data && data.type === 'time') { renderTimeHud(); }
+    return clean;
+  }
 
   /* ---------- Keys & notes ---------- */
   const OR_KEY = 'nova_lite_api_key';
@@ -638,7 +788,10 @@
     "at the user's saved location, nutrition logs, gym training data, sun/steps/vitamin D, today's supplement/stack " +
     "checklist, today's goals, today's caffeine intake, net worth, and any notes the user left for you. If a field says " +
     "it isn't tracked or set up yet, say so plainly rather than guessing. You do NOT have access to their " +
-    "conversations with any other AI assistant (including Claude) — only what's listed below.\n" +
+    "conversations with any other AI assistant (including Claude) — only what's listed below. You also do NOT have " +
+    "live internet or web search access — you cannot look anything up in real time. For current events/news/prices/" +
+    "anything that could have changed since your training, say plainly that you can't check that live rather than " +
+    "guessing or making it up.\n" +
     "Answer style — this matters: be direct. Lead with the actual answer in the first sentence, not a preamble, " +
     "not a restatement of the question, not a disclaimer. Default to 1–3 sentences; only go longer if the user " +
     "asked for detail or a list genuinely helps. Reference specific numbers from the data when relevant instead of " +
@@ -653,6 +806,11 @@
     "magnesium in grams, sodium/potassium/calcium/vitaminC/zinc in mg, iron in mg, vitaminA/vitaminD/vitaminB12/folate " +
     "in micrograms. Never show this JSON block itself as visible prose — it is parsed separately and a confirmation " +
     "is shown automatically. Never include it unless the user actually wants something logged.\n" +
+    "If, and only if, the user is asking specifically for the current weather or the current time, ALSO append " +
+    "EXACTLY ONE block at the very end of your reply (after the ADD_FOOD block if there is one, with nothing after " +
+    "it): <<<SHOW_INFO>>>{\"type\":\"weather\"}<<<END>>> or <<<SHOW_INFO>>>{\"type\":\"time\"}<<<END>>> — this pops " +
+    "open a small readout panel with the live figures pulled directly from the dashboard, so your spoken/written " +
+    "answer can stay short. Never include this for anything else, and never show the block itself as visible prose.\n" +
     "Dashboard data as JSON:\n";
 
   // A bigger, sharper model tried first for quality; the smaller/faster ones
@@ -896,7 +1054,10 @@
     const key = orKey();
     if (!key) {
       $('jarvisKeyRow').classList.add('show');
-      if (opts.viaVoice) { enqueueSpeech("I need a free OpenRouter key first — open my settings to add one."); onQueueDrained = deactivateVoiceUI; }
+      if (opts.viaVoice) {
+        enqueueSpeech("I need a free OpenRouter key first — open my settings to add one.");
+        onQueueDrained = () => { deactivateVoiceUI(); maybeResumeWake(); };
+      }
       return;
     }
     busy = true;
@@ -971,7 +1132,7 @@
       if (authFailed) { $('jarvisKeyRow').classList.add('show'); }
       if (succeeded) {
         const { clean, action } = extractAddFood(full);
-        pending.text = clean || full;
+        pending.text = await extractShowInfo(clean || full);
         if (action && action.name) {
           const added = addFoodToNutrition(action);
           if (added) pending.actionLabel = 'Added "' + added.name + '" (' + added.calories + ' kcal) to today\'s nutrition log';
@@ -993,11 +1154,16 @@
       if (opts.viaVoice) { spokeAny = true; enqueueSpeech(pending.text); }
     }
     document.querySelectorAll('#jarvisCore').forEach((el) => el.classList.remove('thinking'));
-    if (opts.viaVoice) {
-      if (spokeAny) onQueueDrained = deactivateVoiceUI;
-      else deactivateVoiceUI();
-    }
     busy = false;
+    // Whether this was voice-triggered or typed, hold off reopening the
+    // wake mic until any speech from this turn has actually finished —
+    // not just until the text is done rendering.
+    function afterSpeechSettled() {
+      if (opts.viaVoice) deactivateVoiceUI();
+      maybeResumeWake();
+    }
+    if (speechQueue.length || speechPlaying) onQueueDrained = afterSpeechSettled;
+    else afterSpeechSettled();
   }
 
   /* ---------- Voice in: click-to-talk AND always-on wake word ("Jarvis") ----------
@@ -1070,6 +1236,14 @@
     document.querySelectorAll('#jarvisCore').forEach((el) => el.classList.remove('voice-active', 'speaking', 'listening', 'thinking', 'wake-burst'));
     restoreCaption();
   }
+  // Reopens the wake-word mic once it's actually safe to — i.e. once
+  // there's no reply still generating or being spoken, so the mic can't
+  // pick up Jarvis's own voice through the speakers and mistake it for a
+  // new command (see the note in rec.onend for how that used to happen).
+  function maybeResumeWake() {
+    if (!wakeEnabled || busy || speechPlaying || speechQueue.length) return;
+    safeStart('wake');
+  }
   // A word-boundary-ish match rather than an exact "jarvis" substring — generic
   // speech-to-text regularly mangles proper nouns ("jarviss", "jarv is", a
   // trailing "jarvis," with punctuation already stripped by the API, etc.).
@@ -1131,6 +1305,13 @@
           setHint('Voice keeps failing to start — try toggling it off and on again.', true);
           return;
         }
+        // Don't reopen the mic yet if a reply is still being generated or
+        // spoken — this was the real cause of "he responds twice": the mic
+        // would come back on while his own voice was still playing through
+        // the speakers, hear a fragment of it, and treat that as a new
+        // command. maybeResumeWake() (called once speech actually finishes,
+        // see ask()) picks this back up as soon as it's actually safe to.
+        if (busy || speechPlaying || speechQueue.length) return;
         setTimeout(() => safeStart('wake'), 300);
       } else { mode = 'idle'; setWakeIndicator(false); setHint('', false); }
     };
