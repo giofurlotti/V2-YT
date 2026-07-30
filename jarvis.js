@@ -802,10 +802,13 @@
     "anything that could have changed since your training, say plainly that you can't check that live rather than " +
     "guessing or making it up.\n" +
     "Answer style — this matters: be direct. Lead with the actual answer in the first sentence, not a preamble, " +
-    "not a restatement of the question, not a disclaimer. Default to 1–3 sentences; only go longer if the user " +
-    "asked for detail or a list genuinely helps. Reference specific numbers from the data when relevant instead of " +
-    "vague language. Talk like a sharp, calm personal assistant having a real conversation, not a report generator — " +
-    "plain flowing sentences, not bullet-heavy unless listing multiple distinct items. Never hedge with " +
+    "not a restatement of the question, not a disclaimer. Default to 1–3 SHORT sentences — each one plain and easy " +
+    "to say in a single breath. If a thought is running long, split it into two short sentences rather than one " +
+    "long comma-heavy sentence; this gets spoken out loud, and a long run-on sentence is what makes that spoken " +
+    "reply drag even when the total answer is brief. Only go longer/more detailed if the user actually asked for " +
+    "detail or a list genuinely helps. Reference specific numbers from the data when relevant instead of vague " +
+    "language. Talk like a sharp, calm personal assistant having a real conversation, not a report generator — " +
+    "plain short sentences, not bullet-heavy unless listing multiple distinct items. Never hedge with " +
     "\"it seems\"/\"it looks like\" when the data just says it. Keep a calm, capable, faintly dry tone.\n" +
     "If, and only if, the user is telling you they ate or drank something and wants it logged, estimate its full " +
     "nutrition and append EXACTLY ONE block in this format at the very end of your reply, after your normal answer, " +
@@ -970,13 +973,20 @@
       const audio = preloadedNext && preloadedNext.__text === next ? preloadedNext : new Audio(cloudTTSUrl(next));
       preloadedNext = null;
       currentAudio = audio;
+      // Start fetching the NEXT clip right now, while this one plays —
+      // not in the 'ended' handler below. Preloading only in 'ended' gave
+      // it zero real head start (the fetch and the .play() call happened
+      // back to back with no time for the network round-trip to get
+      // ahead), which is why a long sentence split into several TTS
+      // chunks still had an audible gap at every chunk boundary — it just
+      // wasn't actually preloaded in time.
+      if (speechQueue.length) {
+        preloadedNext = new Audio(cloudTTSUrl(speechQueue[0]));
+        preloadedNext.__text = speechQueue[0];
+        preloadedNext.preload = 'auto';
+      }
       const advance = () => {
         speechPlaying = false; currentAudio = null;
-        if (speechQueue.length) {
-          preloadedNext = new Audio(cloudTTSUrl(speechQueue[0]));
-          preloadedNext.__text = speechQueue[0];
-          preloadedNext.preload = 'auto';
-        }
         pumpSpeechQueue();
       };
       audio.addEventListener('ended', advance);
