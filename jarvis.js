@@ -1036,8 +1036,11 @@
       headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
       // Lower temperature than the API default — more focused, direct
       // answers instead of meandering/creative ones, which matters more
-      // here than in a general-purpose chat.
-      body: JSON.stringify({ model, max_tokens: 700, temperature: 0.5, stream: true, messages: [{ role: 'system', content: SYS + ctx }, { role: 'user', content: text }] }),
+      // here than in a general-purpose chat. frequency_penalty/presence_penalty
+      // directly discourage the model from repeating phrases it already
+      // said — free/small models are prone to looping ("doesn't know when
+      // to stop") without this.
+      body: JSON.stringify({ model, max_tokens: 700, temperature: 0.5, frequency_penalty: 0.6, presence_penalty: 0.4, stream: true, messages: [{ role: 'system', content: SYS + ctx }, { role: 'user', content: text }] }),
     });
     if (!res.ok || !res.body) {
       let errJson = null; try { errJson = await res.json(); } catch (e) {}
@@ -1072,7 +1075,13 @@
           throw err;
         }
         const delta = json.choices && json.choices[0] && json.choices[0].delta && json.choices[0].delta.content;
-        if (delta) { full += delta; onDelta(delta, full); }
+        if (delta) {
+          full += delta;
+          // onDelta returns true when it detects the model has started
+          // repeating itself — stop reading immediately instead of letting
+          // a runaway generation keep looping until max_tokens.
+          if (onDelta(delta, full) === true) { try { reader.cancel(); } catch (e) {} return full; }
+        }
       }
     }
     return full;
@@ -1123,11 +1132,10 @@
         stopSpeaking();
         full = ''; spokenUpTo = 0; pending.text = ''; render();
         spokenSentences = new Set();
+        let loopDetected = false, loopCutoffAt = 0;
         try {
           full = await streamChat(model, key, ctx, text, (delta, accumulated) => {
             full = accumulated;
-            pending.text = full;
-            throttledRender();
             // Speak completed sentences as they arrive; never speak past the
             // start of an ADD_FOOD tag (that JSON block isn't for the user's
             // ears — it's stripped from the displayed text once complete).
@@ -1141,14 +1149,29 @@
             if (boundary !== -1) {
               const sentence = unspoken.slice(0, boundary + 1);
               const norm = sentence.trim().toLowerCase().replace(/\s+/g, ' ');
-              if (norm && !spokenSentences.has(norm)) {
+              if (norm && spokenSentences.has(norm)) {
+                // The model has started repeating a sentence it already
+                // said verbatim this turn — "doesn't know when to stop"
+                // is exactly this failure mode. Cut generation off right
+                // here rather than letting it keep looping toward
+                // max_tokens; never show or speak the repeat itself.
+                loopDetected = true;
+                loopCutoffAt = spokenUpTo;
+                pending.text = full.slice(0, spokenUpTo);
+                render();
+                return true;
+              }
+              if (norm) {
                 spokenSentences.add(norm);
                 if (opts.viaVoice && !spokeAny) { spokeAny = true; setCaption('Speaking…'); }
                 enqueueSpeech(sentence);
               }
               spokenUpTo += boundary + 1;
             }
+            pending.text = full;
+            throttledRender();
           });
+          if (loopDetected) full = full.slice(0, loopCutoffAt);
           succeeded = true;
           break;
         } catch (e) {
