@@ -150,6 +150,8 @@
 .jarvis-dots { display: inline-flex; gap: 4px; }
 .jarvis-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--jarvis-cyan); opacity: 0.4; animation: jarvis-dot 1.2s ease-in-out infinite; }
 .jarvis-dots i:nth-child(2) { animation-delay: 0.2s; } .jarvis-dots i:nth-child(3) { animation-delay: 0.4s; }
+.jarvis-cursor { display: inline-block; width: 7px; height: 1em; margin-left: 2px; vertical-align: -2px; background: var(--jarvis-cyan); animation: jarvis-blink 0.9s step-end infinite; }
+@keyframes jarvis-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
 @keyframes jarvis-dot { 0%,100% { opacity: 0.35; transform: scale(1); } 50% { opacity: 1; transform: scale(1.4); } }
 @media (max-width: 480px) { .jarvis-modal { padding: 16px; } }
 `;
@@ -406,13 +408,28 @@
     } catch (e) { return null; }
   }
 
+  // Recent sets only, not the whole lifetime log — dumping months of history
+  // into every request bloats the prompt and adds real, measurable latency
+  // for no benefit (Jarvis only ever gets asked about "recent" workouts).
+  function recentGymLogs(gym, limit) {
+    if (!gym || !gym.logs) return [];
+    const all = [];
+    Object.keys(gym.logs).forEach((exId) => {
+      const ex = (gym.exercises || []).find((e) => e.id === exId);
+      (gym.logs[exId] || []).forEach((l) => all.push(Object.assign({ exercise: ex ? ex.name : exId }, l)));
+    });
+    all.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+    return all.slice(0, limit);
+  }
+
   async function buildContext() {
     const profile = loadJSON('user_profile_v1', {});
     const nutrition = loadJSON('nutrition:v1', null);
     const sun = loadJSON('sun_tracker_v1', null);
-    const gym = await loadGymData();
-    const whoop = await whoopSnapshot();
-    const weather = await fetchWeatherSnapshot();
+    // Independent network/Supabase lookups — run them together instead of
+    // one after another, which used to add their latencies on top of each
+    // other before the OpenRouter call even started.
+    const [gym, whoop, weather] = await Promise.all([loadGymData(), whoopSnapshot(), fetchWeatherSnapshot()]);
 
     const ad = activeDateKey();
     const stackItems = loadJSON('stack:items', []);
@@ -439,7 +456,7 @@
       weather: weather || 'not available — no location saved on this device yet (set it on the Main page)',
       nutritionToday: nutrition && nutrition.logs ? (nutrition.logs[dateKey()] || []) : null,
       sunAndSteps: sun,
-      gym: gym ? { exercises: gym.exercises, days: gym.days, recentLogs: gym.logs } : 'not logged yet',
+      gym: gym ? { days: gym.days, recentLogs: recentGymLogs(gym, 15) } : 'not logged yet',
       supplementsToday: supplements || 'none configured',
       goalsToday: Array.isArray(goals) && goals.length ? goals : 'none set today',
       caffeineMgToday: caffeineMgToday != null ? caffeineMgToday : 'not tracked',
@@ -509,9 +526,10 @@
     feed.innerHTML = messages.map((m) => {
       const cls = m.role === 'user' ? 'user' : 'jarvis';
       let html;
-      if (m.pending) html = '<span class="jarvis-dots"><i></i><i></i><i></i></span>';
+      if (m.pending && !m.text) html = '<span class="jarvis-dots"><i></i><i></i><i></i></span>';
       else {
-        html = format(m.text);
+        html = format(m.text || '');
+        if (m.pending) html += '<span class="jarvis-cursor"></span>';
         if (m.actionLabel) html += '<div class="jarvis-action-note">✅ ' + esc(m.actionLabel) + '</div>';
       }
       return '<div class="jarvis-msg ' + cls + '"><div class="jarvis-bubble">' + html + '</div></div>';
@@ -546,17 +564,6 @@
     for (const test of rank) { const found = candidates.find(test); if (found) return found; }
     return candidates[0];
   }
-  function speakBrowser(text) {
-    if (!('speechSynthesis' in window)) return;
-    try {
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      const v = pickBestVoice();
-      if (v) u.voice = v;
-      u.rate = 1.0; u.pitch = 0.95;
-      window.speechSynthesis.speak(u);
-    } catch (e) {}
-  }
   function chunkForCloudTTS(text) {
     const clean = text.replace(/\s+/g, ' ').trim();
     const chunks = [];
@@ -571,27 +578,74 @@
     }
     return chunks.filter(Boolean);
   }
-  function playCloudChunks(chunks, onFail) {
-    let i = 0;
-    function next() {
-      if (i >= chunks.length) return;
-      const c = chunks[i++];
-      const url = 'https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=' + encodeURIComponent(c);
-      const audio = new Audio(url);
-      audio.addEventListener('ended', next);
-      audio.addEventListener('error', () => { if (i === 1) onFail(); });
-      audio.play().catch(() => { if (i === 1) onFail(); });
+  function cloudTTSUrl(text) {
+    return 'https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=' + encodeURIComponent(text);
+  }
+
+  // Speech is a queue, not a one-shot call — during a streaming reply we
+  // enqueue each finished sentence as it arrives (see ask()) so playback
+  // starts almost immediately instead of waiting for the whole reply, and
+  // still sounds like one continuous voice instead of overlapping clips.
+  // The next cloud clip is preloaded while the current one plays so there's
+  // no dead-air gap between chunks — that gap is what made the old
+  // chunk-at-a-time playback sound choppy.
+  let speechQueue = [];
+  let speechPlaying = false;
+  let currentAudio = null;
+  let preloadedNext = null;
+  function stopSpeaking() {
+    speechQueue = [];
+    speechPlaying = false;
+    if (currentAudio) { try { currentAudio.pause(); } catch (e) {} currentAudio = null; }
+    if (preloadedNext) { try { preloadedNext.src = ''; } catch (e) {} preloadedNext = null; }
+    if ('speechSynthesis' in window) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+  }
+  function speakBrowserOne(text, onDone) {
+    if (!('speechSynthesis' in window)) { onDone(); return; }
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      const v = pickBestVoice();
+      if (v) u.voice = v;
+      u.rate = 1.0; u.pitch = 0.95;
+      u.onend = onDone; u.onerror = onDone;
+      window.speechSynthesis.speak(u);
+    } catch (e) { onDone(); }
+  }
+  function pumpSpeechQueue() {
+    if (speechPlaying) return;
+    const next = speechQueue.shift();
+    if (!next) return;
+    speechPlaying = true;
+    if (cloudVoiceEnabled()) {
+      const audio = preloadedNext && preloadedNext.__text === next ? preloadedNext : new Audio(cloudTTSUrl(next));
+      preloadedNext = null;
+      currentAudio = audio;
+      const advance = () => {
+        speechPlaying = false; currentAudio = null;
+        if (speechQueue.length) {
+          preloadedNext = new Audio(cloudTTSUrl(speechQueue[0]));
+          preloadedNext.__text = speechQueue[0];
+          preloadedNext.preload = 'auto';
+        }
+        pumpSpeechQueue();
+      };
+      audio.addEventListener('ended', advance);
+      audio.addEventListener('error', () => { speakBrowserOne(next, advance); });
+      audio.play().catch(() => { speakBrowserOne(next, advance); });
+    } else {
+      speakBrowserOne(next, () => { speechPlaying = false; pumpSpeechQueue(); });
     }
-    next();
+  }
+  function enqueueSpeech(text) {
+    const plain = String(text || '').replace(/\*\*/g, '').replace(/[-•*]\s+/g, '').trim();
+    if (!plain) return;
+    const chunks = cloudVoiceEnabled() ? chunkForCloudTTS(plain) : [plain];
+    chunks.forEach((c) => speechQueue.push(c));
+    pumpSpeechQueue();
   }
   function speak(text) {
-    const plain = text.replace(/\*\*/g, '').replace(/[-•*]\s+/g, '');
-    if (!plain) return;
-    if (cloudVoiceEnabled()) {
-      const chunks = chunkForCloudTTS(plain);
-      if (chunks.length) { playCloudChunks(chunks, () => speakBrowser(plain)); return; }
-    }
-    speakBrowser(plain);
+    stopSpeaking();
+    enqueueSpeech(text);
   }
 
   function extractAddFood(text) {
@@ -602,54 +656,117 @@
     return { clean, action: data };
   }
 
+  // Streams the reply token-by-token via OpenRouter's SSE format instead of
+  // waiting for the whole thing — onDelta fires as text arrives so the chat
+  // bubble (and, in ask(), the voice) can start well before the full reply
+  // is done generating. Throws an Error with .status/.code set on a real
+  // API error (401 etc.) so callers can tell that apart from a mid-stream
+  // parse hiccup, which is ignored.
+  async function streamChat(model, key, ctx, text, onDelta) {
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
+      body: JSON.stringify({ model, max_tokens: 700, stream: true, messages: [{ role: 'system', content: SYS + ctx }, { role: 'user', content: text }] }),
+    });
+    if (!res.ok || !res.body) {
+      let errJson = null; try { errJson = await res.json(); } catch (e) {}
+      const err = new Error((errJson && errJson.error && errJson.error.message) || ('HTTP ' + res.status));
+      err.status = res.status; err.code = errJson && errJson.error && errJson.error.code;
+      throw err;
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '', full = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith('data:')) continue;
+        const payload = trimmed.slice(5).trim();
+        if (!payload || payload === '[DONE]') continue;
+        let json;
+        try { json = JSON.parse(payload); } catch (e) { continue; }
+        if (json.error) { const err = new Error(json.error.message || 'stream error'); err.status = json.error.code; throw err; }
+        const delta = json.choices && json.choices[0] && json.choices[0].delta && json.choices[0].delta.content;
+        if (delta) { full += delta; onDelta(delta, full); }
+      }
+    }
+    return full;
+  }
+
   async function ask(text) {
     text = (text || '').trim();
     if (!text || busy) return;
     const key = orKey();
     if (!key) { $('jarvisKeyRow').classList.add('show'); return; }
     busy = true;
+    stopSpeaking();
     messages.push({ role: 'user', text });
     const pending = { role: 'jarvis', text: '', pending: true };
     messages.push(pending);
     render();
     $('jarvisInput').value = '';
     document.querySelectorAll('#jarvisCore').forEach((el) => el.classList.add('thinking'));
+    let lastRenderAt = 0;
+    function throttledRender() {
+      const now = Date.now();
+      if (now - lastRenderAt > 70) { lastRenderAt = now; render(); }
+    }
     try {
       const ctx = await buildContext();
-      let reply = null, lastErr = 'Something went wrong — check your API key.', authFailed = false;
+      let full = '', spokenUpTo = 0, succeeded = false, lastErr = 'Something went wrong — check your API key.', authFailed = false;
       for (const model of MODELS) {
+        full = ''; spokenUpTo = 0;
         try {
-          const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
-            body: JSON.stringify({ model, max_tokens: 700, messages: [{ role: 'system', content: SYS + ctx }, { role: 'user', content: text }] }),
-          });
-          const json = await res.json();
-          if (json.error) {
-            if (res.status === 401 || json.error.code === 401) {
-              authFailed = true;
-              try { localStorage.removeItem(OR_KEY); } catch (e2) {}
-              lastErr = "That OpenRouter key isn't working (missing, mistyped, or revoked) — paste a fresh free one below.";
-              break;
+          full = await streamChat(model, key, ctx, text, (delta, accumulated) => {
+            full = accumulated;
+            pending.text = full;
+            throttledRender();
+            // Speak completed sentences as they arrive; never speak past the
+            // start of an ADD_FOOD tag (that JSON block isn't for the user's
+            // ears — it's stripped from the displayed text once complete).
+            const tagIdx = full.indexOf('<<<');
+            const safeEnd = tagIdx === -1 ? full.length : tagIdx;
+            const unspoken = full.slice(spokenUpTo, safeEnd);
+            let boundary = -1;
+            for (let i = unspoken.length - 1; i >= 0; i--) {
+              if ('.!?'.includes(unspoken[i]) && (i === unspoken.length - 1 || /\s/.test(unspoken[i + 1]))) { boundary = i; break; }
             }
-            lastErr = json.error.message || lastErr; continue;
+            if (boundary !== -1) {
+              enqueueSpeech(unspoken.slice(0, boundary + 1));
+              spokenUpTo += boundary + 1;
+            }
+          });
+          succeeded = true;
+          break;
+        } catch (e) {
+          if (e.status === 401 || e.code === 401) {
+            authFailed = true;
+            try { localStorage.removeItem(OR_KEY); } catch (e2) {}
+            lastErr = "That OpenRouter key isn't working (missing, mistyped, or revoked) — paste a fresh free one below.";
+            break;
           }
-          const content = json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content;
-          if (!content) continue;
-          reply = content; break;
-        } catch (e) { lastErr = 'Could not reach OpenRouter — check your connection.'; }
+          lastErr = e.message || lastErr;
+        }
       }
       pending.pending = false;
       if (authFailed) { $('jarvisKeyRow').classList.add('show'); }
-      if (reply) {
-        const { clean, action } = extractAddFood(reply);
-        pending.text = clean || reply;
+      if (succeeded) {
+        const { clean, action } = extractAddFood(full);
+        pending.text = clean || full;
         if (action && action.name) {
           const added = addFoodToNutrition(action);
           if (added) pending.actionLabel = 'Added "' + added.name + '" (' + added.calories + ' kcal) to today\'s nutrition log';
         }
+        const tagIdx = full.indexOf('<<<');
+        const safeEnd = tagIdx === -1 ? full.length : tagIdx;
+        const remainder = full.slice(spokenUpTo, safeEnd).trim();
+        if (remainder) enqueueSpeech(remainder);
         render();
-        speak(pending.text);
       } else {
         pending.text = lastErr;
         render();
