@@ -555,89 +555,139 @@
      passive "listening for my name" mode and the active "taking your
      command" mode never fight over the microphone:
        idle    — nothing running (wake word off, no manual mic press)
-       wake    — continuous background listening, only checking for "jarvis"
+       wake    — passively listening, only checking for "jarvis"
        command — actively transcribing the next thing you say as a real query
-     Hearing the wake word (or pressing the mic button) hands off from wake
-     to command via onend, rather than racing two independent timers. */
+
+     Deliberately continuous:false, even for "always listening" — Chrome's
+     continuous:true mode is known to silently stop emitting results after
+     network hiccups or long silences with no reliable way to detect it.
+     Instead, "always on" is simulated by immediately restarting a fresh
+     short session every time one ends (onend), which is the more reliable
+     pattern in practice. A short backoff + failure cap stops it from
+     spinning forever if the mic is unavailable rather than erroring silently
+     forever in the background. */
   const WAKE_KEY = 'jarvis_wakeword_enabled';
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let rec = null, mode = 'idle', wakeEnabled = loadJSON(WAKE_KEY, false), pendingCommand = false;
+  let rec = null, mode = 'idle', wakeEnabled = loadJSON(WAKE_KEY, false), pendingCommand = false, wakeFailStreak = 0;
 
   function setWakeIndicator(on) { document.querySelectorAll('.jarvis-wake-indicator').forEach((el) => el.classList.toggle('on', on)); }
   function setWakeToggleUI(on) {
     const t = $('jarvisWakeToggle');
     if (t) { t.classList.toggle('on', on); t.setAttribute('aria-checked', String(on)); }
   }
+  function setHint(text, persistent) {
+    const h = $('jarvisVoiceHint');
+    h.textContent = text;
+    h.dataset.persistent = persistent ? '1' : '';
+  }
+  function clearHintUnlessPersistent() { if ($('jarvisVoiceHint').dataset.persistent !== '1') $('jarvisVoiceHint').textContent = ''; }
+  // A word-boundary-ish match rather than an exact "jarvis" substring — generic
+  // speech-to-text regularly mangles proper nouns ("jarviss", "jarv is", a
+  // trailing "jarvis," with punctuation already stripped by the API, etc.).
+  const WAKE_RE = /\bjarv[a-z]*\b/i;
+  async function ensureMicPermission() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true; // can't pre-check; let SpeechRecognition itself prompt
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((t) => t.stop());
+      return true;
+    } catch (e) { return false; }
+  }
   function safeStart(nextMode) {
     mode = nextMode;
     setWakeIndicator(mode === 'wake');
-    try { rec.start(); } catch (e) { /* a session was already active — ignore */ }
+    if (mode === 'wake') setHint("Listening for \"Jarvis\"…", true);
+    try { rec.start(); } catch (e) { /* a session was already active — ignore, onend will retry */ }
   }
 
   if (SpeechRec) {
     rec = new SpeechRec();
-    rec.continuous = true;
+    rec.continuous = false;
     rec.interimResults = false;
     rec.lang = 'en-US';
     rec.onresult = (e) => {
+      wakeFailStreak = 0;
       const said = (e.results[e.results.length - 1][0].transcript || '').trim();
       if (mode === 'wake') {
-        const idx = said.toLowerCase().indexOf('jarvis');
-        if (idx === -1) return; // not my name — keep passively listening
-        const after = said.slice(idx + 6).replace(/^[,.!\s]+/, '').trim();
+        const m = said.match(WAKE_RE);
+        if (!m) return; // not my name — onend will restart passive listening
+        const after = said.slice(m.index + m[0].length).replace(/^[,.!\s]+/, '').trim();
         open();
         if (after) {
+          pendingCommand = false;
           ask(after);
         } else {
           pendingCommand = true;
-          $('jarvisVoiceHint').textContent = "I'm listening…";
+          setHint("Yes? I'm listening…", true);
           document.querySelectorAll('#jarvisCore').forEach((el) => el.classList.add('listening'));
-          try { rec.stop(); } catch (e) {}
         }
       } else if (mode === 'command') {
         $('jarvisInput').value = said;
-        try { rec.stop(); } catch (e) {}
         ask(said);
       }
     };
     rec.onend = () => {
       document.querySelectorAll('#jarvisCore').forEach((el) => el.classList.remove('listening'));
       $('jarvisMicBtn').classList.remove('active');
-      if (pendingCommand) { pendingCommand = false; setTimeout(() => safeStart('command'), 200); return; }
-      if (mode === 'command') $('jarvisVoiceHint').textContent = '';
-      if (wakeEnabled) setTimeout(() => safeStart('wake'), 500);
-      else { mode = 'idle'; setWakeIndicator(false); }
+      if (pendingCommand) { pendingCommand = false; setTimeout(() => safeStart('command'), 150); return; }
+      if (mode === 'command') { clearHintUnlessPersistent(); mode = 'idle'; }
+      if (wakeEnabled) {
+        if (wakeFailStreak >= 6) {
+          // Something's persistently wrong (no mic, blocked permission that
+          // isn't reported as 'not-allowed', etc.) — stop hammering it and
+          // say so plainly instead of silently listening to nothing forever.
+          wakeEnabled = false; saveJSON(WAKE_KEY, false); setWakeToggleUI(false); setWakeIndicator(false);
+          setHint('Voice keeps failing to start — try toggling it off and on again.', true);
+          return;
+        }
+        setTimeout(() => safeStart('wake'), 300);
+      } else { mode = 'idle'; setWakeIndicator(false); setHint('', false); }
     };
     rec.onerror = (e) => {
-      if (e.error === 'not-allowed') {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         wakeEnabled = false; saveJSON(WAKE_KEY, false); setWakeToggleUI(false); setWakeIndicator(false);
-        $('jarvisVoiceHint').textContent = 'Microphone permission denied.';
+        setHint('Microphone permission denied — check your browser/site settings.', true);
+        wakeFailStreak = 0;
+      } else if (e.error === 'no-speech' || e.error === 'aborted') {
+        // Completely normal in wake mode (most restarts hear silence) — not a
+        // real failure, don't count it against the fail streak.
       } else if (mode === 'command') {
-        $('jarvisVoiceHint').textContent = 'Could not hear you — try again.';
+        setHint('Could not hear you — try again.', false);
+      } else {
+        wakeFailStreak++;
       }
-      // wake mode gets transient errors (no-speech, network hiccups) fairly
-      // often — onend fires right after and restarts it, so nothing to do here.
     };
     if (wakeEnabled) safeStart('wake');
   }
 
-  $('jarvisMicBtn').addEventListener('click', () => {
-    if (!rec) { $('jarvisVoiceHint').textContent = "This browser doesn't support voice input — try Chrome or Edge, or just type."; return; }
-    if (mode === 'command') { rec.stop(); return; }
+  $('jarvisMicBtn').addEventListener('click', async () => {
+    if (!rec) { setHint("This browser doesn't support voice input — try Chrome or Edge, or just type.", false); return; }
+    if (mode === 'command') { try { rec.stop(); } catch (e) {} return; }
     $('jarvisMicBtn').classList.add('active');
     document.querySelectorAll('#jarvisCore').forEach((el) => el.classList.add('listening'));
-    $('jarvisVoiceHint').textContent = 'Listening…';
+    setHint('Listening…', false);
     if (mode === 'wake') { pendingCommand = true; try { rec.stop(); } catch (e) {} }
-    else safeStart('command');
+    else {
+      const ok = await ensureMicPermission();
+      if (!ok) { setHint('Microphone permission denied.', false); $('jarvisMicBtn').classList.remove('active'); return; }
+      safeStart('command');
+    }
   });
 
-  $('jarvisWakeToggle').addEventListener('click', () => {
+  $('jarvisWakeToggle').addEventListener('click', async () => {
     if (!SpeechRec) { $('jarvisSettingsStatus').textContent = "This browser doesn't support voice — try Chrome or Edge."; return; }
+    if (!wakeEnabled) {
+      $('jarvisSettingsStatus').textContent = 'Requesting microphone access…';
+      const ok = await ensureMicPermission();
+      if (!ok) { $('jarvisSettingsStatus').textContent = 'Microphone permission denied — check your browser/site settings.'; return; }
+      $('jarvisSettingsStatus').textContent = '';
+    }
     wakeEnabled = !wakeEnabled;
     saveJSON(WAKE_KEY, wakeEnabled);
     setWakeToggleUI(wakeEnabled);
+    wakeFailStreak = 0;
     if (wakeEnabled) safeStart('wake');
-    else { try { rec.stop(); } catch (e) {} mode = 'idle'; setWakeIndicator(false); }
+    else { try { rec.stop(); } catch (e) {} mode = 'idle'; setWakeIndicator(false); setHint('', false); }
   });
 
   /* ---------- Open / close ---------- */
@@ -657,21 +707,6 @@
   $('jarvisBg').addEventListener('click', (e) => { if (e.target === $('jarvisBg')) close(); });
   $('jarvisSendBtn').addEventListener('click', () => ask($('jarvisInput').value));
   $('jarvisInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') ask($('jarvisInput').value); });
-
-  // Exposed so a page's own layout (e.g. Main's floating info blobs) can
-  // reuse the same live data Jarvis already knows how to gather, instead
-  // of re-fetching WHOOP/nutrition independently.
-  window.__jarvisSnapshot = async function () {
-    const whoop = await whoopSnapshot();
-    const sun = loadJSON('sun_tracker_v1', null);
-    const nutrition = loadJSON('nutrition:v1', null);
-    let caloriesToday = 0;
-    if (nutrition && nutrition.logs) {
-      const list = nutrition.logs[dateKey()] || [];
-      caloriesToday = list.reduce((sum, m) => sum + (+m.calories || 0), 0);
-    }
-    return { whoop, steps: sun ? (sun.steps || 0) : null, caloriesToday };
-  };
 
   renderLiveReadout();
 })();
