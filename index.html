@@ -15,101 +15,13 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
+<link rel="stylesheet" href="theme.css">
 
 <style>
-/* ===== Shared design tokens (same as the rest of the dashboard) ===== */
-:root {
-  --text-primary: #FAFAFA;
-  --text-secondary: #B8B6B0;
-  --text-tertiary: #76746E;
-  --glow: #7C3AED;
-  --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
-  --font-numeric: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-}
-* { box-sizing: border-box; }
-html, body {
-  margin: 0; padding: 0;
-  background: #05050a;
-  color: var(--text-secondary);
-  font-family: var(--font);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-body {
-  min-height: 100vh; position: relative; overflow-x: hidden;
-  padding: max(28px, env(safe-area-inset-top)) 20px 60px;
-}
-/* Soft drifting dark-purple glow (replaces the old multi-color glow). */
-body::before {
-  content: ''; position: fixed; inset: 0;
-  background:
-    radial-gradient(circle at 14% 10%, color-mix(in srgb, var(--glow) 30%, transparent), transparent 48%),
-    radial-gradient(circle at 85% 78%, color-mix(in srgb, var(--glow) 14%, transparent), transparent 55%);
-  filter: blur(50px); pointer-events: none; z-index: -3;
-  animation: drift 40s ease-in-out infinite alternate;
-}
-/* Scattered starfield, hand-placed rather than a uniform grid. */
-.starfield {
-  position: fixed; inset: 0; pointer-events: none; z-index: -2;
-  background-image:
-    radial-gradient(1.6px 1.6px at 12% 22%, rgba(255,255,255,0.55), transparent),
-    radial-gradient(1.2px 1.2px at 24% 8%, rgba(255,255,255,0.4), transparent),
-    radial-gradient(1.4px 1.4px at 38% 34%, rgba(255,255,255,0.35), transparent),
-    radial-gradient(1px 1px at 52% 14%, rgba(255,255,255,0.45), transparent),
-    radial-gradient(1.6px 1.6px at 67% 26%, rgba(255,255,255,0.3), transparent),
-    radial-gradient(1.2px 1.2px at 78% 12%, rgba(255,255,255,0.4), transparent),
-    radial-gradient(1px 1px at 88% 30%, rgba(255,255,255,0.35), transparent),
-    radial-gradient(1.4px 1.4px at 6% 48%, rgba(255,255,255,0.3), transparent),
-    radial-gradient(1px 1px at 30% 58%, rgba(255,255,255,0.4), transparent),
-    radial-gradient(1.6px 1.6px at 46% 66%, rgba(255,255,255,0.3), transparent),
-    radial-gradient(1.2px 1.2px at 62% 46%, rgba(255,255,255,0.35), transparent),
-    radial-gradient(1px 1px at 74% 62%, rgba(255,255,255,0.4), transparent),
-    radial-gradient(1.4px 1.4px at 91% 52%, rgba(255,255,255,0.3), transparent),
-    radial-gradient(1.6px 1.6px at 18% 78%, rgba(255,255,255,0.35), transparent),
-    radial-gradient(1px 1px at 42% 84%, rgba(255,255,255,0.3), transparent),
-    radial-gradient(1.2px 1.2px at 58% 88%, rgba(255,255,255,0.4), transparent),
-    radial-gradient(1.4px 1.4px at 82% 82%, rgba(255,255,255,0.3), transparent),
-    radial-gradient(1px 1px at 96% 68%, rgba(255,255,255,0.35), transparent);
-}
-/* Faint horizon silhouette anchored to the bottom of the viewport. */
-.horizon {
-  position: fixed; left: 0; right: 0; bottom: 0; height: 90px; pointer-events: none; z-index: -1;
-  background: color-mix(in srgb, var(--glow) 10%, #05050a);
-  clip-path: polygon(0% 100%, 0% 55%, 6% 62%, 13% 40%, 20% 58%, 28% 35%, 36% 60%, 45% 30%, 54% 55%, 62% 42%, 70% 64%, 79% 38%, 87% 58%, 94% 45%, 100% 60%, 100% 100%);
-  opacity: 0.5;
-}
-body::after {
-  content: ''; position: fixed; inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.01) 1px, transparent 1px);
-  background-size: 3px 3px; pointer-events: none; z-index: -2;
-}
-@keyframes drift { 0%{transform:translate3d(0,0,0)} 100%{transform:translate3d(-22px,14px,0)} }
-
-.page { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; }
-
 /* This screen has its own header + Today panel — the shared topbar.js
    finance quick-link doesn't add anything here, so it's hidden outright.
    The bottom tab bar stays (still useful navigation). */
 #topbar { display: none !important; }
-
-.hub-eyebrow {
-  font-family: var(--font-mono);
-  font-size: 11px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase;
-  color: var(--text-tertiary); margin: 0 0 10px;
-}
-.dash-title {
-  margin: 0 0 6px; font-family: var(--font-display); font-style: italic;
-  font-size: 40px; font-weight: 600; letter-spacing: -0.01em;
-  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent; color: transparent;
-  filter: drop-shadow(0 0 22px color-mix(in srgb, var(--glow) 65%, transparent))
-          drop-shadow(0 0 46px color-mix(in srgb, var(--glow) 35%, transparent));
-}
-.dash-sub { margin: 0; font-size: 14px; color: var(--text-tertiary); font-weight: 500; }
-@media (max-width: 480px) { .dash-title { font-size: 28px; } }
 
 /* ===== TODAY PANEL (readiness, weather, activity pattern, tips) ===== */
 .today-grid {
@@ -153,25 +65,6 @@ body::after {
 .sun-input:focus { border-color: rgba(251,191,36,0.4); }
 .sun-hint { font-size: 10px; color: var(--text-tertiary); margin-top: 6px; min-height: 12px; }
 .sun-note { font-size: 9.5px; color: var(--text-tertiary); margin-top: 10px; line-height: 1.5; }
-.today-card {
-  position: relative;
-  padding: 20px;
-  border-radius: 24px;
-  background: rgba(18,17,24,0.55);
-  border: 1px solid rgba(255,255,255,0.06);
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
-  overflow: hidden;
-}
-/* Purple glow backdrop for cards that don't carry their own accent colour. */
-.today-card::before {
-  content: ''; position: absolute; inset: -25%; pointer-events: none; z-index: 0;
-  background: radial-gradient(circle at 50% 32%, color-mix(in srgb, var(--glow) 32%, transparent), transparent 65%);
-  filter: blur(30px);
-  opacity: 0.85;
-}
-.today-card > * { position: relative; z-index: 1; }
 .sun-card::before {
   background: radial-gradient(circle at 50% 28%, color-mix(in srgb, #FBBF24 30%, transparent), transparent 65%);
 }

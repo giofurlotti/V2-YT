@@ -1,0 +1,252 @@
+/* ============================================================
+   Shared design system for the dashboard.
+   One dark "editorial night sky" language across every page:
+   Playfair Display italic headlines, a starfield + horizon
+   backdrop, glass cards, and ONE signature accent hue per page
+   (each page sets its own --glow before linking this file, or
+   right after — custom properties cascade either way as long as
+   it's set on :root before something reads it at paint time).
+
+   Structure lives here so every page renders identically and any
+   future refinement (easing, shadows, spacing) only has to happen
+   once. Section colour (--glow) is the one thing pages customize:
+   violet=Main, green=Health, blue=Fitness, orange=Nutrition,
+   teal=Growth, gold=Finance — a quiet way to know which app you're
+   in without reading the title.
+   ============================================================ */
+
+:root {
+  --glow: #7C3AED;
+  --bg: #050506;
+
+  --text-primary: #FAFAFA;
+  --text-secondary: #B8B6B0;
+  --text-tertiary: #76746E;
+
+  /* Universal state colours — used for data (recovery bands, macro
+     over/under, verdicts), never as decorative per-card branding. */
+  --good: #6BE3A4;
+  --warn: #F2C063;
+  --bad:  #FF8A8A;
+
+  --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-numeric: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --radius-lg: 22px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+  --radius-pill: 999px;
+
+  --card-bg: rgba(20,19,26,0.55);
+  --card-bg-solid: #100f14;
+  --card-border: rgba(255,255,255,0.07);
+  --card-border-hover: rgba(255,255,255,0.14);
+  --card-shadow: 0 14px 44px rgba(0,0,0,0.42);
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast: 0.16s;
+  --dur-med: 0.32s;
+  --dur-slow: 0.6s;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--text-secondary);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body {
+  min-height: 100vh; position: relative; overflow-x: hidden;
+  padding: max(28px, env(safe-area-inset-top)) 20px 60px;
+}
+::selection { background: color-mix(in srgb, var(--glow) 45%, transparent); color: #fff; }
+a { color: inherit; }
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--glow) 70%, white 10%);
+  outline-offset: 2px; border-radius: 4px;
+}
+
+/* ===== Ambient backdrop: drifting glow + starfield + horizon ===== */
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background:
+    radial-gradient(circle at 14% 10%, color-mix(in srgb, var(--glow) 28%, transparent), transparent 48%),
+    radial-gradient(circle at 85% 78%, color-mix(in srgb, var(--glow) 13%, transparent), transparent 55%);
+  filter: blur(50px); pointer-events: none; z-index: -3;
+  animation: theme-drift 44s ease-in-out infinite alternate;
+}
+body::after {
+  content: ''; position: fixed; inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.012) 1px, transparent 1px);
+  background-size: 3px 3px; pointer-events: none; z-index: -2;
+}
+@keyframes theme-drift { 0% { transform: translate3d(0,0,0); } 100% { transform: translate3d(-22px,14px,0); } }
+
+.starfield {
+  position: fixed; inset: 0; pointer-events: none; z-index: -2;
+  background-image:
+    radial-gradient(1.6px 1.6px at 12% 22%, rgba(255,255,255,0.55), transparent),
+    radial-gradient(1.2px 1.2px at 24% 8%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1.4px 1.4px at 38% 34%, rgba(255,255,255,0.35), transparent),
+    radial-gradient(1px 1px at 52% 14%, rgba(255,255,255,0.45), transparent),
+    radial-gradient(1.6px 1.6px at 67% 26%, rgba(255,255,255,0.3), transparent),
+    radial-gradient(1.2px 1.2px at 78% 12%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1px 1px at 88% 30%, rgba(255,255,255,0.35), transparent),
+    radial-gradient(1.4px 1.4px at 6% 48%, rgba(255,255,255,0.3), transparent),
+    radial-gradient(1px 1px at 30% 58%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1.6px 1.6px at 46% 66%, rgba(255,255,255,0.3), transparent),
+    radial-gradient(1.2px 1.2px at 62% 46%, rgba(255,255,255,0.35), transparent),
+    radial-gradient(1px 1px at 74% 62%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1.4px 1.4px at 91% 52%, rgba(255,255,255,0.3), transparent),
+    radial-gradient(1.6px 1.6px at 18% 78%, rgba(255,255,255,0.35), transparent),
+    radial-gradient(1px 1px at 42% 84%, rgba(255,255,255,0.3), transparent),
+    radial-gradient(1.2px 1.2px at 58% 88%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1.4px 1.4px at 82% 82%, rgba(255,255,255,0.3), transparent),
+    radial-gradient(1px 1px at 96% 68%, rgba(255,255,255,0.35), transparent);
+}
+.horizon {
+  position: fixed; left: 0; right: 0; bottom: 0; height: 90px; pointer-events: none; z-index: -1;
+  background: color-mix(in srgb, var(--glow) 10%, var(--bg));
+  clip-path: polygon(0% 100%, 0% 55%, 6% 62%, 13% 40%, 20% 58%, 28% 35%, 36% 60%, 45% 30%, 54% 55%, 62% 42%, 70% 64%, 79% 38%, 87% 58%, 94% 45%, 100% 60%, 100% 100%);
+  opacity: 0.5;
+}
+
+.page { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; }
+
+/* ===== Typography ===== */
+.hub-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase;
+  color: var(--text-tertiary); margin: 0 0 10px;
+}
+.dash-title {
+  margin: 0 0 6px; font-family: var(--font-display); font-style: italic;
+  font-size: 40px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.1;
+  background: linear-gradient(180deg, #FFFFFF 0%, #C7C4BC 120%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  filter: drop-shadow(0 0 22px color-mix(in srgb, var(--glow) 65%, transparent))
+          drop-shadow(0 0 46px color-mix(in srgb, var(--glow) 35%, transparent));
+}
+.dash-sub { margin: 0; font-size: 14px; color: var(--text-tertiary); font-weight: 500; }
+@media (max-width: 480px) { .dash-title { font-size: 28px; } }
+
+.section-title {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-tertiary);
+  margin: 0 0 12px; display: flex; align-items: center; gap: 8px;
+}
+
+/* ===== Card shell ===== */
+.card, .today-card, .gm-card {
+  position: relative;
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  backdrop-filter: blur(22px) saturate(1.15);
+  -webkit-backdrop-filter: blur(22px) saturate(1.15);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  transition: border-color var(--dur-med) var(--ease), box-shadow var(--dur-med) var(--ease), transform var(--dur-med) var(--ease);
+}
+.card::before, .today-card::before, .gm-card::before {
+  content: ''; position: absolute; inset: -25%; pointer-events: none; z-index: 0;
+  background: radial-gradient(circle at 50% 32%, color-mix(in srgb, var(--glow) 26%, transparent), transparent 65%);
+  filter: blur(30px);
+  opacity: 0.8;
+}
+.card > *, .today-card > *, .gm-card > * { position: relative; z-index: 1; }
+.card-interactive:hover, a.card:hover {
+  border-color: var(--card-border-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 20px 54px rgba(0,0,0,0.5);
+}
+
+/* ===== Buttons ===== */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  font-family: var(--font); font-size: 13px; font-weight: 700;
+  padding: 11px 18px; border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+  background: rgba(255,255,255,0.04); color: var(--text-primary);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background var(--dur-fast) ease, border-color var(--dur-fast) ease, transform var(--dur-fast) ease;
+}
+.btn:hover { background: rgba(255,255,255,0.08); border-color: var(--card-border-hover); }
+.btn:active { transform: scale(0.98); }
+.btn-primary {
+  border-color: color-mix(in srgb, var(--glow) 55%, transparent);
+  background: color-mix(in srgb, var(--glow) 22%, rgba(255,255,255,0.03));
+  color: #fff;
+}
+.btn-primary:hover { background: color-mix(in srgb, var(--glow) 32%, rgba(255,255,255,0.05)); }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--text-tertiary); }
+.btn-ghost:hover { color: var(--text-primary); background: rgba(255,255,255,0.05); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ===== Inputs ===== */
+.field, input.field, .gm-input {
+  width: 100%; padding: 10px 13px; border-radius: var(--radius-sm);
+  border: 1px solid var(--card-border);
+  background: rgba(0,0,0,0.25); color: var(--text-primary);
+  font-family: inherit; font-size: 13px; outline: none;
+  transition: border-color var(--dur-fast) ease;
+}
+.field:focus, input.field:focus, .gm-input:focus { border-color: color-mix(in srgb, var(--glow) 55%, transparent); }
+.field::placeholder, .gm-input::placeholder { color: var(--text-tertiary); }
+
+/* ===== Pills / tags ===== */
+.pill, .tag-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: var(--radius-pill);
+  font-size: 11.5px; font-weight: 700;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text-secondary);
+}
+.pill-good { color: var(--good); border-color: color-mix(in srgb, var(--good) 40%, transparent); background: color-mix(in srgb, var(--good) 12%, transparent); }
+.pill-warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.pill-bad  { color: var(--bad);  border-color: color-mix(in srgb, var(--bad) 40%, transparent);  background: color-mix(in srgb, var(--bad) 12%, transparent); }
+
+/* ===== Stat tiles ===== */
+.stat {
+  background: rgba(255,255,255,0.035); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--radius-md); padding: 14px;
+}
+.stat-num { font-family: var(--font-numeric); font-size: 24px; font-weight: 700; letter-spacing: -0.03em; color: var(--text-primary); line-height: 1; font-variant-numeric: tabular-nums; }
+.stat-label { margin-top: 6px; font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-tertiary); }
+.bar-track { height: 5px; border-radius: var(--radius-pill); background: rgba(255,255,255,0.07); overflow: hidden; }
+.bar-fill { height: 100%; border-radius: var(--radius-pill); transition: width var(--dur-slow) var(--ease); }
+
+/* ===== Status colour utilities ===== */
+.status-good { color: var(--good); }
+.status-warn { color: var(--warn); }
+.status-bad  { color: var(--bad); }
+
+/* ===== Organic orb primitive (reused per-page with a different
+   silhouette; --orb-color/--orb-color-2 supply data-driven tint) ===== */
+.orb-specks {
+  position: absolute; inset: 0; opacity: 0.9;
+  background-image:
+    radial-gradient(1.6px 1.6px at 18% 22%, rgba(255,255,255,0.9), transparent),
+    radial-gradient(1.1px 1.1px at 32% 12%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1.4px 1.4px at 48% 30%, rgba(255,255,255,0.75), transparent),
+    radial-gradient(1px 1px at 62% 14%, rgba(255,255,255,0.55), transparent),
+    radial-gradient(1.5px 1.5px at 78% 24%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1.1px 1.1px at 88% 40%, rgba(255,255,255,0.55), transparent),
+    radial-gradient(1.3px 1.3px at 12% 48%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 25% 65%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1.6px 1.6px at 40% 82%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1.1px 1.1px at 58% 88%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1.4px 1.4px at 74% 78%, rgba(255,255,255,0.65), transparent),
+    radial-gradient(1px 1px at 90% 62%, rgba(255,255,255,0.5), transparent);
+}
+
+@media (max-width: 480px) {
+  .card, .today-card, .gm-card { padding: 16px; border-radius: var(--radius-md); }
+}

@@ -7,7 +7,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a0a0b">
 <title>Progressive Overload Coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Playfair+Display:ital,wght@1,500;1,600;1,700&display=swap" rel="stylesheet">
 <script src="topbar.js" defer></script>
+<link rel="stylesheet" href="theme.css">
 
 <!-- =============================================================
      EDIT THIS BLOCK TO MAKE THE APP YOURS.
@@ -95,6 +99,7 @@ const CONFIG = {
 
 <style>
 :root {
+  --glow: #38BDF8;
   --bg: #0a0a0b;
   --bg-card: #111113;
   --text-1: #ffffff;
@@ -107,12 +112,13 @@ const CONFIG = {
   --good: #6ee7b7;
   --warn: #fbbf24;
   --bad: #ff8a8a;
-  --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+  --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
   --font-mono: ui-monospace, SF Mono, Menlo, Consolas, monospace;
 }
 * { box-sizing: border-box; }
 html, body {
-  margin: 0; padding: 0;
+  margin: 0 !important; padding: 0 !important;
   background: radial-gradient(ellipse 80% 60% at 50% 0%, #14141a 0%, #0a0a0b 60%);
   color: var(--text-1);
   font-family: var(--font);
@@ -224,7 +230,8 @@ img, video, canvas, svg { max-width: 100%; }
   margin-bottom: 18px;
 }
 .po-title {
-  font-size: 22px; font-weight: 700; letter-spacing: -0.015em;
+  font-family: var(--font-display); font-style: italic;
+  font-size: 24px; font-weight: 600; letter-spacing: -0.01em;
   margin: 0;
 }
 .po-icon-btn {
@@ -1268,6 +1275,8 @@ img, video, canvas, svg { max-width: 100%; }
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+<div class="starfield"></div>
+<div class="horizon"></div>
 
 <div class="po-shell">
   <button class="po-day-pill" type="button" id="dayPill" title="Tap to switch the day filter to today's split">
