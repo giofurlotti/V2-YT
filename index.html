@@ -15,6 +15,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="sync.js" defer></script>
 <script src="topbar.js" defer></script>
+<script src="jarvis.js" defer></script>
 <link rel="stylesheet" href="theme.css">
 
 <style>
@@ -495,50 +496,8 @@ body::before {
   border: 1px dashed color-mix(in srgb, var(--glow) 30%, transparent);
   pointer-events: none;
 }
-.jarvis-core {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 148px; height: 148px; z-index: 2; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-  border-radius: 44% 56% 62% 38% / 41% 46% 54% 59%;
-  overflow: hidden;
-  background:
-    radial-gradient(circle at 30% 26%, color-mix(in srgb, var(--glow) 80%, transparent), transparent 60%),
-    radial-gradient(circle at 72% 76%, color-mix(in srgb, var(--glow-2, var(--glow)) 55%, transparent), transparent 68%),
-    #0a0a0d;
-  box-shadow:
-    0 0 55px color-mix(in srgb, var(--glow) 50%, transparent),
-    inset 0 0 55px color-mix(in srgb, var(--glow) 25%, transparent);
-  animation: jarvis-morph 9s ease-in-out infinite alternate, jarvis-pulse 4s ease-in-out infinite;
-  transition: background 1.2s ease, box-shadow 1.2s ease, transform 0.15s ease;
-  -webkit-tap-highlight-color: transparent;
-}
-.jarvis-core:hover, .jarvis-core:focus-visible { transform: translate(-50%, -50%) scale(1.05); }
-.jarvis-core.listening { animation: jarvis-morph 9s ease-in-out infinite alternate, jarvis-listen-pulse 1.1s ease-in-out infinite; }
-.jarvis-core.thinking { filter: saturate(1.4); }
-@keyframes jarvis-morph {
-  0% { border-radius: 44% 56% 62% 38% / 41% 46% 54% 59%; }
-  50% { border-radius: 58% 42% 40% 60% / 55% 60% 40% 45%; }
-  100% { border-radius: 48% 52% 55% 45% / 47% 55% 45% 53%; }
-}
-@keyframes jarvis-pulse {
-  0%, 100% { box-shadow: 0 0 55px color-mix(in srgb, var(--glow) 50%, transparent), inset 0 0 55px color-mix(in srgb, var(--glow) 25%, transparent); }
-  50% { box-shadow: 0 0 74px color-mix(in srgb, var(--glow) 65%, transparent), inset 0 0 68px color-mix(in srgb, var(--glow) 32%, transparent); }
-}
-@keyframes jarvis-listen-pulse {
-  0%, 100% { box-shadow: 0 0 55px color-mix(in srgb, var(--glow) 60%, transparent); }
-  50% { box-shadow: 0 0 90px color-mix(in srgb, var(--glow) 85%, transparent); }
-}
-.jarvis-core-specks {
-  position: absolute; inset: 0; opacity: 0.9;
-  background-image:
-    radial-gradient(1.6px 1.6px at 18% 22%, rgba(255,255,255,0.9), transparent),
-    radial-gradient(1.2px 1.2px at 70% 18%, rgba(255,255,255,0.65), transparent),
-    radial-gradient(1.4px 1.4px at 30% 70%, rgba(255,255,255,0.7), transparent),
-    radial-gradient(1px 1px at 82% 62%, rgba(255,255,255,0.55), transparent),
-    radial-gradient(1.3px 1.3px at 55% 85%, rgba(255,255,255,0.6), transparent);
-}
-.jarvis-core-icon { position: relative; width: 30px; height: 30px; fill: #fff; stroke: none; filter: drop-shadow(0 0 8px rgba(255,255,255,0.8)); }
-.jarvis-core-label { position: relative; font-family: var(--font-display); font-style: italic; font-size: 14px; font-weight: 600; color: #fff; text-shadow: 0 0 10px rgba(0,0,0,0.4); }
+.jarvis-core { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 148px; height: 148px; z-index: 2; }
+.jarvis-core:hover, .jarvis-core:focus-visible { transform: translate(-50%, -50%) scale(1.06); }
 
 .orbit-node {
   position: absolute; top: 50%; left: 50%; width: 88px; height: 88px;
@@ -584,35 +543,6 @@ body::before {
   .jarvis-orbit > .orbit-node.n5 { order: 5; } .jarvis-orbit > .orbit-node.n6 { order: 6; }
 }
 
-/* ===== Jarvis chat modal ===== */
-.jarvis-modal { max-width: 560px; display: flex; flex-direction: column; }
-.jarvis-feed { display: flex; flex-direction: column; gap: 12px; max-height: 50vh; overflow-y: auto; margin-bottom: 14px; padding-right: 2px; }
-.jarvis-msg { max-width: 88%; font-size: 13.5px; line-height: 1.55; }
-.jarvis-msg.user { align-self: flex-end; }
-.jarvis-msg.jarvis { align-self: flex-start; width: 100%; }
-.jarvis-bubble { border-radius: 14px; padding: 11px 14px; }
-.jarvis-msg.user .jarvis-bubble { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10); color: var(--text-primary); }
-.jarvis-msg.jarvis .jarvis-bubble { background: rgba(255,255,255,0.04); border: 1px solid color-mix(in srgb, var(--glow) 35%, transparent); border-left: 3px solid var(--glow); color: var(--text-secondary); }
-.jarvis-msg.jarvis .jarvis-bubble b { color: var(--text-primary); }
-.jarvis-msg ul { margin: 6px 0 0; padding-left: 18px; }
-.jarvis-key-row { display: none; gap: 8px; margin-bottom: 12px; }
-.jarvis-key-row.show { display: flex; }
-.jarvis-composer { display: flex; gap: 8px; align-items: center; }
-.jarvis-composer .set-input { flex: 1; }
-.jarvis-mic-btn, .jarvis-send-btn {
-  width: 42px; height: 42px; flex-shrink: 0; border-radius: 50%; border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.04); color: var(--text-secondary); cursor: pointer;
-  display: flex; align-items: center; justify-content: center; transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-.jarvis-mic-btn svg, .jarvis-send-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.jarvis-mic-btn:hover, .jarvis-send-btn:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
-.jarvis-mic-btn.active { color: #fff; border-color: color-mix(in srgb, var(--glow) 60%, transparent); background: color-mix(in srgb, var(--glow) 30%, transparent); animation: jarvis-mic-pulse 1.1s ease-in-out infinite; }
-@keyframes jarvis-mic-pulse { 0%,100% { box-shadow: 0 0 0 rgba(0,0,0,0); } 50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--glow) 20%, transparent); } }
-.jarvis-voice-hint { font-size: 10.5px; color: var(--text-tertiary); margin-top: 8px; text-align: center; min-height: 13px; }
-.jarvis-dots { display: inline-flex; gap: 4px; }
-.jarvis-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--glow); opacity: 0.4; animation: jarvis-dot 1.2s ease-in-out infinite; }
-.jarvis-dots i:nth-child(2) { animation-delay: 0.2s; } .jarvis-dots i:nth-child(3) { animation-delay: 0.4s; }
-@keyframes jarvis-dot { 0%,100% { opacity: 0.35; transform: scale(1); } 50% { opacity: 1; transform: scale(1.4); } }
 </style>
 </head>
 <body>
@@ -759,9 +689,7 @@ body::before {
   <div class="jarvis-hub">
     <div class="jarvis-orbit">
       <div class="jarvis-core" id="jarvisCore" role="button" tabindex="0" aria-label="Talk to Jarvis">
-        <div class="jarvis-core-specks"></div>
         <svg class="jarvis-core-icon" viewBox="0 0 24 24"><path d="M12 2.5c.6 3.4 1.4 5.6 2.7 6.9 1.3 1.3 3.5 2.1 6.8 2.6-3.3.6-5.5 1.4-6.8 2.7-1.3 1.3-2.1 3.5-2.7 6.8-.6-3.3-1.4-5.5-2.7-6.8-1.3-1.3-3.5-2.1-6.8-2.7 3.3-.5 5.5-1.3 6.8-2.6C10.6 8.1 11.4 5.9 12 2.5Z"/></svg>
-        <span class="jarvis-core-label">Jarvis</span>
       </div>
 
       <a class="orbit-node n1" href="gym.html" style="--n-accent:#38BDF8">
@@ -800,33 +728,6 @@ body::before {
   </div>
 </div>
 
-<!-- ===== Jarvis (central AI, full dashboard context, optional voice) ===== -->
-<div class="modal-bg" id="jarvisBg">
-  <div class="modal jarvis-modal" role="dialog" aria-label="Jarvis">
-    <div class="modal-head">
-      <span class="modal-title">🧠 Jarvis</span>
-      <button class="modal-close" id="jarvisClose" type="button" aria-label="Close">×</button>
-    </div>
-
-    <div class="jarvis-feed" id="jarvisFeed"></div>
-
-    <div class="jarvis-key-row" id="jarvisKeyRow">
-      <input class="set-input" id="jarvisKeyInput" type="password" placeholder="paste your free OpenRouter API key (sk-or-…)" autocomplete="off">
-      <button class="whoop-btn" id="jarvisKeySave" type="button" style="width:auto;margin:0;white-space:nowrap">Save</button>
-    </div>
-
-    <div class="jarvis-composer">
-      <button class="jarvis-mic-btn" id="jarvisMicBtn" type="button" aria-label="Speak to Jarvis">
-        <svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z"/><path d="M19 11a7 7 0 0 1-14 0"/><path d="M12 18v3"/></svg>
-      </button>
-      <input class="set-input" id="jarvisInput" type="text" placeholder="Ask Jarvis anything…" autocomplete="off">
-      <button class="jarvis-send-btn" id="jarvisSendBtn" type="button" aria-label="Send">
-        <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
-      </button>
-    </div>
-    <div class="jarvis-voice-hint" id="jarvisVoiceHint"></div>
-  </div>
-</div>
 
 <!-- ===== Settings / Your Data ===== -->
 <div class="modal-bg" id="settingsBg">
@@ -900,24 +801,7 @@ body::before {
       </div>
       <button class="whoop-btn" id="whAction" type="button">Sync now</button>
     </div>
-
-    <div class="section-divider"></div>
-
-    <label class="field-label">Jarvis voice (optional)</label>
-    <div class="field">
-      <input class="set-input" id="elKeyInput" type="password" placeholder="ElevenLabs API key (free tier works)" autocomplete="off" style="margin-bottom:8px">
-      <input class="set-input" id="elVoiceInput" type="text" placeholder="Voice ID (from your ElevenLabs library)" autocomplete="off">
-    </div>
-    <p class="loc-empty" style="padding:0;text-align:left;font-style:normal;margin:0 0 4px">Leave blank and Jarvis still speaks — it just uses your browser's built-in voice instead.</p>
-
-    <div class="section-divider"></div>
-
-    <label class="field-label">Notes for Jarvis</label>
-    <div class="field">
-      <textarea class="set-input" id="jarvisNotesInput" rows="3" placeholder="Anything you want Jarvis to always know — goals, context, reminders…" style="resize:vertical;font-family:inherit"></textarea>
-    </div>
-    <button class="set-save" id="jarvisSettingsSave" type="button">Save voice & notes</button>
-    <div class="set-status" id="jarvisSettingsStatus"></div>
+    <p class="loc-empty" style="padding:0;text-align:left;font-style:normal;margin:10px 0 0">Jarvis's voice and notes now live in his own chat panel — tap the ⚙ there.</p>
   </div>
 </div>
 
@@ -1123,7 +1007,7 @@ body::before {
   }
 
   /* ---------- open / close ---------- */
-  function open() { populate(); renderWhoop(); populateJarvisSettings(); $('settingsBg').classList.add('show'); syncWhoop(); }
+  function open() { populate(); renderWhoop(); $('settingsBg').classList.add('show'); syncWhoop(); }
   function close() { $('settingsBg').classList.remove('show'); }
   $('settingsOpen').addEventListener('click', open);
   $('settingsClose').addEventListener('click', close);
@@ -1803,252 +1687,10 @@ body::before {
     $('whAction').textContent = 'Syncing…'; syncWhoop();
   });
 
-  /* ---------- Jarvis: central AI, full dashboard context, optional voice ----------
-     Brain: the same free OpenRouter key already shared across Nova/nutrition/gym
-     (nova_lite_api_key) — nothing new to set up there. Voice OUT: ElevenLabs if
-     the user pastes a key+voice id in Settings, otherwise the browser's free
-     built-in speechSynthesis (works everywhere, no key, just lower quality).
-     Voice IN: the browser's free built-in SpeechRecognition (Chrome/Edge/Safari;
-     no key, no server, nothing to configure). Context is a live dump of
-     everything this dashboard already knows — WHOOP, nutrition, gym, sun/vitD,
-     profile — plus a free-text "notes" field, NOT actual Claude conversation
-     history (no API exists for that; see the chat reply where this was explained). */
-  const JARVIS_OR_KEY = 'nova_lite_api_key';
-  const JARVIS_EL_KEY = 'elevenlabs_api_key';
-  const JARVIS_EL_VOICE = 'elevenlabs_voice_id';
-  const JARVIS_NOTES_KEY = 'jarvis_notes_v1';
-  const JARVIS_MODELS = ['google/gemma-4-31b-it:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-3-nano-30b-a3b:free'];
-
-  function jarvisCleanKey(v, storeKey) {
-    if (typeof v !== 'string' || v.length < 2) return v;
-    if (v[0] === '"' && v[v.length - 1] === '"') {
-      let cleaned; try { cleaned = JSON.parse(v); } catch (e) { cleaned = v.slice(1, -1); }
-      if (typeof cleaned === 'string' && storeKey) { try { localStorage.setItem(storeKey, cleaned); } catch (e) {} }
-      return cleaned;
-    }
-    return v;
-  }
-  function jarvisOrKey() { try { return jarvisCleanKey(localStorage.getItem(JARVIS_OR_KEY) || '', JARVIS_OR_KEY); } catch (e) { return ''; } }
-  function jarvisElKey() { try { return localStorage.getItem(JARVIS_EL_KEY) || ''; } catch (e) { return ''; } }
-  function jarvisElVoice() { try { return localStorage.getItem(JARVIS_EL_VOICE) || ''; } catch (e) { return ''; } }
-  function jarvisNotes() { try { return localStorage.getItem(JARVIS_NOTES_KEY) || ''; } catch (e) { return ''; } }
-
-  function populateJarvisSettings() {
-    $('elKeyInput').value = jarvisElKey();
-    $('elVoiceInput').value = jarvisElVoice();
-    $('jarvisNotesInput').value = jarvisNotes();
-  }
-  $('jarvisSettingsSave').addEventListener('click', () => {
-    try {
-      localStorage.setItem(JARVIS_EL_KEY, $('elKeyInput').value.trim());
-      localStorage.setItem(JARVIS_EL_VOICE, $('elVoiceInput').value.trim());
-      localStorage.setItem(JARVIS_NOTES_KEY, $('jarvisNotesInput').value);
-    } catch (e) {}
-    const s = $('jarvisSettingsStatus'); s.textContent = 'Saved.'; setTimeout(() => { s.textContent = ''; }, 1800);
-  });
-
-  async function loadJarvisGymData() {
-    const supa = whoopSupa();
-    if (supa) {
-      try {
-        const { data } = await supa.from('app_state').select('data').eq('key', 'po-coach').maybeSingle();
-        if (data && data.data && data.data.po_coach_v1) return data.data.po_coach_v1;
-      } catch (e) {}
-    }
-    return loadJSON('po_coach_v1', null);
-  }
-
-  async function buildJarvisContext() {
-    const profile = loadJSON(PROFILE_KEY, defaultProfile());
-    const nutrition = loadJSON('nutrition:v1', null);
-    const sun = loadJSON(SUN_KEY, null);
-    const gym = await loadJarvisGymData();
-    const ctx = {
-      today: new Date().toString(),
-      profile,
-      whoop: whStats || 'not connected or not synced yet',
-      nutritionToday: (function () {
-        if (!nutrition || !nutrition.logs) return null;
-        const k = calendarDateKey();
-        return nutrition.logs[k] || [];
-      })(),
-      sunAndSteps: sun,
-      gym: gym ? { exercises: gym.exercises, days: gym.days, recentLogs: gym.logs } : 'not logged yet',
-      userNotes: jarvisNotes() || null,
-    };
-    return JSON.stringify(ctx);
-  }
-
-  const JARVIS_SYS_BASE =
-    "You are Jarvis, a witty, sharp, unflappable AI assistant living inside the user's personal life-tracking " +
-    "dashboard — think Tony Stark's Jarvis, but for health, fitness, nutrition, and finance instead of a suit of armor. " +
-    "You can see everything this dashboard has already recorded: WHOOP recovery/sleep/strain, nutrition logs, gym " +
-    "training data, sun/steps/vitamin D, and any notes the user left for you. You do NOT have access to their " +
-    "conversations with any other AI assistant (including Claude) — only what's listed below. Answer concisely, " +
-    "reference specific numbers from the data when relevant, and keep a calm, capable, faintly dry tone. " +
-    "Dashboard data as JSON:\n";
-
-  /* ---------- Chat UI ---------- */
-  let jarvisMessages = [];
-  let jarvisBusy = false;
-  function jarvisRender() {
-    const feed = $('jarvisFeed');
-    feed.innerHTML = jarvisMessages.map((m) => {
-      const cls = m.role === 'user' ? 'user' : 'jarvis';
-      const html = m.pending
-        ? '<span class="jarvis-dots"><i></i><i></i><i></i></span>'
-        : jarvisFormat(m.text);
-      return '<div class="jarvis-msg ' + cls + '"><div class="jarvis-bubble">' + html + '</div></div>';
-    }).join('');
-    feed.scrollTop = feed.scrollHeight;
-  }
-  function jarvisEsc(s) { return String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
-  function jarvisFormat(text) {
-    let h = jarvisEsc(text).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
-    const lines = h.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    const items = [], loose = [];
-    lines.forEach((l) => {
-      if (/^[-•*]\s+/.test(l)) items.push('<li>' + l.replace(/^[-•*]\s+/, '') + '</li>');
-      else loose.push(l);
-    });
-    let out = loose.join('<br>');
-    if (items.length) out += (out ? '<br>' : '') + '<ul>' + items.join('') + '</ul>';
-    return out;
-  }
-
-  function jarvisSpeak(text) {
-    const plain = text.replace(/\*\*/g, '').replace(/[-•*]\s+/g, '');
-    const key = jarvisElKey(), voice = jarvisElVoice();
-    if (key && voice) {
-      fetch('https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(voice), {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'xi-api-key': key, accept: 'audio/mpeg' },
-        body: JSON.stringify({ text: plain, model_id: 'eleven_turbo_v2_5' }),
-      }).then((r) => {
-        if (!r.ok) throw new Error('elevenlabs ' + r.status);
-        return r.blob();
-      }).then((blob) => {
-        const audio = new Audio(URL.createObjectURL(blob));
-        audio.play().catch(() => {});
-      }).catch(() => { jarvisSpeakBrowser(plain); });
-    } else {
-      jarvisSpeakBrowser(plain);
-    }
-  }
-  function jarvisSpeakBrowser(text) {
-    if (!('speechSynthesis' in window)) return;
-    try {
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.rate = 1.02; u.pitch = 0.92;
-      window.speechSynthesis.speak(u);
-    } catch (e) {}
-  }
-
-  async function jarvisAsk(text) {
-    text = (text || '').trim();
-    if (!text || jarvisBusy) return;
-    const key = jarvisOrKey();
-    if (!key) { $('jarvisKeyRow').classList.add('show'); return; }
-    jarvisBusy = true;
-    jarvisMessages.push({ role: 'user', text });
-    const pending = { role: 'jarvis', text: '', pending: true };
-    jarvisMessages.push(pending);
-    jarvisRender();
-    $('jarvisInput').value = '';
-    $('jarvisCore').classList.add('thinking');
-    try {
-      const ctx = await buildJarvisContext();
-      let reply = null, lastErrMsg = 'Something went wrong — check your API key.';
-      for (const model of JARVIS_MODELS) {
-        try {
-          const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
-            body: JSON.stringify({
-              model,
-              max_tokens: 700,
-              messages: [{ role: 'system', content: JARVIS_SYS_BASE + ctx }, { role: 'user', content: text }],
-            }),
-          });
-          const json = await res.json();
-          if (json.error) { lastErrMsg = json.error.message || lastErrMsg; continue; }
-          const content = json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content;
-          if (!content) continue;
-          reply = content;
-          break;
-        } catch (e) { lastErrMsg = 'Could not reach OpenRouter — check your connection.'; }
-      }
-      pending.pending = false;
-      pending.text = reply || lastErrMsg;
-      jarvisRender();
-      if (reply) jarvisSpeak(reply);
-    } catch (e) {
-      pending.pending = false;
-      pending.text = 'Something went wrong on my end.';
-      jarvisRender();
-    }
-    $('jarvisCore').classList.remove('thinking');
-    jarvisBusy = false;
-  }
-
-  /* ---------- Speech recognition (voice in) ---------- */
-  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let jarvisRec = null, jarvisListening = false;
-  if (SpeechRec) {
-    jarvisRec = new SpeechRec();
-    jarvisRec.continuous = false;
-    jarvisRec.interimResults = false;
-    jarvisRec.lang = 'en-US';
-    jarvisRec.onresult = (e) => {
-      const said = e.results[0][0].transcript;
-      $('jarvisInput').value = said;
-      jarvisAsk(said);
-    };
-    jarvisRec.onend = () => {
-      jarvisListening = false;
-      $('jarvisMicBtn').classList.remove('active');
-      $('jarvisCore').classList.remove('listening');
-      $('jarvisVoiceHint').textContent = '';
-    };
-    jarvisRec.onerror = (e) => {
-      $('jarvisVoiceHint').textContent = e.error === 'not-allowed' ? 'Microphone permission denied.' : 'Could not hear you — try again.';
-    };
-  }
-  $('jarvisMicBtn').addEventListener('click', () => {
-    if (!jarvisRec) { $('jarvisVoiceHint').textContent = "This browser doesn't support voice input — try Chrome or Edge, or just type."; return; }
-    if (jarvisListening) { jarvisRec.stop(); return; }
-    jarvisListening = true;
-    $('jarvisMicBtn').classList.add('active');
-    $('jarvisCore').classList.add('listening');
-    $('jarvisVoiceHint').textContent = 'Listening…';
-    try { jarvisRec.start(); } catch (e) {}
-  });
-
-  /* ---------- Modal open/close + wiring ---------- */
-  function jarvisOpen() {
-    $('jarvisKeyRow').classList.toggle('show', !jarvisOrKey());
-    if (!jarvisMessages.length) {
-      jarvisMessages.push({ role: 'jarvis', text: "Evening. I can see your WHOOP, nutrition, training, and sun data — ask me anything, or tap the mic and talk to me." });
-      jarvisRender();
-    }
-    $('jarvisBg').classList.add('show');
-    setTimeout(() => $('jarvisInput').focus(), 50);
-  }
-  function jarvisClose() { $('jarvisBg').classList.remove('show'); if (jarvisListening) jarvisRec.stop(); }
-  $('jarvisCore').addEventListener('click', jarvisOpen);
-  $('jarvisCore').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); jarvisOpen(); } });
-  $('jarvisClose').addEventListener('click', jarvisClose);
-  $('jarvisBg').addEventListener('click', (e) => { if (e.target === $('jarvisBg')) jarvisClose(); });
-  $('jarvisSendBtn').addEventListener('click', () => jarvisAsk($('jarvisInput').value));
-  $('jarvisInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') jarvisAsk($('jarvisInput').value); });
-  $('jarvisKeySave').addEventListener('click', () => {
-    const k = $('jarvisKeyInput').value.trim();
-    if (!k) return;
-    try { localStorage.setItem(JARVIS_OR_KEY, k); } catch (e) {}
-    $('jarvisKeyInput').value = '';
-    $('jarvisKeyRow').classList.remove('show');
-  });
+  // Jarvis (the central AI orb + chat) now lives entirely in jarvis.js,
+  // shared across every page — see that file for the brain, voice, and
+  // context logic. This page just supplies the hero orb + orbit markup
+  // jarvis.js finds and wires up (#jarvisCore).
 
   /* ---------- Today panel: initial load ---------- */
   updateReadinessRing();
