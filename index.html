@@ -23,12 +23,34 @@
    The bottom tab bar stays (still useful navigation). */
 #topbar { display: none !important; }
 
-/* ===== TODAY PANEL (readiness, weather, activity pattern, tips) ===== */
-.today-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-  margin-bottom: 18px;
+/* ===== Aurora backdrop: Main gets a two-tone glow that shifts with the
+   time of day (see applyTimeOfDayTheme in the script below), instead of
+   the single fixed hue every other page uses. ===== */
+body::before {
+  background:
+    radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--glow) 32%, transparent), transparent 46%),
+    radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--glow-2, var(--glow)) 22%, transparent), transparent 50%),
+    radial-gradient(circle at 80% 85%, color-mix(in srgb, var(--glow) 14%, transparent), transparent 55%);
+  transition: background 1.4s ease;
+}
+.dash-title { transition: filter 1.4s ease; }
+
+/* ===== TODAY PANEL — Readiness leads as a wide hero, everything else
+   follows in a row underneath instead of a uniform 2x2 grid. ===== */
+.today-grid { display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
+.today-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.readiness-hero-inner { display: flex; align-items: center; gap: 32px; flex-wrap: wrap; }
+.readiness-hero-left { flex-shrink: 0; }
+.readiness-hero-right { flex: 1; min-width: 220px; }
+.readiness-hero-right .readiness-stats { grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.readiness-hero-right .readiness-stats span { font-size: 22px; }
+@media (max-width: 720px) {
+  .today-row { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .readiness-hero-inner { flex-direction: column; align-items: stretch; text-align: center; }
+  .readiness-hero-right .readiness-stats { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .today-row { grid-template-columns: 1fr; }
 }
 .productivity-body { display: flex; align-items: center; gap: 14px; }
 .productivity-icon svg {
@@ -473,8 +495,8 @@
   <div class="hub-head">
     <div>
       <div class="hub-eyebrow" id="hubDate">&nbsp;</div>
-      <h1 class="dash-title">Giorgio's Dashboard</h1>
-      <p class="dash-sub">Everything, in one place.</p>
+      <h1 class="dash-title" id="hubGreeting">Giorgio's Dashboard</h1>
+      <p class="dash-sub">Here's where things stand right now.</p>
     </div>
     <button class="gear-btn" id="settingsOpen" type="button" aria-label="Settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -487,38 +509,45 @@
   <div class="today-grid">
     <div class="today-card readiness-card">
       <div class="readiness-bg" aria-hidden="true"></div>
-      <div class="today-card-label">Readiness</div>
-      <div class="readiness-ring-wrap">
-        <svg class="readiness-ring" viewBox="0 0 140 140">
-          <circle class="ring-track" cx="70" cy="70" r="60"/>
-          <circle class="ring-fill" id="readinessRingFill" cx="70" cy="70" r="60"/>
-          <circle class="ring-track-inner" cx="70" cy="70" r="47"/>
-          <circle class="ring-fill-inner" id="sleepRingFill" cx="70" cy="70" r="47"/>
-        </svg>
-        <div class="readiness-center">
-          <div class="readiness-split">
-            <div class="readiness-pct-row">
-              <span class="readiness-pct" id="readinessPct">—</span>
-              <span class="readiness-trend" id="readinessTrend"></span>
+      <div class="readiness-hero-inner">
+        <div class="readiness-hero-left">
+          <div class="today-card-label">Readiness</div>
+          <div class="readiness-ring-wrap">
+            <svg class="readiness-ring" viewBox="0 0 140 140">
+              <circle class="ring-track" cx="70" cy="70" r="60"/>
+              <circle class="ring-fill" id="readinessRingFill" cx="70" cy="70" r="60"/>
+              <circle class="ring-track-inner" cx="70" cy="70" r="47"/>
+              <circle class="ring-fill-inner" id="sleepRingFill" cx="70" cy="70" r="47"/>
+            </svg>
+            <div class="readiness-center">
+              <div class="readiness-split">
+                <div class="readiness-pct-row">
+                  <span class="readiness-pct" id="readinessPct">—</span>
+                  <span class="readiness-trend" id="readinessTrend"></span>
+                </div>
+                <div class="readiness-divider"></div>
+                <span class="readiness-pct-sleep" id="readinessPctSleep">—</span>
+              </div>
             </div>
-            <div class="readiness-divider"></div>
-            <span class="readiness-pct-sleep" id="readinessPctSleep">—</span>
+          </div>
+          <div class="readiness-headline" id="readinessHeadline">Connect WHOOP in Settings</div>
+          <div class="ring-legend">
+            <span class="ring-legend-item"><span class="ring-legend-dot recovery"></span>Recovery</span>
+            <span class="ring-legend-item"><span class="ring-legend-dot sleep"></span>Sleep</span>
+          </div>
+        </div>
+        <div class="readiness-hero-right">
+          <div class="readiness-stats">
+            <div><span id="readinessSleep">—</span><label>Sleep</label></div>
+            <div><span id="readinessRhr">—</span><label>Rest HR</label></div>
+            <div><span id="readinessHrv">—</span><label>HRV</label></div>
+            <div><span id="readinessStrain">—</span><label>Strain</label></div>
           </div>
         </div>
       </div>
-      <div class="readiness-headline" id="readinessHeadline">Connect WHOOP in Settings</div>
-      <div class="ring-legend">
-        <span class="ring-legend-item"><span class="ring-legend-dot recovery"></span>Recovery</span>
-        <span class="ring-legend-item"><span class="ring-legend-dot sleep"></span>Sleep</span>
-      </div>
-      <div class="readiness-stats">
-        <div><span id="readinessSleep">—</span><label>Sleep</label></div>
-        <div><span id="readinessRhr">—</span><label>Rest HR</label></div>
-        <div><span id="readinessHrv">—</span><label>HRV</label></div>
-        <div><span id="readinessStrain">—</span><label>Strain</label></div>
-      </div>
     </div>
 
+    <div class="today-row">
     <div class="today-card weather-card">
       <div class="weather-bg" id="weatherBg" aria-hidden="true">
         <div class="weather-stars"></div>
@@ -595,6 +624,7 @@
           <div class="productivity-sub" id="bedtimeSub">Uses your sleep goal, average wake time, and today's strain</div>
         </div>
       </div>
+    </div>
     </div>
   </div>
 
@@ -859,6 +889,42 @@
   const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const now = new Date();
   $('hubDate').textContent = DAY_NAMES[now.getDay()] + ', ' + MONTH_NAMES[now.getMonth()] + ' ' + now.getDate();
+
+  /* ---------- Time-of-day: the whole page's mood shifts with the clock ----------
+     Same --glow/--glow-2 mechanism the rest of the app uses for its per-section
+     accent, just computed live from the hour instead of fixed — dawn amber,
+     midday sky blue, dusk violet, deep indigo at night. Re-applied on an
+     interval so a tab left open across a boundary (e.g. sunrise) catches up
+     without a reload. */
+  const TIME_BANDS = [
+    { end: 5,  glow: '#6366F1', glow2: '#7C3AED', name: 'night' },
+    { end: 8,  glow: '#F2A65A', glow2: '#F472B6', name: 'dawn' },
+    { end: 17, glow: '#38BDF8', glow2: '#67E8F9', name: 'day' },
+    { end: 21, glow: '#A78BFA', glow2: '#FB7185', name: 'dusk' },
+    { end: 24, glow: '#6366F1', glow2: '#7C3AED', name: 'night' },
+  ];
+  function applyTimeOfDayTheme() {
+    const h = new Date().getHours();
+    const band = TIME_BANDS.find((b) => h < b.end) || TIME_BANDS[TIME_BANDS.length - 1];
+    document.documentElement.style.setProperty('--glow', band.glow);
+    document.documentElement.style.setProperty('--glow-2', band.glow2);
+    document.body.dataset.timeOfDay = band.name;
+  }
+  applyTimeOfDayTheme();
+  setInterval(applyTimeOfDayTheme, 15 * 60 * 1000);
+
+  function updateGreeting() {
+    const h = new Date().getHours();
+    let g = 'Good morning';
+    if (h < 5) g = 'Still up';
+    else if (h < 12) g = 'Good morning';
+    else if (h < 17) g = 'Good afternoon';
+    else if (h < 21) g = 'Good evening';
+    else g = 'Good night';
+    $('hubGreeting').textContent = g + ', Giorgio';
+  }
+  updateGreeting();
+  setInterval(updateGreeting, 15 * 60 * 1000);
 
   function loadJSON(k, f) { try { return JSON.parse(localStorage.getItem(k)) || f; } catch (e) { return f; } }
   function saveJSON(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
