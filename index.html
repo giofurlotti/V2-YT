@@ -31,24 +31,43 @@
    a lighter navy canvas (not near-black like the rest of the dashboard),
    a faint blueprint grid, and sharper, more angular card corners so it
    reads as an instrument panel rather than a soft glassy app screen. */
-:root { --glow: #2DE1FC; --glow-2: #38BDF8; --bg: #0A1622; }
+:root {
+  --glow: #2DE1FC; --glow-2: #38BDF8; --bg: #050F1A;
+  --card-bg: rgba(10,28,44,0.55);
+  --card-border: rgba(56,189,248,0.16);
+  --card-border-hover: rgba(56,189,248,0.36);
+  --text-secondary: #A9C9DE;
+  --text-tertiary: #6F94AD;
+}
 .page { max-width: 1320px; }
 body::before {
   background:
-    radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--glow) 34%, transparent), transparent 46%),
-    radial-gradient(circle at 88% 14%, color-mix(in srgb, var(--glow-2) 26%, transparent), transparent 50%),
-    radial-gradient(circle at 50% 95%, color-mix(in srgb, var(--glow) 22%, transparent), transparent 55%);
+    radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--glow) 42%, transparent), transparent 48%),
+    radial-gradient(circle at 88% 14%, color-mix(in srgb, var(--glow-2) 34%, transparent), transparent 52%),
+    radial-gradient(circle at 50% 95%, color-mix(in srgb, var(--glow) 30%, transparent), transparent 58%);
 }
 /* Faint technical grid — blueprint / HUD texture, very low opacity so it
    reads as an ambient surface, not a distraction. */
 body::after {
   background-image:
-    linear-gradient(color-mix(in srgb, var(--glow) 7%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--glow) 7%, transparent) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--glow) 11%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--glow) 11%, transparent) 1px, transparent 1px);
   background-size: 42px 42px;
 }
 .today-card, .orbit-link { border-radius: var(--radius-sm) !important; }
-.today-card { border-color: color-mix(in srgb, var(--glow) 22%, var(--card-border)) !important; }
+.today-card { border-color: color-mix(in srgb, var(--glow) 30%, var(--card-border)) !important; }
+
+/* Side widgets double as nav links to their full page — a small arrow marks
+   the affordance; buttons/inputs inside them still work normally (JS keeps
+   clicks on those from triggering navigation). */
+.card-link { cursor: pointer; }
+.card-link:hover { border-color: color-mix(in srgb, var(--glow) 55%, var(--card-border)) !important; transform: translateY(-2px); }
+.card-link::after {
+  content: '→'; position: absolute; z-index: 1; top: 16px; right: 18px;
+  font-size: 13px; color: var(--text-tertiary); opacity: 0.55; transition: opacity 0.15s, transform 0.15s;
+}
+.card-link:hover::after { opacity: 0.95; transform: translateX(2px); color: var(--glow); }
+.dash-title, h1, h2 { text-shadow: 0 0 24px color-mix(in srgb, var(--glow) 22%, transparent); }
 
 /* ===== Jarvis stage: he's the only thing in the center; every card and
    nav link that used to fill the page lives in two flanking side rails.
@@ -69,10 +88,17 @@ body::after {
   text-decoration: none; transition: border-color var(--dur-med) var(--ease), transform var(--dur-med) var(--ease);
 }
 .orbit-link:hover { border-color: color-mix(in srgb, var(--n-accent) 55%, transparent); transform: translateX(3px); }
+.orbit-link::after {
+  content: '→'; margin-left: auto; padding-left: 8px; font-size: 12px; color: var(--text-tertiary);
+  opacity: 0.5; transition: opacity 0.15s, transform 0.15s, color 0.15s; flex-shrink: 0;
+}
+.orbit-link:hover::after { opacity: 1; transform: translateX(2px); color: var(--n-accent); }
 .orbit-link-icon { flex-shrink: 0; display: flex; }
 .orbit-link-icon svg { width: 19px; height: 19px; stroke: var(--n-accent); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--n-accent) 65%, transparent)); }
 .orbit-link-icon svg.filled { fill: var(--n-accent); stroke: none; }
+.orbit-link-copy { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .orbit-link-label { font-size: 12.5px; font-weight: 700; color: var(--text-secondary); }
+.orbit-link-sub { font-size: 10.5px; color: var(--text-tertiary); font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Jarvis gets the full stage height — HUD corner brackets frame him like a
    targeting reticle instead of sitting in plain empty space. */
@@ -91,7 +117,8 @@ body::after {
 .jarvis-bracket-l { bottom: 0; left: 50%; margin-left: -180px; border-bottom-width: 2px; border-left-width: 2px; }
 .jarvis-bracket-r { bottom: 0; right: 50%; margin-right: -180px; border-bottom-width: 2px; border-right-width: 2px; }
 .jarvis-center .jarvis-core { width: 320px; height: 320px; }
-.jarvis-center .jarvis-hint { margin-top: 28px; max-width: 320px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; }
+.jarvis-particles { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.jarvis-center .jarvis-hint { position: relative; z-index: 1; margin-top: 28px; max-width: 320px; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; }
 
 @media (min-width: 1000px) {
   .jarvis-stage { display: grid; grid-template-columns: 250px minmax(0, 1fr) 250px; gap: 30px; align-items: start; }
@@ -567,14 +594,86 @@ body::after {
     <div class="jarvis-center">
       <div class="jarvis-bracket-l"></div>
       <div class="jarvis-bracket-r"></div>
+      <canvas class="jarvis-particles" id="jarvisParticles" aria-hidden="true"></canvas>
       <div class="jarvis-core" id="jarvisCore" role="button" tabindex="0" aria-label="Talk to Jarvis">
         <svg class="jarvis-core-icon" viewBox="0 0 24 24"><path d="M12 2.5c.6 3.4 1.4 5.6 2.7 6.9 1.3 1.3 3.5 2.1 6.8 2.6-3.3.6-5.5 1.4-6.8 2.7-1.3 1.3-2.1 3.5-2.7 6.8-.6-3.3-1.4-5.5-2.7-6.8-1.3-1.3-3.5-2.1-6.8-2.7 3.3-.5 5.5-1.3 6.8-2.6C10.6 8.1 11.4 5.9 12 2.5Z"/></svg>
       </div>
       <p class="jarvis-hint">Say "Jarvis" or tap — he can see everything on this dashboard</p>
     </div>
+    <script>
+    (function () {
+      'use strict';
+      var canvas = document.getElementById('jarvisParticles');
+      if (!canvas || !canvas.getContext) return;
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      var ctx = canvas.getContext('2d');
+      var wrap = canvas.parentElement;
+      var w = 0, h = 0, dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var COLORS = ['#2DE1FC', '#38BDF8', '#7DD3FC', '#67E8F9'];
+      var particles = [];
+      function makeParticle() {
+        return {
+          x: Math.random() * w, y: Math.random() * h,
+          r: 0.8 + Math.random() * 1.8,
+          vx: (Math.random() - 0.5) * 0.18, vy: (Math.random() - 0.5) * 0.18,
+          color: COLORS[Math.floor(Math.random() * COLORS.length)],
+          baseAlpha: 0.35 + Math.random() * 0.45,
+        };
+      }
+      function resize() {
+        var r = wrap.getBoundingClientRect();
+        w = r.width; h = r.height;
+        canvas.width = w * dpr; canvas.height = h * dpr;
+        canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        var count = w < 340 ? 16 : (w < 700 ? 26 : 36);
+        particles = [];
+        for (var i = 0; i < count; i++) particles.push(makeParticle());
+      }
+      resize();
+      window.addEventListener('resize', resize);
+      var t = 0;
+      var LINK_DIST = 90;
+      function tick() {
+        t++;
+        ctx.clearRect(0, 0, w, h);
+        for (var i = 0; i < particles.length; i++) {
+          var p = particles[i];
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < -10) p.x = w + 10; if (p.x > w + 10) p.x = -10;
+          if (p.y < -10) p.y = h + 10; if (p.y > h + 10) p.y = -10;
+          for (var j = i + 1; j < particles.length; j++) {
+            var q = particles[j];
+            var dx = p.x - q.x, dy = p.y - q.y;
+            var dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < LINK_DIST) {
+              ctx.globalAlpha = (1 - dist / LINK_DIST) * 0.16;
+              ctx.strokeStyle = '#38BDF8';
+              ctx.lineWidth = 1;
+              ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+            }
+          }
+        }
+        for (var k = 0; k < particles.length; k++) {
+          var pt = particles[k];
+          var alpha = pt.baseAlpha * (0.7 + 0.3 * Math.sin(t * 0.02 + k));
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+          ctx.fillStyle = pt.color;
+          ctx.globalAlpha = alpha;
+          ctx.shadowColor = pt.color;
+          ctx.shadowBlur = 5;
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    })();
+    </script>
 
     <div class="jarvis-side jarvis-side-left">
-      <div class="today-card readiness-card">
+      <div class="today-card readiness-card card-link" data-nav="health.html">
         <div class="readiness-bg" aria-hidden="true"></div>
         <div class="readiness-hero-inner">
           <div class="readiness-hero-left">
@@ -601,14 +700,6 @@ body::after {
             <div class="ring-legend">
               <span class="ring-legend-item"><span class="ring-legend-dot recovery"></span>Recovery</span>
               <span class="ring-legend-item"><span class="ring-legend-dot sleep"></span>Sleep</span>
-            </div>
-          </div>
-          <div class="readiness-hero-right">
-            <div class="readiness-stats">
-              <div><span id="readinessSleep">—</span><label>Sleep</label></div>
-              <div><span id="readinessRhr">—</span><label>Rest HR</label></div>
-              <div><span id="readinessHrv">—</span><label>HRV</label></div>
-              <div><span id="readinessStrain">—</span><label>Strain</label></div>
             </div>
           </div>
         </div>
@@ -648,21 +739,21 @@ body::after {
       <div class="orbit-links">
         <a class="orbit-link" href="gym.html" style="--n-accent:#38BDF8">
           <span class="orbit-link-icon"><svg viewBox="0 0 24 24"><rect x="1.5" y="9" width="3" height="6" rx="1"/><rect x="19.5" y="9" width="3" height="6" rx="1"/><line x1="6" y1="12" x2="18" y2="12"/><rect x="5.5" y="6.5" width="3" height="11" rx="1"/><rect x="15.5" y="6.5" width="3" height="11" rx="1"/></svg></span>
-          <span class="orbit-link-label">Fitness</span>
+          <span class="orbit-link-copy"><span class="orbit-link-label">Fitness</span><span class="orbit-link-sub" id="olFitness">—</span></span>
         </a>
         <a class="orbit-link" href="health.html" style="--n-accent:#22D3EE">
           <span class="orbit-link-icon"><svg viewBox="0 0 24 24"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span>
-          <span class="orbit-link-label">Health</span>
+          <span class="orbit-link-copy"><span class="orbit-link-label">Health</span><span class="orbit-link-sub" id="olHealth">—</span></span>
         </a>
         <a class="orbit-link" href="nutrition.html" style="--n-accent:#60A5FA">
           <span class="orbit-link-icon"><svg viewBox="0 0 24 24"><path d="M3 2v7a2 2 0 0 0 2 2h.5a2 2 0 0 0 2-2V2"/><path d="M6.5 11v11"/><path d="M17.5 2c-2 0-3.5 2.5-3.5 6s1 5 3.5 5 1 8 1 8"/></svg></span>
-          <span class="orbit-link-label">Nutrition</span>
+          <span class="orbit-link-copy"><span class="orbit-link-label">Nutrition</span><span class="orbit-link-sub" id="olNutrition">—</span></span>
         </a>
       </div>
     </div>
 
     <div class="jarvis-side jarvis-side-right">
-      <div class="today-card sun-card">
+      <div class="today-card sun-card card-link" data-nav="nutrition.html">
         <div class="today-card-label">Sun & vitamin D</div>
         <div class="sun-stat-row">
           <div class="sun-stat"><div class="sun-stat-num" id="sunSteps">0</div><div class="sun-stat-label">Steps</div></div>
@@ -681,10 +772,10 @@ body::after {
           </div>
         </div>
         <div class="sun-hint" id="sunMinutesHint"></div>
-        <div class="sun-note">Live tracking weighs each minute by the UV index during that exact hour, so it adapts as UV rises and falls through the day. Manually typed minutes use the current hour's UV instead. A rough guide, not a clinical measurement — only counts while this tab stays open. Added automatically to today's Vitamin D in Nutrition.</div>
+        <div class="sun-note">Adds automatically to today's Vitamin D in Nutrition.</div>
       </div>
 
-      <div class="today-card">
+      <div class="today-card card-link" data-nav="health.html">
         <div class="today-card-label">Focus & bedtime</div>
         <div class="productivity-body">
           <span class="productivity-icon">
@@ -719,15 +810,15 @@ body::after {
               <line x1="21" y1="4.5" x2="21" y2="19"/><rect x="19.5" y="7" width="3" height="6" rx="1"/>
             </svg>
           </span>
-          <span class="orbit-link-label">Finance</span>
+          <span class="orbit-link-copy"><span class="orbit-link-label">Finance</span><span class="orbit-link-sub" id="olFinance">—</span></span>
         </a>
         <a class="orbit-link" href="self-improvement.html" style="--n-accent:#67E8F9">
           <span class="orbit-link-icon"><svg viewBox="0 0 24 24"><path d="M3 17 9 11 13 15 21 7"/><path d="M15 7h6v6"/></svg></span>
-          <span class="orbit-link-label">Growth</span>
+          <span class="orbit-link-copy"><span class="orbit-link-label">Growth</span><span class="orbit-link-sub" id="olGrowth">Fitness age & habits</span></span>
         </a>
         <a class="orbit-link" href="nova-lite.html" style="--n-accent:#3B82F6">
           <span class="orbit-link-icon"><svg class="filled" viewBox="0 0 24 24"><path d="M12 2.5c.6 3.4 1.4 5.6 2.7 6.9 1.3 1.3 3.5 2.1 6.8 2.6-3.3.6-5.5 1.4-6.8 2.7-1.3 1.3-2.1 3.5-2.7 6.8-.6-3.3-1.4-5.5-2.7-6.8-1.3-1.3-3.5-2.1-6.8-2.7 3.3-.5 5.5-1.3 6.8-2.6C10.6 8.1 11.4 5.9 12 2.5Z"/></svg></span>
-          <span class="orbit-link-label">Nova</span>
+          <span class="orbit-link-copy"><span class="orbit-link-label">Nova</span><span class="orbit-link-sub">AI coach & estimator</span></span>
         </a>
       </div>
     </div>
@@ -1102,10 +1193,6 @@ body::after {
       $('readinessHeadline').textContent = 'Connect WHOOP in Settings';
       fill.style.strokeDashoffset = RING_CIRCUMFERENCE;
       fillInner.style.strokeDashoffset = RING_CIRCUMFERENCE_INNER;
-      $('readinessSleep').textContent = '—';
-      $('readinessRhr').textContent = '—';
-      $('readinessHrv').textContent = '—';
-      $('readinessStrain').textContent = '—';
       return;
     }
     if (rec == null) {
@@ -1135,10 +1222,6 @@ body::after {
 
     const sleepPct = whStats.sleep != null ? whStats.sleep : 0;
     fillInner.style.strokeDashoffset = RING_CIRCUMFERENCE_INNER * (1 - sleepPct / 100);
-    $('readinessSleep').textContent = whStats.sleep != null ? whStats.sleep + '%' : '—';
-    $('readinessRhr').textContent = whStats.rhr != null ? whStats.rhr : '—';
-    $('readinessHrv').textContent = whStats.hrv != null ? whStats.hrv : '—';
-    $('readinessStrain').textContent = whStats.strain != null ? whStats.strain : '—';
   }
 
   /* ---------- Weather (Open-Meteo, geolocation-based, no API key) ---------- */
@@ -1683,6 +1766,61 @@ body::after {
   loadProductivityWindow();
   loadBedtime();
   renderSunCard();
+
+  /* Side widgets navigate to their full page on click — but not when the
+     click lands on one of their own interactive controls (weather's
+     location pin, sun tracking's button/inputs). */
+  document.querySelectorAll('.card-link[data-nav]').forEach((card) => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('button, input, a, select, textarea')) return;
+      window.location.href = card.getAttribute('data-nav');
+    });
+  });
+
+  /* Nav tiles (Fitness/Health/Nutrition/Finance) get a one-line live
+     snippet pulled straight from each page's own localStorage — enough to
+     be useful at a glance without duplicating the full page here. */
+  function renderOrbitWidgets() {
+    function dk(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+    const todayKey = dk(new Date());
+
+    try {
+      const doneDays = loadJSON('po_coach_workout_done', {});
+      const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const count = Object.keys(doneDays).filter((k) => { const t = Date.parse(doneDays[k]); return !isNaN(t) && t >= cutoff; }).length;
+      $('olFitness').textContent = count + (count === 1 ? ' workout this wk' : ' workouts this wk');
+    } catch (e) {}
+
+    try {
+      const items = loadJSON('stack:items', []);
+      const now = new Date();
+      const activeDay = now.getHours() < 6 ? dk(new Date(now.getTime() - 86400000)) : todayKey;
+      const taken = loadJSON('stack:taken:' + activeDay, {});
+      if (Array.isArray(items) && items.length) {
+        const doneCt = items.filter((it) => taken[it.id]).length;
+        $('olHealth').textContent = doneCt + '/' + items.length + ' supplements today';
+      } else {
+        $('olHealth').textContent = 'Recovery, sleep & vitals';
+      }
+    } catch (e) {}
+
+    try {
+      const nutr = loadJSON('nutrition:v1', null);
+      const meals = (nutr && nutr.logs && nutr.logs[todayKey]) || [];
+      const cal = meals.reduce((sum, m) => sum + (+m.calories || 0), 0);
+      $('olNutrition').textContent = meals.length ? Math.round(cal) + ' kcal today' : 'Nothing logged yet';
+    } catch (e) {}
+
+    try {
+      const nw = loadJSON('nw:history', []);
+      if (Array.isArray(nw) && nw.length) {
+        $('olFinance').textContent = '$' + Math.round(nw[nw.length - 1].v).toLocaleString();
+      } else {
+        $('olFinance').textContent = 'Net worth & spending';
+      }
+    } catch (e) {}
+  }
+  renderOrbitWidgets();
 })();
 </script>
 </body>

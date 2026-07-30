@@ -40,7 +40,7 @@
   --jarvis-cyan-deep: #0891B2;
 }
 .jarvis-core {
-  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
   border-radius: 50%; cursor: pointer; overflow: visible; -webkit-tap-highlight-color: transparent;
   background: radial-gradient(circle at 34% 28%, #eafeff 0%, var(--jarvis-cyan) 46%, var(--jarvis-cyan-deep) 100%);
   box-shadow: 0 0 34px color-mix(in srgb, var(--jarvis-cyan) 60%, transparent), inset 0 0 24px rgba(255,255,255,0.3);
@@ -71,9 +71,6 @@
           mask: radial-gradient(circle, transparent 70%, #000 72%, #000 76%, transparent 78%);
 }
 .jarvis-core-icon { position: relative; z-index: 1; fill: #06282e; stroke: none; }
-.jarvis-core-readout { position: relative; z-index: 1; font-family: var(--font-mono, monospace); font-weight: 700; color: #06282e; line-height: 1; text-align: center; }
-.jarvis-core-readout .n { display: block; font-variant-numeric: tabular-nums; }
-.jarvis-core-readout .l { display: block; font-size: 0.5em; letter-spacing: 0.1em; opacity: 0.75; }
 
 /* Floating orb (every page except index.html, which has its own hero) */
 .jarvis-fab {
@@ -81,11 +78,9 @@
   width: 60px; height: 60px;
 }
 .jarvis-fab .jarvis-core-icon { width: 22px; height: 22px; }
-.jarvis-fab .jarvis-core-readout { font-size: 9px; }
 
-/* Hero variant (index.html) gets bigger icon/readout via its own size */
+/* Hero variant (index.html) gets bigger icon via its own size */
 #jarvisCore:not(.jarvis-fab) .jarvis-core-icon { width: 30px; height: 30px; }
-#jarvisCore:not(.jarvis-fab) .jarvis-core-readout { font-size: 15px; margin-top: 2px; }
 
 /* ---------- Chat modal ---------- */
 .jarvis-modal-bg { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,0.62); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
@@ -172,11 +167,10 @@
         '<div class="jarvis-ring-ticks"></div>' +
         '<div class="jarvis-ring-sweep"></div>' +
         '<svg class="jarvis-core-icon" viewBox="0 0 24 24"><path d="M12 2.5c.6 3.4 1.4 5.6 2.7 6.9 1.3 1.3 3.5 2.1 6.8 2.6-3.3.6-5.5 1.4-6.8 2.7-1.3 1.3-2.1 3.5-2.7 6.8-.6-3.3-1.4-5.5-2.7-6.8-1.3-1.3-3.5-2.1-6.8-2.7 3.3-.5 5.5-1.3 6.8-2.6C10.6 8.1 11.4 5.9 12 2.5Z" fill="#06282e"/></svg>' +
-        '<div class="jarvis-core-readout" id="jarvisReadout" style="display:none"></div>' +
       '</div>';
     document.body.appendChild(fab.firstChild);
   } else {
-    // Hero orb already exists (index.html) — give it the same ring/readout decoration.
+    // Hero orb already exists (index.html) — give it the same ring decoration.
     const core = $('jarvisCore');
     if (!core.querySelector('.jarvis-ring-sweep')) {
       const wake = document.createElement('div'); wake.className = 'jarvis-wake-indicator';
@@ -185,9 +179,6 @@
       core.insertBefore(sweep, core.firstChild);
       core.insertBefore(ticks, core.firstChild);
       core.insertBefore(wake, core.firstChild);
-      const readout = document.createElement('div');
-      readout.className = 'jarvis-core-readout'; readout.id = 'jarvisReadout'; readout.style.display = 'none';
-      core.appendChild(readout);
     }
   }
 
@@ -210,10 +201,11 @@
         <span class="jarvis-toggle" id="jarvisWakeToggle" role="switch" aria-checked="false"><span class="jarvis-toggle-knob"></span></span>
       </label>
       <small>Keeps the mic on in the background on every page and wakes him the moment you say his name — like Alexa or Siri. Needs one-time mic permission.</small>
-      <label style="margin-top:6px">Voice (optional)</label>
-      <input id="jarvisElKeyInput" type="password" placeholder="ElevenLabs API key — free tier works" autocomplete="off">
-      <input id="jarvisElVoiceInput" type="text" placeholder="Voice ID from your ElevenLabs library" autocomplete="off">
-      <small>Leave blank and Jarvis still talks — he just uses your browser's built-in voice instead.</small>
+      <label style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;text-transform:none;font-size:12.5px;color:#fff;font-weight:600">
+        Natural cloud voice
+        <span class="jarvis-toggle" id="jarvisVoiceToggle" role="switch" aria-checked="true"><span class="jarvis-toggle-knob"></span></span>
+      </label>
+      <small>Free, no signup needed. Turn off to use your browser's built-in voice instead.</small>
       <label style="margin-top:6px">Notes for Jarvis</label>
       <textarea id="jarvisNotesInput" rows="2" placeholder="Anything you want Jarvis to always know…"></textarea>
       <button class="jarvis-settings-save" id="jarvisSettingsSave" type="button">Save</button>
@@ -243,8 +235,7 @@
 
   /* ---------- Keys & notes ---------- */
   const OR_KEY = 'nova_lite_api_key';
-  const EL_KEY = 'elevenlabs_api_key';
-  const EL_VOICE = 'elevenlabs_voice_id';
+  const VOICE_KEY = 'jarvis_cloud_voice_enabled';
   const NOTES_KEY = 'jarvis_notes_v1';
   const WHOOP_KEY = 'whoop_tokens_v1';
 
@@ -258,21 +249,28 @@
     return v;
   }
   function orKey() { try { return cleanKey(localStorage.getItem(OR_KEY) || '', OR_KEY); } catch (e) { return ''; } }
-  function elKey() { try { return localStorage.getItem(EL_KEY) || ''; } catch (e) { return ''; } }
-  function elVoice() { try { return localStorage.getItem(EL_VOICE) || ''; } catch (e) { return ''; } }
+  function cloudVoiceEnabled() { try { const v = localStorage.getItem(VOICE_KEY); return v === null ? true : v === '1'; } catch (e) { return true; } }
+  function setVoiceToggleUI(on) {
+    const t = $('jarvisVoiceToggle');
+    if (!t) return;
+    t.classList.toggle('on', on);
+    t.setAttribute('aria-checked', on ? 'true' : 'false');
+  }
   function notes() { try { return localStorage.getItem(NOTES_KEY) || ''; } catch (e) { return ''; } }
 
   $('jarvisSettingsToggle').addEventListener('click', () => {
-    $('jarvisElKeyInput').value = elKey();
-    $('jarvisElVoiceInput').value = elVoice();
     $('jarvisNotesInput').value = notes();
     setWakeToggleUI(wakeEnabled);
+    setVoiceToggleUI(cloudVoiceEnabled());
     $('jarvisSettings').classList.toggle('show');
+  });
+  $('jarvisVoiceToggle').addEventListener('click', () => {
+    const next = !cloudVoiceEnabled();
+    try { localStorage.setItem(VOICE_KEY, next ? '1' : '0'); } catch (e) {}
+    setVoiceToggleUI(next);
   });
   $('jarvisSettingsSave').addEventListener('click', () => {
     try {
-      localStorage.setItem(EL_KEY, $('jarvisElKeyInput').value.trim());
-      localStorage.setItem(EL_VOICE, $('jarvisElVoiceInput').value.trim());
       localStorage.setItem(NOTES_KEY, $('jarvisNotesInput').value);
     } catch (e) {}
     const s = $('jarvisSettingsStatus'); s.textContent = 'Saved.'; setTimeout(() => { s.textContent = ''; }, 1800);
@@ -354,19 +352,6 @@
       };
       return whoopSnapshotCache;
     } catch (e) { return null; }
-  }
-
-  function recoveryColor(rec) { if (rec >= 67) return '#6BE3A4'; if (rec >= 34) return '#F2C063'; return '#FF8A8A'; }
-  async function renderLiveReadout() {
-    const snap = await whoopSnapshot();
-    const readout = $('jarvisReadout');
-    if (!readout) return;
-    if (snap && snap.recovery != null) {
-      // Jarvis himself stays blue/cyan always — the recovery band shows up
-      // as the readout number's colour, not by recolouring the whole orb.
-      readout.style.display = '';
-      readout.innerHTML = '<span class="n" style="color:' + recoveryColor(snap.recovery) + '">' + snap.recovery + '%</span><span class="l">RECOVERY</span>';
-    }
   }
 
   /* ---------- Context for the LLM ---------- */
@@ -572,20 +557,41 @@
       window.speechSynthesis.speak(u);
     } catch (e) {}
   }
+  function chunkForCloudTTS(text) {
+    const clean = text.replace(/\s+/g, ' ').trim();
+    const chunks = [];
+    let rest = clean;
+    while (rest.length) {
+      if (rest.length <= 180) { chunks.push(rest); break; }
+      let cut = rest.lastIndexOf('. ', 180);
+      if (cut < 40) cut = rest.lastIndexOf(' ', 180);
+      if (cut < 40) cut = 180;
+      chunks.push(rest.slice(0, cut + 1).trim());
+      rest = rest.slice(cut + 1).trim();
+    }
+    return chunks.filter(Boolean);
+  }
+  function playCloudChunks(chunks, onFail) {
+    let i = 0;
+    function next() {
+      if (i >= chunks.length) return;
+      const c = chunks[i++];
+      const url = 'https://translate.google.com/translate_tts?ie=UTF-8&tl=en&client=tw-ob&q=' + encodeURIComponent(c);
+      const audio = new Audio(url);
+      audio.addEventListener('ended', next);
+      audio.addEventListener('error', () => { if (i === 1) onFail(); });
+      audio.play().catch(() => { if (i === 1) onFail(); });
+    }
+    next();
+  }
   function speak(text) {
     const plain = text.replace(/\*\*/g, '').replace(/[-•*]\s+/g, '');
-    const key = elKey(), voice = elVoice();
-    if (key && voice) {
-      fetch('https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(voice), {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', 'xi-api-key': key, accept: 'audio/mpeg' },
-        body: JSON.stringify({ text: plain, model_id: 'eleven_turbo_v2_5' }),
-      }).then((r) => { if (!r.ok) throw new Error('elevenlabs ' + r.status); return r.blob(); })
-        .then((blob) => { const audio = new Audio(URL.createObjectURL(blob)); audio.play().catch(() => {}); })
-        .catch(() => speakBrowser(plain));
-    } else {
-      speakBrowser(plain);
+    if (!plain) return;
+    if (cloudVoiceEnabled()) {
+      const chunks = chunkForCloudTTS(plain);
+      if (chunks.length) { playCloudChunks(chunks, () => speakBrowser(plain)); return; }
     }
+    speakBrowser(plain);
   }
 
   function extractAddFood(text) {
@@ -798,6 +804,4 @@
   $('jarvisBg').addEventListener('click', (e) => { if (e.target === $('jarvisBg')) close(); });
   $('jarvisSendBtn').addEventListener('click', () => ask($('jarvisInput').value));
   $('jarvisInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') ask($('jarvisInput').value); });
-
-  renderLiveReadout();
 })();
