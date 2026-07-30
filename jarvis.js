@@ -113,6 +113,17 @@
 .jarvis-settings small { font-size: 10.5px; color: rgba(255,255,255,0.35); line-height: 1.4; }
 .jarvis-settings-save { align-self: flex-start; margin-top: 2px; padding: 7px 14px; border-radius: 8px; border: 1px solid rgba(45,225,252,0.4); background: rgba(45,225,252,0.15); color: #fff; font-family: inherit; font-size: 11.5px; font-weight: 700; cursor: pointer; }
 .jarvis-settings-status { font-size: 11px; color: var(--jarvis-cyan); min-height: 14px; }
+.jarvis-toggle { position: relative; width: 38px; height: 22px; border-radius: 999px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); cursor: pointer; flex-shrink: 0; transition: background 0.2s ease, border-color 0.2s ease; }
+.jarvis-toggle-knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 0.2s ease; }
+.jarvis-toggle.on { background: var(--jarvis-cyan); border-color: var(--jarvis-cyan); }
+.jarvis-toggle.on .jarvis-toggle-knob { transform: translateX(16px); }
+.jarvis-wake-indicator {
+  position: absolute; inset: -8%; border-radius: 50%; pointer-events: none; opacity: 0; z-index: 0;
+  border: 1.5px solid var(--jarvis-cyan); transition: opacity 0.3s ease;
+  animation: jarvis-wake-breathe 2.6s ease-in-out infinite;
+}
+.jarvis-wake-indicator.on { opacity: 0.55; }
+@keyframes jarvis-wake-breathe { 0%, 100% { transform: scale(1); opacity: 0.35; } 50% { transform: scale(1.06); opacity: 0.7; } }
 
 .jarvis-feed { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; margin-bottom: 14px; padding-right: 2px; flex: 1; min-height: 120px; max-height: 46vh; }
 .jarvis-msg { max-width: 88%; font-size: 13.5px; line-height: 1.55; }
@@ -157,6 +168,7 @@
     const fab = document.createElement('div');
     fab.innerHTML =
       '<div class="jarvis-core jarvis-fab" id="jarvisCore" role="button" tabindex="0" aria-label="Talk to Jarvis">' +
+        '<div class="jarvis-wake-indicator"></div>' +
         '<div class="jarvis-ring-ticks"></div>' +
         '<div class="jarvis-ring-sweep"></div>' +
         '<svg class="jarvis-core-icon" viewBox="0 0 24 24"><path d="M12 2.5c.6 3.4 1.4 5.6 2.7 6.9 1.3 1.3 3.5 2.1 6.8 2.6-3.3.6-5.5 1.4-6.8 2.7-1.3 1.3-2.1 3.5-2.7 6.8-.6-3.3-1.4-5.5-2.7-6.8-1.3-1.3-3.5-2.1-6.8-2.7 3.3-.5 5.5-1.3 6.8-2.6C10.6 8.1 11.4 5.9 12 2.5Z" fill="#06282e"/></svg>' +
@@ -167,10 +179,12 @@
     // Hero orb already exists (index.html) — give it the same ring/readout decoration.
     const core = $('jarvisCore');
     if (!core.querySelector('.jarvis-ring-sweep')) {
+      const wake = document.createElement('div'); wake.className = 'jarvis-wake-indicator';
       const ticks = document.createElement('div'); ticks.className = 'jarvis-ring-ticks';
       const sweep = document.createElement('div'); sweep.className = 'jarvis-ring-sweep';
       core.insertBefore(sweep, core.firstChild);
       core.insertBefore(ticks, core.firstChild);
+      core.insertBefore(wake, core.firstChild);
       const readout = document.createElement('div');
       readout.className = 'jarvis-core-readout'; readout.id = 'jarvisReadout'; readout.style.display = 'none';
       core.appendChild(readout);
@@ -191,7 +205,12 @@
     </div>
 
     <div class="jarvis-settings" id="jarvisSettings">
-      <label>Voice (optional)</label>
+      <label style="display:flex;align-items:center;justify-content:space-between;text-transform:none;font-size:12.5px;color:#fff;font-weight:600">
+        Always listen for "Jarvis"
+        <span class="jarvis-toggle" id="jarvisWakeToggle" role="switch" aria-checked="false"><span class="jarvis-toggle-knob"></span></span>
+      </label>
+      <small>Keeps the mic on in the background on every page and wakes him the moment you say his name — like Alexa or Siri. Needs one-time mic permission.</small>
+      <label style="margin-top:6px">Voice (optional)</label>
       <input id="jarvisElKeyInput" type="password" placeholder="ElevenLabs API key — free tier works" autocomplete="off">
       <input id="jarvisElVoiceInput" type="text" placeholder="Voice ID from your ElevenLabs library" autocomplete="off">
       <small>Leave blank and Jarvis still talks — he just uses your browser's built-in voice instead.</small>
@@ -247,6 +266,7 @@
     $('jarvisElKeyInput').value = elKey();
     $('jarvisElVoiceInput').value = elVoice();
     $('jarvisNotesInput').value = notes();
+    setWakeToggleUI(wakeEnabled);
     $('jarvisSettings').classList.toggle('show');
   });
   $('jarvisSettingsSave').addEventListener('click', () => {
@@ -342,11 +362,10 @@
     const readout = $('jarvisReadout');
     if (!readout) return;
     if (snap && snap.recovery != null) {
+      // Jarvis himself stays blue/cyan always — the recovery band shows up
+      // as the readout number's colour, not by recolouring the whole orb.
       readout.style.display = '';
-      readout.innerHTML = '<span class="n">' + snap.recovery + '%</span><span class="l">RECOVERY</span>';
-      document.querySelectorAll('#jarvisCore').forEach((el) => {
-        el.style.setProperty('--jarvis-cyan', recoveryColor(snap.recovery));
-      });
+      readout.innerHTML = '<span class="n" style="color:' + recoveryColor(snap.recovery) + '">' + snap.recovery + '%</span><span class="l">RECOVERY</span>';
     }
   }
 
@@ -531,31 +550,94 @@
     busy = false;
   }
 
-  /* ---------- Voice in ---------- */
+  /* ---------- Voice in: click-to-talk AND always-on wake word ("Jarvis") ----------
+     One shared SpeechRecognition instance, one small state machine, so the
+     passive "listening for my name" mode and the active "taking your
+     command" mode never fight over the microphone:
+       idle    — nothing running (wake word off, no manual mic press)
+       wake    — continuous background listening, only checking for "jarvis"
+       command — actively transcribing the next thing you say as a real query
+     Hearing the wake word (or pressing the mic button) hands off from wake
+     to command via onend, rather than racing two independent timers. */
+  const WAKE_KEY = 'jarvis_wakeword_enabled';
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-  let rec = null, listening = false;
+  let rec = null, mode = 'idle', wakeEnabled = loadJSON(WAKE_KEY, false), pendingCommand = false;
+
+  function setWakeIndicator(on) { document.querySelectorAll('.jarvis-wake-indicator').forEach((el) => el.classList.toggle('on', on)); }
+  function setWakeToggleUI(on) {
+    const t = $('jarvisWakeToggle');
+    if (t) { t.classList.toggle('on', on); t.setAttribute('aria-checked', String(on)); }
+  }
+  function safeStart(nextMode) {
+    mode = nextMode;
+    setWakeIndicator(mode === 'wake');
+    try { rec.start(); } catch (e) { /* a session was already active — ignore */ }
+  }
+
   if (SpeechRec) {
     rec = new SpeechRec();
-    rec.continuous = false;
+    rec.continuous = true;
     rec.interimResults = false;
     rec.lang = 'en-US';
-    rec.onresult = (e) => { const said = e.results[0][0].transcript; $('jarvisInput').value = said; ask(said); };
-    rec.onend = () => {
-      listening = false;
-      $('jarvisMicBtn').classList.remove('active');
-      document.querySelectorAll('#jarvisCore').forEach((el) => el.classList.remove('listening'));
-      $('jarvisVoiceHint').textContent = '';
+    rec.onresult = (e) => {
+      const said = (e.results[e.results.length - 1][0].transcript || '').trim();
+      if (mode === 'wake') {
+        const idx = said.toLowerCase().indexOf('jarvis');
+        if (idx === -1) return; // not my name — keep passively listening
+        const after = said.slice(idx + 6).replace(/^[,.!\s]+/, '').trim();
+        open();
+        if (after) {
+          ask(after);
+        } else {
+          pendingCommand = true;
+          $('jarvisVoiceHint').textContent = "I'm listening…";
+          document.querySelectorAll('#jarvisCore').forEach((el) => el.classList.add('listening'));
+          try { rec.stop(); } catch (e) {}
+        }
+      } else if (mode === 'command') {
+        $('jarvisInput').value = said;
+        try { rec.stop(); } catch (e) {}
+        ask(said);
+      }
     };
-    rec.onerror = (e) => { $('jarvisVoiceHint').textContent = e.error === 'not-allowed' ? 'Microphone permission denied.' : 'Could not hear you — try again.'; };
+    rec.onend = () => {
+      document.querySelectorAll('#jarvisCore').forEach((el) => el.classList.remove('listening'));
+      $('jarvisMicBtn').classList.remove('active');
+      if (pendingCommand) { pendingCommand = false; setTimeout(() => safeStart('command'), 200); return; }
+      if (mode === 'command') $('jarvisVoiceHint').textContent = '';
+      if (wakeEnabled) setTimeout(() => safeStart('wake'), 500);
+      else { mode = 'idle'; setWakeIndicator(false); }
+    };
+    rec.onerror = (e) => {
+      if (e.error === 'not-allowed') {
+        wakeEnabled = false; saveJSON(WAKE_KEY, false); setWakeToggleUI(false); setWakeIndicator(false);
+        $('jarvisVoiceHint').textContent = 'Microphone permission denied.';
+      } else if (mode === 'command') {
+        $('jarvisVoiceHint').textContent = 'Could not hear you — try again.';
+      }
+      // wake mode gets transient errors (no-speech, network hiccups) fairly
+      // often — onend fires right after and restarts it, so nothing to do here.
+    };
+    if (wakeEnabled) safeStart('wake');
   }
+
   $('jarvisMicBtn').addEventListener('click', () => {
     if (!rec) { $('jarvisVoiceHint').textContent = "This browser doesn't support voice input — try Chrome or Edge, or just type."; return; }
-    if (listening) { rec.stop(); return; }
-    listening = true;
+    if (mode === 'command') { rec.stop(); return; }
     $('jarvisMicBtn').classList.add('active');
     document.querySelectorAll('#jarvisCore').forEach((el) => el.classList.add('listening'));
     $('jarvisVoiceHint').textContent = 'Listening…';
-    try { rec.start(); } catch (e) {}
+    if (mode === 'wake') { pendingCommand = true; try { rec.stop(); } catch (e) {} }
+    else safeStart('command');
+  });
+
+  $('jarvisWakeToggle').addEventListener('click', () => {
+    if (!SpeechRec) { $('jarvisSettingsStatus').textContent = "This browser doesn't support voice — try Chrome or Edge."; return; }
+    wakeEnabled = !wakeEnabled;
+    saveJSON(WAKE_KEY, wakeEnabled);
+    setWakeToggleUI(wakeEnabled);
+    if (wakeEnabled) safeStart('wake');
+    else { try { rec.stop(); } catch (e) {} mode = 'idle'; setWakeIndicator(false); }
   });
 
   /* ---------- Open / close ---------- */
@@ -575,6 +657,21 @@
   $('jarvisBg').addEventListener('click', (e) => { if (e.target === $('jarvisBg')) close(); });
   $('jarvisSendBtn').addEventListener('click', () => ask($('jarvisInput').value));
   $('jarvisInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') ask($('jarvisInput').value); });
+
+  // Exposed so a page's own layout (e.g. Main's floating info blobs) can
+  // reuse the same live data Jarvis already knows how to gather, instead
+  // of re-fetching WHOOP/nutrition independently.
+  window.__jarvisSnapshot = async function () {
+    const whoop = await whoopSnapshot();
+    const sun = loadJSON('sun_tracker_v1', null);
+    const nutrition = loadJSON('nutrition:v1', null);
+    let caloriesToday = 0;
+    if (nutrition && nutrition.logs) {
+      const list = nutrition.logs[dateKey()] || [];
+      caloriesToday = list.reduce((sum, m) => sum + (+m.calories || 0), 0);
+    }
+    return { whoop, steps: sun ? (sun.steps || 0) : null, caloriesToday };
+  };
 
   renderLiveReadout();
 })();

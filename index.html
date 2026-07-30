@@ -24,34 +24,73 @@
    The bottom tab bar stays (still useful navigation). */
 #topbar { display: none !important; }
 
-/* ===== Aurora backdrop: Main gets a two-tone glow that shifts with the
-   time of day (see applyTimeOfDayTheme in the script below), instead of
-   the single fixed hue every other page uses. ===== */
+/* Main runs a fixed cyan/blue "technological" theme built around Jarvis,
+   instead of the violet identity + time-of-day shift used before — a
+   deliberate, single accent everything on this page reads off of. */
+:root { --glow: #2DE1FC; --glow-2: #38BDF8; }
 body::before {
   background:
-    radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--glow) 32%, transparent), transparent 46%),
-    radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--glow-2, var(--glow)) 22%, transparent), transparent 50%),
-    radial-gradient(circle at 80% 85%, color-mix(in srgb, var(--glow) 14%, transparent), transparent 55%);
-  transition: background 1.4s ease;
+    radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--glow) 28%, transparent), transparent 46%),
+    radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--glow-2) 20%, transparent), transparent 50%),
+    radial-gradient(circle at 50% 90%, color-mix(in srgb, var(--glow) 16%, transparent), transparent 55%);
 }
-.dash-title { transition: filter 1.4s ease; }
 
-/* ===== TODAY PANEL — Readiness leads as a wide hero, everything else
-   follows in a row underneath instead of a uniform 2x2 grid. ===== */
-.today-grid { display: flex; flex-direction: column; gap: 14px; margin-bottom: 18px; }
-.today-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.readiness-hero-inner { display: flex; align-items: center; gap: 32px; flex-wrap: wrap; }
-.readiness-hero-left { flex-shrink: 0; }
-.readiness-hero-right { flex: 1; min-width: 220px; }
-.readiness-hero-right .readiness-stats { grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.readiness-hero-right .readiness-stats span { font-size: 22px; }
-@media (max-width: 720px) {
-  .today-row { grid-template-columns: 1fr 1fr; }
+/* ===== Jarvis stage: he's the only thing in the center; every card and
+   nav link that used to fill the page lives in two flanking side rails.
+   DOM order is center-first so a collapsed single-column view (tablet/
+   phone) still shows him before anything else; the 3-column grid on wide
+   screens re-orders the rails around him visually. ===== */
+.jarvis-stage { display: flex; flex-direction: column; gap: 26px; margin-bottom: 30px; }
+.jarvis-side { display: flex; flex-direction: column; gap: 14px; }
+.jarvis-side .readiness-hero-inner { flex-direction: column; align-items: center; text-align: center; gap: 14px; }
+.jarvis-side .readiness-hero-right { width: 100%; }
+.jarvis-side .readiness-hero-right .readiness-stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.jarvis-side .readiness-hero-right .readiness-stats span { font-size: 16px; }
+
+.orbit-links { display: flex; flex-direction: column; gap: 9px; }
+.orbit-link {
+  display: flex; align-items: center; gap: 12px; padding: 12px 15px;
+  border-radius: var(--radius-md); background: var(--card-bg); border: 1px solid var(--card-border);
+  text-decoration: none; transition: border-color var(--dur-med) var(--ease), transform var(--dur-med) var(--ease);
 }
-@media (max-width: 560px) {
-  .readiness-hero-inner { flex-direction: column; align-items: stretch; text-align: center; }
-  .readiness-hero-right .readiness-stats { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-  .today-row { grid-template-columns: 1fr; }
+.orbit-link:hover { border-color: color-mix(in srgb, var(--n-accent) 55%, transparent); transform: translateX(3px); }
+.orbit-link-icon { flex-shrink: 0; display: flex; }
+.orbit-link-icon svg { width: 19px; height: 19px; stroke: var(--n-accent); fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--n-accent) 65%, transparent)); }
+.orbit-link-icon svg.filled { fill: var(--n-accent); stroke: none; }
+.orbit-link-label { font-size: 12.5px; font-weight: 700; color: var(--text-secondary); }
+
+.jarvis-center { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 420px; padding: 20px 0; }
+.jarvis-center .jarvis-core { width: 280px; height: 280px; }
+.jarvis-center .jarvis-hint { margin-top: 24px; max-width: 280px; }
+
+.jarvis-float-blob {
+  position: absolute; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 88px; height: 88px; border-radius: 46% 54% 58% 42% / 44% 48% 52% 56%;
+  background: radial-gradient(circle at 32% 26%, rgba(255,255,255,0.22), color-mix(in srgb, var(--glow) 40%, transparent) 55%, rgba(6,16,22,0.75) 100%);
+  border: 1px solid color-mix(in srgb, var(--glow) 45%, transparent);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 0 26px color-mix(in srgb, var(--glow) 30%, transparent);
+  text-align: center; animation: jarvis-blob-float 8s ease-in-out infinite, jarvis-blob-morph 11s ease-in-out infinite;
+}
+.jarvis-float-blob .n { font-family: var(--font-numeric); font-size: 18px; font-weight: 800; color: #fff; line-height: 1; font-variant-numeric: tabular-nums; }
+.jarvis-float-blob .l { font-size: 7.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.65); margin-top: 4px; }
+.jarvis-float-blob.b1 { top: 2%; left: 6%; animation-delay: 0s, 0s; }
+.jarvis-float-blob.b2 { top: 8%; right: 4%; animation-delay: 1.6s, 2s; }
+.jarvis-float-blob.b3 { bottom: 10%; left: 2%; animation-delay: 3.2s, 4s; }
+.jarvis-float-blob.b4 { bottom: 4%; right: 8%; animation-delay: 4.8s, 6s; }
+@keyframes jarvis-blob-float { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(7px, -16px); } }
+@keyframes jarvis-blob-morph {
+  0%, 100% { border-radius: 46% 54% 58% 42% / 44% 48% 52% 56%; }
+  50% { border-radius: 56% 44% 42% 58% / 52% 58% 42% 48%; }
+}
+
+@media (min-width: 1000px) {
+  .jarvis-stage { display: grid; grid-template-columns: 260px minmax(0, 1fr) 260px; gap: 26px; align-items: start; }
+  .jarvis-center { order: 2; min-height: 560px; }
+  .jarvis-side-left { order: 1; }
+  .jarvis-side-right { order: 3; }
+  .jarvis-center .jarvis-core { width: 340px; height: 340px; }
+  .jarvis-float-blob { width: 100px; height: 100px; }
 }
 .productivity-body { display: flex; align-items: center; gap: 14px; }
 .productivity-icon svg {
@@ -67,29 +106,29 @@ body::before {
 .productivity-sub { font-size: 10.5px; color: var(--text-tertiary); margin-top: 3px; line-height: 1.4; }
 .productivity-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 16px 0; }
 
-.sun-card { --accent: #FBBF24; }
+.sun-card { --accent: #38BDF8; }
 .sun-stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; text-align: center; }
 .sun-stat-num { font-family: var(--font-numeric); font-size: 18px; font-weight: 800; color: var(--text-primary); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
 .sun-stat-label { font-size: 8.5px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 3px; }
 .sun-track-btn {
-  width: 100%; margin-top: 14px; padding: 10px; border: 1px solid rgba(251,191,36,0.3);
-  border-radius: 11px; background: rgba(251,191,36,0.10); color: #FBBF24;
+  width: 100%; margin-top: 14px; padding: 10px; border: 1px solid rgba(56,189,248,0.3);
+  border-radius: 11px; background: rgba(56,189,248,0.10); color: #38BDF8;
   font-family: inherit; font-size: 11.5px; font-weight: 700; letter-spacing: 0.03em;
   cursor: pointer; transition: background 0.15s, border-color 0.15s;
 }
-.sun-track-btn:hover { background: rgba(251,191,36,0.18); }
-.sun-track-btn.active { background: rgba(251,191,36,0.22); border-color: rgba(251,191,36,0.5); }
+.sun-track-btn:hover { background: rgba(56,189,248,0.18); }
+.sun-track-btn.active { background: rgba(56,189,248,0.22); border-color: rgba(56,189,248,0.5); }
 .sun-input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
 .sun-input-field label { display: block; font-size: 9px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
 .sun-input {
   width: 100%; padding: 8px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.10);
   background: rgba(0,0,0,0.25); color: var(--text-primary); font-family: inherit; font-size: 12.5px; outline: none;
 }
-.sun-input:focus { border-color: rgba(251,191,36,0.4); }
+.sun-input:focus { border-color: rgba(56,189,248,0.4); }
 .sun-hint { font-size: 10px; color: var(--text-tertiary); margin-top: 6px; min-height: 12px; }
 .sun-note { font-size: 9.5px; color: var(--text-tertiary); margin-top: 10px; line-height: 1.5; }
 .sun-card::before {
-  background: radial-gradient(circle at 50% 28%, color-mix(in srgb, #FBBF24 30%, transparent), transparent 65%);
+  background: radial-gradient(circle at 50% 28%, color-mix(in srgb, #38BDF8 30%, transparent), transparent 65%);
 }
 .today-card-label {
   font-family: var(--font-mono); font-size: 10.5px; font-weight: 600;
@@ -487,62 +526,7 @@ body::before {
 .loc-use-gps { border: 1px solid rgba(255,255,255,0.14); background: transparent; color: var(--text-secondary); font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.04em; padding: 7px 10px; border-radius: 9px; cursor: pointer; transition: background 0.15s, color 0.15s; white-space: nowrap; }
 .loc-use-gps:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
 
-/* ===== Jarvis hub: the AI in the middle, tiles orbiting around him ===== */
-.jarvis-hub { display: flex; flex-direction: column; align-items: center; margin: 8px 0 30px; }
-.jarvis-orbit { position: relative; width: 560px; max-width: 100%; height: 560px; }
-.jarvis-orbit::before {
-  content: ''; position: absolute; inset: 50% auto auto 50%; width: 460px; height: 460px;
-  transform: translate(-50%, -50%); border-radius: 50%;
-  border: 1px dashed color-mix(in srgb, var(--glow) 30%, transparent);
-  pointer-events: none;
-}
-.jarvis-core { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 148px; height: 148px; z-index: 2; }
-.jarvis-core:hover, .jarvis-core:focus-visible { transform: translate(-50%, -50%) scale(1.06); }
-
-.orbit-node {
-  position: absolute; top: 50%; left: 50%; width: 88px; height: 88px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
-  border-radius: 50%; text-decoration: none;
-  background: var(--card-bg); border: 1px solid var(--card-border);
-  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-  transition: transform var(--dur-med) var(--ease), border-color var(--dur-med) var(--ease), box-shadow var(--dur-med) var(--ease);
-}
-.orbit-node.n1 { transform: translate(calc(-50% + 0px), calc(-50% + -220px)); }
-.orbit-node.n2 { transform: translate(calc(-50% + 190px), calc(-50% + -110px)); }
-.orbit-node.n3 { transform: translate(calc(-50% + 190px), calc(-50% + 110px)); }
-.orbit-node.n4 { transform: translate(calc(-50% + 0px), calc(-50% + 220px)); }
-.orbit-node.n5 { transform: translate(calc(-50% + -190px), calc(-50% + 110px)); }
-.orbit-node.n6 { transform: translate(calc(-50% + -190px), calc(-50% + -110px)); }
-.orbit-node:hover {
-  border-color: color-mix(in srgb, var(--n-accent) 55%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--n-accent) 30%, transparent) inset, 0 12px 32px rgba(0,0,0,0.5);
-}
-.orbit-node.n1:hover { transform: translate(calc(-50% + 0px), calc(-50% + -226px)) scale(1.06); }
-.orbit-node.n2:hover { transform: translate(calc(-50% + 196px), calc(-50% + -113px)) scale(1.06); }
-.orbit-node.n3:hover { transform: translate(calc(-50% + 196px), calc(-50% + 113px)) scale(1.06); }
-.orbit-node.n4:hover { transform: translate(calc(-50% + 0px), calc(-50% + 226px)) scale(1.06); }
-.orbit-node.n5:hover { transform: translate(calc(-50% + -196px), calc(-50% + 113px)) scale(1.06); }
-.orbit-node.n6:hover { transform: translate(calc(-50% + -196px), calc(-50% + -113px)) scale(1.06); }
-.orbit-node-icon svg { width: 22px; height: 22px; stroke: var(--n-accent); fill: none; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--n-accent) 70%, transparent)); }
-.orbit-node-icon svg.filled { fill: var(--n-accent); stroke: none; }
-.orbit-node-label { font-size: 10.5px; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.02em; }
-.jarvis-hint { font-size: 11.5px; color: var(--text-tertiary); margin-top: 4px; text-align: center; }
-
-@media (max-width: 680px) {
-  .jarvis-orbit { height: auto; display: flex; flex-direction: column; align-items: center; gap: 24px; }
-  .jarvis-orbit::before { display: none; }
-  .jarvis-core { position: static; transform: none !important; }
-  .orbit-node {
-    position: static; transform: none !important; width: auto; height: auto;
-    flex-direction: row; justify-content: flex-start; gap: 12px; border-radius: var(--radius-md);
-    padding: 12px 16px; width: 100%;
-  }
-  .jarvis-orbit > .orbit-node.n1 { order: 1; } .jarvis-orbit > .orbit-node.n2 { order: 2; }
-  .jarvis-orbit > .orbit-node.n3 { order: 3; } .jarvis-orbit > .orbit-node.n4 { order: 4; }
-  .jarvis-orbit > .orbit-node.n5 { order: 5; } .jarvis-orbit > .orbit-node.n6 { order: 6; }
-}
-
+.jarvis-hint { font-size: 11.5px; color: var(--text-tertiary); text-align: center; }
 </style>
 </head>
 <body>
@@ -564,167 +548,178 @@ body::before {
     </button>
   </div>
 
-  <div class="today-grid">
-    <div class="today-card readiness-card">
-      <div class="readiness-bg" aria-hidden="true"></div>
-      <div class="readiness-hero-inner">
-        <div class="readiness-hero-left">
-          <div class="today-card-label">Readiness</div>
-          <div class="readiness-ring-wrap">
-            <svg class="readiness-ring" viewBox="0 0 140 140">
-              <circle class="ring-track" cx="70" cy="70" r="60"/>
-              <circle class="ring-fill" id="readinessRingFill" cx="70" cy="70" r="60"/>
-              <circle class="ring-track-inner" cx="70" cy="70" r="47"/>
-              <circle class="ring-fill-inner" id="sleepRingFill" cx="70" cy="70" r="47"/>
-            </svg>
-            <div class="readiness-center">
-              <div class="readiness-split">
-                <div class="readiness-pct-row">
-                  <span class="readiness-pct" id="readinessPct">—</span>
-                  <span class="readiness-trend" id="readinessTrend"></span>
-                </div>
-                <div class="readiness-divider"></div>
-                <span class="readiness-pct-sleep" id="readinessPctSleep">—</span>
-              </div>
-            </div>
-          </div>
-          <div class="readiness-headline" id="readinessHeadline">Connect WHOOP in Settings</div>
-          <div class="ring-legend">
-            <span class="ring-legend-item"><span class="ring-legend-dot recovery"></span>Recovery</span>
-            <span class="ring-legend-item"><span class="ring-legend-dot sleep"></span>Sleep</span>
-          </div>
-        </div>
-        <div class="readiness-hero-right">
-          <div class="readiness-stats">
-            <div><span id="readinessSleep">—</span><label>Sleep</label></div>
-            <div><span id="readinessRhr">—</span><label>Rest HR</label></div>
-            <div><span id="readinessHrv">—</span><label>HRV</label></div>
-            <div><span id="readinessStrain">—</span><label>Strain</label></div>
-          </div>
-        </div>
-      </div>
-    </div>
+  <div class="jarvis-stage">
 
-    <div class="today-row">
-    <div class="today-card weather-card">
-      <div class="weather-bg" id="weatherBg" aria-hidden="true">
-        <div class="weather-stars"></div>
-        <div class="weather-moon"></div>
-        <div class="weather-sun"></div>
-        <div class="weather-cloud c1"></div>
-        <div class="weather-cloud c2"></div>
-        <div class="weather-cloud c3"></div>
-        <div class="weather-precip"></div>
-        <div class="weather-flash"></div>
-      </div>
-      <div class="weather-label-row">
-        <div class="today-card-label">Weather</div>
-        <button class="weather-loc-btn" id="weatherLocBtn" type="button" aria-label="Change location">
-          <svg viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
-        </button>
-      </div>
-      <div class="weather-main">
-        <span class="weather-icon" id="weatherIcon"></span>
-        <span class="weather-temp" id="weatherTemp">—</span>
-      </div>
-      <div class="weather-desc" id="weatherDesc">Getting your location…</div>
-      <div class="weather-loc-label" id="weatherLocLabel"></div>
-      <div class="weather-rain" id="weatherRain">Checking today's forecast…</div>
-      <div class="weather-details">
-        <div><span id="weatherWind">—</span><label>Wind</label></div>
-        <div><span id="weatherUv">—</span><label>UV</label></div>
-        <div><span id="weatherSunset">—</span><label>Sunset</label></div>
-      </div>
-    </div>
-
-    <div class="today-card sun-card">
-      <div class="today-card-label">Sun & vitamin D</div>
-      <div class="sun-stat-row">
-        <div class="sun-stat"><div class="sun-stat-num" id="sunSteps">0</div><div class="sun-stat-label">Steps</div></div>
-        <div class="sun-stat"><div class="sun-stat-num" id="sunUv">—</div><div class="sun-stat-label">UV now</div></div>
-        <div class="sun-stat"><div class="sun-stat-num" id="sunVitD">—</div><div class="sun-stat-label">Vitamin D</div></div>
-      </div>
-      <button class="sun-track-btn" id="sunTrackBtn" type="button">🚶 Start live step tracking</button>
-      <div class="sun-input-grid">
-        <div class="sun-input-field">
-          <label for="sunStepsInput">Steps today</label>
-          <input class="sun-input" id="sunStepsInput" type="number" min="0" inputmode="numeric" placeholder="e.g. 6000">
-        </div>
-        <div class="sun-input-field">
-          <label for="sunMinutesInput">Minutes outside</label>
-          <input class="sun-input" id="sunMinutesInput" type="number" min="0" inputmode="numeric" placeholder="e.g. 30">
-        </div>
-      </div>
-      <div class="sun-hint" id="sunMinutesHint"></div>
-      <div class="sun-note">Live tracking weighs each minute by the UV index during that exact hour, so it adapts as UV rises and falls through the day. Manually typed minutes use the current hour's UV instead. A rough guide, not a clinical measurement — only counts while this tab stays open. Added automatically to today's Vitamin D in Nutrition.</div>
-    </div>
-
-    <div class="today-card">
-      <div class="today-card-label">Focus & bedtime</div>
-      <div class="productivity-body">
-        <span class="productivity-icon">
-          <svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.6.55 1 1.35 1 2.2V16h6v-.3c0-.85.4-1.65 1-2.2A6 6 0 0 0 12 3Z"/></svg>
-        </span>
-        <div class="productivity-copy">
-          <div class="productivity-label">Best window to focus</div>
-          <div class="productivity-window" id="productivityWindow">Connect WHOOP</div>
-          <div class="productivity-sub" id="productivitySub">Uses your average wake time to estimate peak alertness</div>
-        </div>
-      </div>
-      <div class="productivity-divider"></div>
-      <div class="productivity-body">
-        <span class="productivity-icon bedtime-icon">
-          <svg viewBox="0 0 24 24"><path d="M20 14.5a8.5 8.5 0 1 1-9.5-11 7 7 0 0 0 9.5 11Z"/></svg>
-        </span>
-        <div class="productivity-copy">
-          <div class="productivity-label">Wind down by</div>
-          <div class="productivity-window" id="bedtimeWindow">Connect WHOOP</div>
-          <div class="productivity-sub" id="bedtimeSub">Uses your sleep goal, average wake time, and today's strain</div>
-        </div>
-      </div>
-    </div>
-    </div>
-  </div>
-
-  <div class="jarvis-hub">
-    <div class="jarvis-orbit">
+    <div class="jarvis-center">
+      <div class="jarvis-float-blob b1" id="blobRecovery"><span class="n">—</span><span class="l">Recovery</span></div>
+      <div class="jarvis-float-blob b2" id="blobSteps"><span class="n">—</span><span class="l">Steps</span></div>
+      <div class="jarvis-float-blob b3" id="blobCalories"><span class="n">—</span><span class="l">Kcal today</span></div>
+      <div class="jarvis-float-blob b4" id="blobStrain"><span class="n">—</span><span class="l">Strain</span></div>
       <div class="jarvis-core" id="jarvisCore" role="button" tabindex="0" aria-label="Talk to Jarvis">
         <svg class="jarvis-core-icon" viewBox="0 0 24 24"><path d="M12 2.5c.6 3.4 1.4 5.6 2.7 6.9 1.3 1.3 3.5 2.1 6.8 2.6-3.3.6-5.5 1.4-6.8 2.7-1.3 1.3-2.1 3.5-2.7 6.8-.6-3.3-1.4-5.5-2.7-6.8-1.3-1.3-3.5-2.1-6.8-2.7 3.3-.5 5.5-1.3 6.8-2.6C10.6 8.1 11.4 5.9 12 2.5Z"/></svg>
       </div>
-
-      <a class="orbit-node n1" href="gym.html" style="--n-accent:#38BDF8">
-        <span class="orbit-node-icon"><svg viewBox="0 0 24 24"><rect x="1.5" y="9" width="3" height="6" rx="1"/><rect x="19.5" y="9" width="3" height="6" rx="1"/><line x1="6" y1="12" x2="18" y2="12"/><rect x="5.5" y="6.5" width="3" height="11" rx="1"/><rect x="15.5" y="6.5" width="3" height="11" rx="1"/></svg></span>
-        <span class="orbit-node-label">Fitness</span>
-      </a>
-      <a class="orbit-node n2" href="health.html" style="--n-accent:#34D399">
-        <span class="orbit-node-icon"><svg viewBox="0 0 24 24"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span>
-        <span class="orbit-node-label">Health</span>
-      </a>
-      <a class="orbit-node n3" href="nutrition.html" style="--n-accent:#FB923C">
-        <span class="orbit-node-icon"><svg viewBox="0 0 24 24"><path d="M3 2v7a2 2 0 0 0 2 2h.5a2 2 0 0 0 2-2V2"/><path d="M6.5 11v11"/><path d="M17.5 2c-2 0-3.5 2.5-3.5 6s1 5 3.5 5 1 8 1 8"/></svg></span>
-        <span class="orbit-node-label">Nutrition</span>
-      </a>
-      <a class="orbit-node n4" href="finance.html" style="--n-accent:#F2C063">
-        <span class="orbit-node-icon">
-          <svg viewBox="0 0 24 24">
-            <line x1="4.5" y1="12" x2="4.5" y2="19"/><rect x="3" y="8.5" width="3" height="4.5" rx="1"/>
-            <line x1="10" y1="6" x2="10" y2="19"/><rect x="8.5" y="10" width="3" height="5.5" rx="1"/><circle cx="10" cy="6" r="1.2" style="fill:var(--n-accent);stroke:none"/>
-            <line x1="15.5" y1="11" x2="15.5" y2="19"/><rect x="14" y="14" width="3" height="3.5" rx="1"/>
-            <line x1="21" y1="4.5" x2="21" y2="19"/><rect x="19.5" y="7" width="3" height="6" rx="1"/>
-          </svg>
-        </span>
-        <span class="orbit-node-label">Finance</span>
-      </a>
-      <a class="orbit-node n5" href="self-improvement.html" style="--n-accent:#2DD4BF">
-        <span class="orbit-node-icon"><svg viewBox="0 0 24 24"><path d="M3 17 9 11 13 15 21 7"/><path d="M15 7h6v6"/></svg></span>
-        <span class="orbit-node-label">Growth</span>
-      </a>
-      <a class="orbit-node n6" href="nova-lite.html" style="--n-accent:#A78BFA">
-        <span class="orbit-node-icon"><svg class="filled" viewBox="0 0 24 24"><path d="M12 2.5c.6 3.4 1.4 5.6 2.7 6.9 1.3 1.3 3.5 2.1 6.8 2.6-3.3.6-5.5 1.4-6.8 2.7-1.3 1.3-2.1 3.5-2.7 6.8-.6-3.3-1.4-5.5-2.7-6.8-1.3-1.3-3.5-2.1-6.8-2.7 3.3-.5 5.5-1.3 6.8-2.6C10.6 8.1 11.4 5.9 12 2.5Z"/></svg></span>
-        <span class="orbit-node-label">Nova</span>
-      </a>
+      <p class="jarvis-hint">Tap or say "Jarvis" — he can see everything on this dashboard.</p>
     </div>
-    <p class="jarvis-hint">Tap Jarvis — type or talk, he can see everything on this dashboard.</p>
+
+    <div class="jarvis-side jarvis-side-left">
+      <div class="today-card readiness-card">
+        <div class="readiness-bg" aria-hidden="true"></div>
+        <div class="readiness-hero-inner">
+          <div class="readiness-hero-left">
+            <div class="today-card-label">Readiness</div>
+            <div class="readiness-ring-wrap">
+              <svg class="readiness-ring" viewBox="0 0 140 140">
+                <circle class="ring-track" cx="70" cy="70" r="60"/>
+                <circle class="ring-fill" id="readinessRingFill" cx="70" cy="70" r="60"/>
+                <circle class="ring-track-inner" cx="70" cy="70" r="47"/>
+                <circle class="ring-fill-inner" id="sleepRingFill" cx="70" cy="70" r="47"/>
+              </svg>
+              <div class="readiness-center">
+                <div class="readiness-split">
+                  <div class="readiness-pct-row">
+                    <span class="readiness-pct" id="readinessPct">—</span>
+                    <span class="readiness-trend" id="readinessTrend"></span>
+                  </div>
+                  <div class="readiness-divider"></div>
+                  <span class="readiness-pct-sleep" id="readinessPctSleep">—</span>
+                </div>
+              </div>
+            </div>
+            <div class="readiness-headline" id="readinessHeadline">Connect WHOOP in Settings</div>
+            <div class="ring-legend">
+              <span class="ring-legend-item"><span class="ring-legend-dot recovery"></span>Recovery</span>
+              <span class="ring-legend-item"><span class="ring-legend-dot sleep"></span>Sleep</span>
+            </div>
+          </div>
+          <div class="readiness-hero-right">
+            <div class="readiness-stats">
+              <div><span id="readinessSleep">—</span><label>Sleep</label></div>
+              <div><span id="readinessRhr">—</span><label>Rest HR</label></div>
+              <div><span id="readinessHrv">—</span><label>HRV</label></div>
+              <div><span id="readinessStrain">—</span><label>Strain</label></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="today-card weather-card">
+        <div class="weather-bg" id="weatherBg" aria-hidden="true">
+          <div class="weather-stars"></div>
+          <div class="weather-moon"></div>
+          <div class="weather-sun"></div>
+          <div class="weather-cloud c1"></div>
+          <div class="weather-cloud c2"></div>
+          <div class="weather-cloud c3"></div>
+          <div class="weather-precip"></div>
+          <div class="weather-flash"></div>
+        </div>
+        <div class="weather-label-row">
+          <div class="today-card-label">Weather</div>
+          <button class="weather-loc-btn" id="weatherLocBtn" type="button" aria-label="Change location">
+            <svg viewBox="0 0 24 24"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
+          </button>
+        </div>
+        <div class="weather-main">
+          <span class="weather-icon" id="weatherIcon"></span>
+          <span class="weather-temp" id="weatherTemp">—</span>
+        </div>
+        <div class="weather-desc" id="weatherDesc">Getting your location…</div>
+        <div class="weather-loc-label" id="weatherLocLabel"></div>
+        <div class="weather-rain" id="weatherRain">Checking today's forecast…</div>
+        <div class="weather-details">
+          <div><span id="weatherWind">—</span><label>Wind</label></div>
+          <div><span id="weatherUv">—</span><label>UV</label></div>
+          <div><span id="weatherSunset">—</span><label>Sunset</label></div>
+        </div>
+      </div>
+
+      <div class="orbit-links">
+        <a class="orbit-link" href="gym.html" style="--n-accent:#38BDF8">
+          <span class="orbit-link-icon"><svg viewBox="0 0 24 24"><rect x="1.5" y="9" width="3" height="6" rx="1"/><rect x="19.5" y="9" width="3" height="6" rx="1"/><line x1="6" y1="12" x2="18" y2="12"/><rect x="5.5" y="6.5" width="3" height="11" rx="1"/><rect x="15.5" y="6.5" width="3" height="11" rx="1"/></svg></span>
+          <span class="orbit-link-label">Fitness</span>
+        </a>
+        <a class="orbit-link" href="health.html" style="--n-accent:#22D3EE">
+          <span class="orbit-link-icon"><svg viewBox="0 0 24 24"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span>
+          <span class="orbit-link-label">Health</span>
+        </a>
+        <a class="orbit-link" href="nutrition.html" style="--n-accent:#60A5FA">
+          <span class="orbit-link-icon"><svg viewBox="0 0 24 24"><path d="M3 2v7a2 2 0 0 0 2 2h.5a2 2 0 0 0 2-2V2"/><path d="M6.5 11v11"/><path d="M17.5 2c-2 0-3.5 2.5-3.5 6s1 5 3.5 5 1 8 1 8"/></svg></span>
+          <span class="orbit-link-label">Nutrition</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="jarvis-side jarvis-side-right">
+      <div class="today-card sun-card">
+        <div class="today-card-label">Sun & vitamin D</div>
+        <div class="sun-stat-row">
+          <div class="sun-stat"><div class="sun-stat-num" id="sunSteps">0</div><div class="sun-stat-label">Steps</div></div>
+          <div class="sun-stat"><div class="sun-stat-num" id="sunUv">—</div><div class="sun-stat-label">UV now</div></div>
+          <div class="sun-stat"><div class="sun-stat-num" id="sunVitD">—</div><div class="sun-stat-label">Vitamin D</div></div>
+        </div>
+        <button class="sun-track-btn" id="sunTrackBtn" type="button">🚶 Start live step tracking</button>
+        <div class="sun-input-grid">
+          <div class="sun-input-field">
+            <label for="sunStepsInput">Steps today</label>
+            <input class="sun-input" id="sunStepsInput" type="number" min="0" inputmode="numeric" placeholder="e.g. 6000">
+          </div>
+          <div class="sun-input-field">
+            <label for="sunMinutesInput">Minutes outside</label>
+            <input class="sun-input" id="sunMinutesInput" type="number" min="0" inputmode="numeric" placeholder="e.g. 30">
+          </div>
+        </div>
+        <div class="sun-hint" id="sunMinutesHint"></div>
+        <div class="sun-note">Live tracking weighs each minute by the UV index during that exact hour, so it adapts as UV rises and falls through the day. Manually typed minutes use the current hour's UV instead. A rough guide, not a clinical measurement — only counts while this tab stays open. Added automatically to today's Vitamin D in Nutrition.</div>
+      </div>
+
+      <div class="today-card">
+        <div class="today-card-label">Focus & bedtime</div>
+        <div class="productivity-body">
+          <span class="productivity-icon">
+            <svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.6.55 1 1.35 1 2.2V16h6v-.3c0-.85.4-1.65 1-2.2A6 6 0 0 0 12 3Z"/></svg>
+          </span>
+          <div class="productivity-copy">
+            <div class="productivity-label">Best window to focus</div>
+            <div class="productivity-window" id="productivityWindow">Connect WHOOP</div>
+            <div class="productivity-sub" id="productivitySub">Uses your average wake time to estimate peak alertness</div>
+          </div>
+        </div>
+        <div class="productivity-divider"></div>
+        <div class="productivity-body">
+          <span class="productivity-icon bedtime-icon">
+            <svg viewBox="0 0 24 24"><path d="M20 14.5a8.5 8.5 0 1 1-9.5-11 7 7 0 0 0 9.5 11Z"/></svg>
+          </span>
+          <div class="productivity-copy">
+            <div class="productivity-label">Wind down by</div>
+            <div class="productivity-window" id="bedtimeWindow">Connect WHOOP</div>
+            <div class="productivity-sub" id="bedtimeSub">Uses your sleep goal, average wake time, and today's strain</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="orbit-links">
+        <a class="orbit-link" href="finance.html" style="--n-accent:#0EA5E9">
+          <span class="orbit-link-icon">
+            <svg viewBox="0 0 24 24">
+              <line x1="4.5" y1="12" x2="4.5" y2="19"/><rect x="3" y="8.5" width="3" height="4.5" rx="1"/>
+              <line x1="10" y1="6" x2="10" y2="19"/><rect x="8.5" y="10" width="3" height="5.5" rx="1"/><circle cx="10" cy="6" r="1.2" style="fill:var(--n-accent);stroke:none"/>
+              <line x1="15.5" y1="11" x2="15.5" y2="19"/><rect x="14" y="14" width="3" height="3.5" rx="1"/>
+              <line x1="21" y1="4.5" x2="21" y2="19"/><rect x="19.5" y="7" width="3" height="6" rx="1"/>
+            </svg>
+          </span>
+          <span class="orbit-link-label">Finance</span>
+        </a>
+        <a class="orbit-link" href="self-improvement.html" style="--n-accent:#67E8F9">
+          <span class="orbit-link-icon"><svg viewBox="0 0 24 24"><path d="M3 17 9 11 13 15 21 7"/><path d="M15 7h6v6"/></svg></span>
+          <span class="orbit-link-label">Growth</span>
+        </a>
+        <a class="orbit-link" href="nova-lite.html" style="--n-accent:#3B82F6">
+          <span class="orbit-link-icon"><svg class="filled" viewBox="0 0 24 24"><path d="M12 2.5c.6 3.4 1.4 5.6 2.7 6.9 1.3 1.3 3.5 2.1 6.8 2.6-3.3.6-5.5 1.4-6.8 2.7-1.3 1.3-2.1 3.5-2.7 6.8-.6-3.3-1.4-5.5-2.7-6.8-1.3-1.3-3.5-2.1-6.8-2.7 3.3-.5 5.5-1.3 6.8-2.6C10.6 8.1 11.4 5.9 12 2.5Z"/></svg></span>
+          <span class="orbit-link-label">Nova</span>
+        </a>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -885,29 +880,6 @@ body::before {
   const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const now = new Date();
   $('hubDate').textContent = DAY_NAMES[now.getDay()] + ', ' + MONTH_NAMES[now.getMonth()] + ' ' + now.getDate();
-
-  /* ---------- Time-of-day: the whole page's mood shifts with the clock ----------
-     Same --glow/--glow-2 mechanism the rest of the app uses for its per-section
-     accent, just computed live from the hour instead of fixed — dawn amber,
-     midday sky blue, dusk violet, deep indigo at night. Re-applied on an
-     interval so a tab left open across a boundary (e.g. sunrise) catches up
-     without a reload. */
-  const TIME_BANDS = [
-    { end: 5,  glow: '#6366F1', glow2: '#7C3AED', name: 'night' },
-    { end: 8,  glow: '#F2A65A', glow2: '#F472B6', name: 'dawn' },
-    { end: 17, glow: '#38BDF8', glow2: '#67E8F9', name: 'day' },
-    { end: 21, glow: '#A78BFA', glow2: '#FB7185', name: 'dusk' },
-    { end: 24, glow: '#6366F1', glow2: '#7C3AED', name: 'night' },
-  ];
-  function applyTimeOfDayTheme() {
-    const h = new Date().getHours();
-    const band = TIME_BANDS.find((b) => h < b.end) || TIME_BANDS[TIME_BANDS.length - 1];
-    document.documentElement.style.setProperty('--glow', band.glow);
-    document.documentElement.style.setProperty('--glow-2', band.glow2);
-    document.body.dataset.timeOfDay = band.name;
-  }
-  applyTimeOfDayTheme();
-  setInterval(applyTimeOfDayTheme, 15 * 60 * 1000);
 
   function updateGreeting() {
     const h = new Date().getHours();
@@ -1689,8 +1661,24 @@ body::before {
 
   // Jarvis (the central AI orb + chat) now lives entirely in jarvis.js,
   // shared across every page — see that file for the brain, voice, and
-  // context logic. This page just supplies the hero orb + orbit markup
-  // jarvis.js finds and wires up (#jarvisCore).
+  // context logic. This page just supplies the hero orb markup jarvis.js
+  // finds and wires up (#jarvisCore), plus the floating info blobs below,
+  // which reuse jarvis.js's own data-gathering via window.__jarvisSnapshot
+  // rather than re-fetching WHOOP/nutrition a third time.
+  async function renderFloatingBlobs() {
+    if (typeof window.__jarvisSnapshot !== 'function') { setTimeout(renderFloatingBlobs, 400); return; }
+    try {
+      const snap = await window.__jarvisSnapshot();
+      const rec = snap.whoop && snap.whoop.recovery != null ? snap.whoop.recovery : null;
+      const strain = snap.whoop && snap.whoop.strain != null ? snap.whoop.strain : null;
+      $('blobRecovery').querySelector('.n').textContent = rec != null ? rec + '%' : '—';
+      $('blobSteps').querySelector('.n').textContent = snap.steps != null ? snap.steps : '—';
+      $('blobCalories').querySelector('.n').textContent = snap.caloriesToday != null ? Math.round(snap.caloriesToday) : '—';
+      $('blobStrain').querySelector('.n').textContent = strain != null ? strain : '—';
+    } catch (e) {}
+  }
+  renderFloatingBlobs();
+  setInterval(renderFloatingBlobs, 5 * 60 * 1000);
 
   /* ---------- Today panel: initial load ---------- */
   updateReadinessRing();
