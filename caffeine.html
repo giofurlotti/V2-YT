@@ -423,7 +423,27 @@ body::after {
   function energyColor(v){ if(v>=62)return'#6BE3A4'; if(v>=40)return'#F2C063'; return '#FF8A8A'; }
 
   /* ============ WHOOP (optional) ============ */
+  // Read-only pull so a device that's never been through WHOOP's OAuth here
+  // can still pick up the connection made on another device — same
+  // additive-only mechanism as index.html/health.html (never deletes,
+  // never pushes from this page, just adopts a newer token if one exists).
+  async function pullWhoopTokenFromCloud() {
+    if (!window.supabase) return false;
+    try {
+      const url = window.DASH_SUPABASE_URL || 'https://srajryooffirbroltjmg.supabase.co';
+      const skey = window.DASH_SUPABASE_KEY || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+      const supa = window.supabase.createClient(url, skey);
+      const { data } = await supa.from('app_state').select('data').eq('key', 'health').maybeSingle();
+      const remoteTok = data && data.data && data.data.whoop_tokens_v1;
+      if (!remoteTok || !remoteTok.access) return false;
+      const local = loadJSON('whoop_tokens_v1', null);
+      if (local && local.expires && remoteTok.expires && local.expires >= remoteTok.expires) return false;
+      localStorage.setItem('whoop_tokens_v1', JSON.stringify(remoteTok));
+      return true;
+    } catch (e) { return false; }
+  }
   async function loadWhoop(){
+    await pullWhoopTokenFromCloud();
     let t = loadJSON('whoop_tokens_v1', null);
     if (!t || !t.access) return;
     async function whFetch(path, tok){

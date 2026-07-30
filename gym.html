@@ -3838,6 +3838,26 @@ img, video, canvas, svg { max-width: 100%; }
   function addMsg(who, html) { const d = document.createElement('div'); d.className = 'rc-msg ' + who; d.innerHTML = html; body.appendChild(d); body.scrollTop = body.scrollHeight; return d; }
   function readLS(k, f) { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? f : v; } catch (e) { return f; } }
 
+  // Read-only pull so a device that's never been through WHOOP's OAuth here
+  // can still pick up the connection made on another device — same
+  // additive-only mechanism as index.html/health.html (never deletes,
+  // never pushes from this page, just adopts a newer token if one exists).
+  async function pullWhoopTokenFromCloud() {
+    if (!window.supabase) return false;
+    try {
+      const url = window.DASH_SUPABASE_URL || 'https://srajryooffirbroltjmg.supabase.co';
+      const skey = window.DASH_SUPABASE_KEY || 'sb_publishable_5142ZwTLF_DkSVRzciNuRA_bHwRAu4c';
+      const supa = window.supabase.createClient(url, skey);
+      const { data } = await supa.from('app_state').select('data').eq('key', 'health').maybeSingle();
+      const remoteTok = data && data.data && data.data.whoop_tokens_v1;
+      if (!remoteTok || !remoteTok.access) return false;
+      const local = readLS(WHOOP_KEY, null);
+      if (local && local.expires && remoteTok.expires && local.expires >= remoteTok.expires) return false;
+      localStorage.setItem(WHOOP_KEY, JSON.stringify(remoteTok));
+      return true;
+    } catch (e) { return false; }
+  }
+
   async function wFetch(path, t) {
     const [p, qs] = path.split('?');
     const params = new URLSearchParams(qs || ''); params.set('path', p);
@@ -3846,6 +3866,7 @@ img, video, canvas, svg { max-width: 100%; }
     return r.json();
   }
   async function whoopSnapshot() {
+    await pullWhoopTokenFromCloud();
     const t = readLS(WHOOP_KEY, null);
     if (!t || !t.access) return null;
     try {

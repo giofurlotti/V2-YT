@@ -780,7 +780,16 @@ main {
     const errEl = $('whErr');
     function showErr(m) { errEl.textContent = m || ''; errEl.style.display = m ? 'block' : 'none'; }
 
-    $('whConnectBtn').addEventListener('click', () => {
+    $('whConnectBtn').addEventListener('click', async (e) => {
+      // Last-chance check: if another device connected in the meantime (or
+      // the earlier pull just hadn't landed yet), use that instead of
+      // sending the user through OAuth again — the whole point is one
+      // connection should cover every device.
+      const btn = e.currentTarget;
+      btn.disabled = true; const prevText = btn.textContent; btn.textContent = 'Checking for an existing connection…';
+      const pulled = await pullWhoopTokenFromCloud();
+      btn.disabled = false; btn.textContent = prevText;
+      if (pulled) { render(); return; }
       const url = 'https://api.prod.whoop.com/oauth/oauth2/auth'
         + '?client_id='     + encodeURIComponent(CLIENT_ID)
         + '&redirect_uri='  + encodeURIComponent(REDIRECT)
@@ -811,7 +820,12 @@ main {
       const [p, qs] = path.split('?');
       const params = new URLSearchParams(qs || ''); params.set('path', p);
       const r = await fetch('/api/whoop-data?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + t.access, 'Accept':'application/json' } });
-      if (r.status === 401) { const n = await refreshTok(t); if (n) return whFetch(path, n); throw new Error('unauthorized — reconnect'); }
+      if (r.status === 401) {
+        const pulled = await pullWhoopTokenFromCloud();
+        if (pulled) return whFetch(path, load());
+        const n = await refreshTok(t); if (n) return whFetch(path, n);
+        throw new Error('unauthorized — reconnect');
+      }
       if (!r.ok) throw new Error('WHOOP ' + r.status + ': ' + (await r.text()));
       return await r.json();
     }
@@ -850,7 +864,16 @@ main {
 
     async function loadData() {
       let t = load(); if (!t) return;
-      if (t.expires && Date.now() > t.expires - 60000) { const n = await refreshTok(t); if (n) t = n; }
+      if (t.expires && Date.now() > t.expires - 60000) {
+        // Another device may have already refreshed this same connection —
+        // WHOOP rotates the refresh token on each use, so blindly refreshing
+        // our own possibly-stale copy here would fail with an OAuth2 error
+        // ("invalid_grant") if a different device already burned it. Pull
+        // first and only refresh locally if the cloud doesn't have a newer one.
+        const pulled = await pullWhoopTokenFromCloud();
+        if (pulled) t = load();
+        else { const n = await refreshTok(t); if (n) t = n; }
+      }
       showErr('');
       try {
         const [rec, sleep, cycle] = await Promise.all([
@@ -975,14 +998,20 @@ main {
       if (t && t.access) { $('whDisc').style.display = 'none'; $('whConn').style.display = ''; loadData(); }
       else { $('whDisc').style.display = ''; $('whConn').style.display = 'none'; }
     }
-    render();
-    // If this device has no token yet (or an older one), pick up whatever
-    // was connected from another device — this is the "reconnect on the
-    // phone won't work, but the computer's connection reaches it" path.
-    pullWhoopTokenFromCloud().then((changed) => { if (changed) render(); });
+    // Pull BEFORE the first render, not after — so a device that's never
+    // been connected doesn't flash the "Connect" button (and risk someone
+    // clicking it) while a perfectly good token from another device is
+    // still in flight from Supabase. Only show "Connect" once we're sure
+    // there really isn't one anywhere.
+    pullWhoopTokenFromCloud().then(render);
     // Exposed so the cloud-sync handler below (a separate closure) can
     // re-render once a WHOOP token arrives from another device.
     window.__whoopRerender = render;
+    // A tab can sit open for hours; re-check whenever it regains focus so a
+    // connection made on another device shows up without a manual reload.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') pullWhoopTokenFromCloud().then((changed) => { if (changed) render(); });
+    });
   })();
   </script>
 

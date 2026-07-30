@@ -1093,6 +1093,17 @@ body::after {
       if (changed) { whSyncFailed = false; whSyncAttempted = false; renderWhoop(); }
       syncWhoop();
     });
+    // A tab can sit open for hours; re-check whenever it regains focus so a
+    // connection (or refresh) made on another device shows up without a
+    // manual reload, instead of this tab eventually trying — and failing —
+    // to refresh its own stale copy.
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      pullWhoopTokenFromCloud().then((changed) => {
+        if (changed) { whSyncFailed = false; whSyncAttempted = false; renderWhoop(); }
+        syncWhoop();
+      });
+    });
   });
 
   /* ---------- WHOOP ---------- */
@@ -1659,14 +1670,28 @@ body::after {
     const [p, qs] = path.split('?');
     const params = new URLSearchParams(qs || ''); params.set('path', p);
     const r = await fetch('/api/whoop-data?' + params.toString(), { headers: { 'Authorization': 'Bearer ' + t.access, 'Accept':'application/json' } });
-    if (r.status === 401) { const n = await wRefresh(t); if (n) return wFetch(path, n); throw new Error('unauthorized'); }
+    if (r.status === 401) {
+      const pulled = await pullWhoopTokenFromCloud();
+      if (pulled) return wFetch(path, loadJSON(WHOOP_KEY, null));
+      const n = await wRefresh(t); if (n) return wFetch(path, n);
+      throw new Error('unauthorized');
+    }
     if (!r.ok) throw new Error('whoop ' + r.status);
     return r.json();
   }
   async function syncWhoop() {
     let t = loadJSON(WHOOP_KEY, null);
     if (!t || !t.access) return;
-    if (t.expires && Date.now() > t.expires - 60000) { const n = await wRefresh(t); if (n) t = n; }
+    if (t.expires && Date.now() > t.expires - 60000) {
+      // Another device may have already refreshed this same connection —
+      // WHOOP rotates the refresh token on each use, so blindly refreshing
+      // our own possibly-stale copy would fail with an OAuth2 error if a
+      // different device already burned it. Pull first, refresh only if
+      // the cloud doesn't have anything newer.
+      const pulled = await pullWhoopTokenFromCloud();
+      if (pulled) t = loadJSON(WHOOP_KEY, null);
+      else { const n = await wRefresh(t); if (n) t = n; }
+    }
     let recErr = null, sleepErr = null, cycleErr = null;
     try {
       const [rec, sleep, cycle] = await Promise.all([
