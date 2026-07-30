@@ -88,38 +88,16 @@
 .jarvis-core.voice-active .jarvis-ring-sweep { animation-duration: 1.6s; }
 
 /* ---------- Hologram face: shown only while voice-active, replacing the
-   sparkle icon with a small animated face (blinking eyes + a waveform
-   "mouth" that reacts while he's actually speaking) for a more alive,
-   sci-fi feel during hands-free conversations. ---------- */
-.jarvis-face {
-  position: absolute; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 8px;
-  opacity: 0; transform: scale(0.85); transition: opacity 0.45s ease, transform 0.45s ease; pointer-events: none;
+   sparkle icon with a canvas-drawn wireframe/constellation face (glowing
+   node points + connecting lines, à la a holographic face scan) — mouth
+   points animate open/closed while he's actually speaking, brows shift
+   slightly for a "thinking" look while a reply is being generated. ---------- */
+.jarvis-face-canvas {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  opacity: 0; transform: scale(0.9); transition: opacity 0.45s ease, transform 0.45s ease;
 }
-.jarvis-core.voice-active .jarvis-face { opacity: 1; transform: scale(1); }
+.jarvis-core.voice-active .jarvis-face-canvas { opacity: 1; transform: scale(1); }
 .jarvis-core.voice-active .jarvis-core-icon { opacity: 0; transform: scale(0.7); }
-.jarvis-face-eyes { display: flex; gap: 10px; }
-.jarvis-face-eye {
-  width: 7px; height: 7px; border-radius: 50%; background: #06282e;
-  animation: jarvis-eye-blink 4.2s ease-in-out infinite;
-}
-.jarvis-face-eye.r { animation-delay: 0.05s; }
-@keyframes jarvis-eye-blink { 0%, 92%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.12); } }
-.jarvis-face-mouth { display: flex; align-items: flex-end; gap: 2.5px; height: 11px; }
-.jarvis-face-mouth .bar { width: 2.5px; border-radius: 2px; background: #06282e; height: 3px; transition: height 0.12s ease; }
-.jarvis-core.speaking .jarvis-face-mouth .bar { animation: jarvis-mouth-bar 0.55s ease-in-out infinite; }
-.jarvis-core.speaking .jarvis-face-mouth .bar:nth-child(1) { animation-delay: 0.05s; }
-.jarvis-core.speaking .jarvis-face-mouth .bar:nth-child(2) { animation-delay: 0.18s; }
-.jarvis-core.speaking .jarvis-face-mouth .bar:nth-child(3) { animation-delay: 0s; }
-.jarvis-core.speaking .jarvis-face-mouth .bar:nth-child(4) { animation-delay: 0.24s; }
-.jarvis-core.speaking .jarvis-face-mouth .bar:nth-child(5) { animation-delay: 0.12s; }
-@keyframes jarvis-mouth-bar { 0%, 100% { height: 3px; } 50% { height: 11px; } }
-/* Faint scanline sweep across the face for a holographic-projection feel. */
-.jarvis-face::before {
-  content: ''; position: absolute; inset: -8px -16px; pointer-events: none; opacity: 0.4; mix-blend-mode: overlay;
-  background: repeating-linear-gradient(0deg, rgba(255,255,255,0.5) 0px, transparent 1px, transparent 3px);
-  animation: jarvis-scan 2.2s linear infinite;
-}
-@keyframes jarvis-scan { 0% { transform: translateY(-40%); } 100% { transform: translateY(40%); } }
 
 /* Floating orb (every page except index.html, which has its own hero) */
 .jarvis-fab {
@@ -128,14 +106,8 @@
 }
 .jarvis-fab .jarvis-core-icon { width: 22px; height: 22px; }
 
-/* Hero variant (index.html) gets bigger icon/face via its own size */
+/* Hero variant (index.html) gets bigger icon via its own size */
 #jarvisCore:not(.jarvis-fab) .jarvis-core-icon { width: 30px; height: 30px; }
-#jarvisCore:not(.jarvis-fab) .jarvis-face-eye { width: 11px; height: 11px; }
-#jarvisCore:not(.jarvis-fab) .jarvis-face-eyes { gap: 16px; }
-#jarvisCore:not(.jarvis-fab) .jarvis-face-mouth { height: 17px; gap: 4px; }
-#jarvisCore:not(.jarvis-fab) .jarvis-face-mouth .bar { width: 4px; }
-@keyframes jarvis-mouth-bar-hero { 0%, 100% { height: 4px; } 50% { height: 17px; } }
-#jarvisCore:not(.jarvis-fab).speaking .jarvis-face-mouth .bar { animation-name: jarvis-mouth-bar-hero; }
 
 /* ---------- Chat modal ---------- */
 .jarvis-modal-bg { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,0.62); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
@@ -215,11 +187,7 @@
   styleEl.textContent = css;
   document.head.appendChild(styleEl);
 
-  const FACE_HTML =
-    '<div class="jarvis-face">' +
-      '<div class="jarvis-face-eyes"><div class="jarvis-face-eye l"></div><div class="jarvis-face-eye r"></div></div>' +
-      '<div class="jarvis-face-mouth"><span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span></div>' +
-    '</div>';
+  const FACE_HTML = '<canvas class="jarvis-face-canvas"></canvas>';
 
   /* ---------- Inject FAB if this page has no hero orb of its own ---------- */
   if (!$('jarvisCore')) {
@@ -244,12 +212,121 @@
       core.insertBefore(ticks, core.firstChild);
       core.insertBefore(wake, core.firstChild);
     }
-    if (!core.querySelector('.jarvis-face')) {
+    if (!core.querySelector('.jarvis-face-canvas')) {
       const face = document.createElement('div');
       face.innerHTML = FACE_HTML;
       core.appendChild(face.firstChild);
     }
   }
+
+  /* ---------- Hologram face draw loop ----------
+     A stylized wireframe/constellation face: a handful of facial landmark
+     points (brow/eye/nose/mouth/jaw, normalized 0–1 within a face box) drawn
+     as glowing nodes, with nearby points auto-connected by faint lines —
+     the same "connect what's close" trick as a particle-network effect,
+     which naturally produces mesh density around the features without
+     hand-authoring a full triangulation. Runs once per orb (hero + FAB both
+     get their own canvas + loop) but only actually draws while the orb has
+     .voice-active, so it costs nothing the rest of the time. */
+  const FACE_LANDMARKS = [
+    // face oval (20 pts)
+    [0.50,0.04],[0.61,0.06],[0.71,0.11],[0.79,0.19],[0.85,0.29],[0.88,0.40],[0.89,0.50],
+    [0.88,0.60],[0.85,0.71],[0.79,0.81],[0.71,0.89],[0.61,0.94],[0.50,0.96],
+    [0.39,0.94],[0.29,0.89],[0.21,0.81],[0.15,0.71],[0.12,0.60],[0.11,0.50],[0.12,0.40],
+    [0.15,0.29],[0.21,0.19],[0.29,0.11],[0.39,0.06],
+    // brows
+    [0.26,0.35],[0.31,0.32],[0.37,0.31],[0.43,0.33],
+    [0.57,0.33],[0.63,0.31],[0.69,0.32],[0.74,0.35],
+    // eyes
+    [0.27,0.42],[0.32,0.40],[0.38,0.40],[0.42,0.43],[0.38,0.45],[0.32,0.45],
+    [0.58,0.43],[0.62,0.40],[0.68,0.40],[0.73,0.42],[0.68,0.45],[0.62,0.45],
+    // nose
+    [0.50,0.44],[0.49,0.53],[0.47,0.61],[0.43,0.64],[0.50,0.66],[0.57,0.64],
+    // mouth (outer then inner)
+    [0.34,0.76],[0.41,0.73],[0.50,0.72],[0.59,0.73],[0.66,0.76],[0.59,0.81],[0.50,0.83],[0.41,0.81],
+    [0.41,0.76],[0.50,0.76],[0.59,0.76],[0.50,0.78],
+    // jaw/ears hint
+    [0.10,0.45],[0.90,0.45],
+  ];
+  const MOUTH_START = 50; // index into FACE_LANDMARKS where the mouth points begin (24 oval + 8 brow + 12 eye + 6 nose)
+  const MOUTH_COUNT = 12;
+  function startFaceCanvas(core) {
+    const canvas = core.querySelector('.jarvis-face-canvas');
+    if (!canvas || !canvas.getContext || canvas.__jarvisFaceStarted) return;
+    canvas.__jarvisFaceStarted = true;
+    const ctx = canvas.getContext('2d');
+    let w = 0, h = 0, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    function resize() {
+      const r = core.getBoundingClientRect();
+      w = r.width; h = r.height;
+      if (!w || !h) return;
+      canvas.width = w * dpr; canvas.height = h * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resize();
+    window.addEventListener('resize', resize);
+    let t = 0;
+    const FACE_COLOR = '#06282e';
+    function draw() {
+      requestAnimationFrame(draw);
+      const active = core.classList.contains('voice-active');
+      if (!active) { if (w && h) ctx.clearRect(0, 0, w, h); return; }
+      if (!w || !h) { resize(); if (!w || !h) return; }
+      t++;
+      ctx.clearRect(0, 0, w, h);
+      const box = Math.min(w, h) * 0.62;
+      const ox = (w - box) / 2, oy = (h - box) / 2 - box * 0.03;
+      const speaking = core.classList.contains('speaking');
+      const thinking = core.classList.contains('thinking');
+      // Talking mouth: pseudo-random-but-smooth openness while speaking,
+      // settles flat otherwise. Thinking gets a slower, subtler "considering"
+      // brow/mouth drift instead of a flat neutral face.
+      const talk = speaking ? (0.3 + 0.7 * Math.abs(Math.sin(t * 0.22) * 0.6 + Math.sin(t * 0.09) * 0.4)) : 0;
+      const think = thinking ? Math.sin(t * 0.04) * 0.5 + 0.5 : 0;
+      const pts = FACE_LANDMARKS.map((p, i) => {
+        let x = p[0], y = p[1];
+        // Idle "alive" breathing jitter, tiny, on every point.
+        x += Math.sin(t * 0.02 + i) * 0.003;
+        y += Math.cos(t * 0.023 + i * 1.3) * 0.003;
+        if (i >= MOUTH_START && i < MOUTH_START + MOUTH_COUNT) {
+          // Push the lower mouth points down and upper ones up slightly to
+          // open the mouth while talking, proportional to vertical position
+          // within the mouth group (top lip vs bottom lip).
+          const localY = p[1] - FACE_LANDMARKS[MOUTH_START + 2][1];
+          y += (localY > 0 ? 1 : -1) * talk * 0.05;
+        }
+        if (thinking && (i === 25 || i === 26 || i === 28 || i === 29)) {
+          y -= think * 0.02; // one brow lifts slightly while "considering"
+        }
+        return [ox + x * box, oy + y * box];
+      });
+      // Mesh lines: connect points within a distance threshold (scaled to
+      // box size) — concentrates naturally around dense feature clusters.
+      const LINK = box * 0.11;
+      ctx.lineWidth = 1;
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          const dx = pts[i][0] - pts[j][0], dy = pts[i][1] - pts[j][1];
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < LINK) {
+            ctx.globalAlpha = (1 - d / LINK) * 0.55;
+            ctx.strokeStyle = FACE_COLOR;
+            ctx.beginPath(); ctx.moveTo(pts[i][0], pts[i][1]); ctx.lineTo(pts[j][0], pts[j][1]); ctx.stroke();
+          }
+        }
+      }
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = FACE_COLOR;
+      for (let i = 0; i < pts.length; i++) {
+        ctx.beginPath();
+        ctx.arc(pts[i][0], pts[i][1], box * 0.008, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+    requestAnimationFrame(draw);
+  }
+  startFaceCanvas($('jarvisCore'));
 
   /* ---------- Inject chat modal ---------- */
   const modalWrap = document.createElement('div');
@@ -561,8 +638,13 @@
     "at the user's saved location, nutrition logs, gym training data, sun/steps/vitamin D, today's supplement/stack " +
     "checklist, today's goals, today's caffeine intake, net worth, and any notes the user left for you. If a field says " +
     "it isn't tracked or set up yet, say so plainly rather than guessing. You do NOT have access to their " +
-    "conversations with any other AI assistant (including Claude) — only what's listed below. Answer concisely, " +
-    "reference specific numbers from the data when relevant, and keep a calm, capable, faintly dry tone.\n" +
+    "conversations with any other AI assistant (including Claude) — only what's listed below.\n" +
+    "Answer style — this matters: be direct. Lead with the actual answer in the first sentence, not a preamble, " +
+    "not a restatement of the question, not a disclaimer. Default to 1–3 sentences; only go longer if the user " +
+    "asked for detail or a list genuinely helps. Reference specific numbers from the data when relevant instead of " +
+    "vague language. Talk like a sharp, calm personal assistant having a real conversation, not a report generator — " +
+    "plain flowing sentences, not bullet-heavy unless listing multiple distinct items. Never hedge with " +
+    "\"it seems\"/\"it looks like\" when the data just says it. Keep a calm, capable, faintly dry tone.\n" +
     "If, and only if, the user is telling you they ate or drank something and wants it logged, estimate its full " +
     "nutrition and append EXACTLY ONE block in this format at the very end of your reply, after your normal answer, " +
     "with nothing after it: <<<ADD_FOOD>>>{\"name\":\"short label\",\"calories\":N,\"protein\":N,\"carbs\":N,\"fat\":N," +
@@ -763,7 +845,10 @@
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
-      body: JSON.stringify({ model, max_tokens: 700, stream: true, messages: [{ role: 'system', content: SYS + ctx }, { role: 'user', content: text }] }),
+      // Lower temperature than the API default — more focused, direct
+      // answers instead of meandering/creative ones, which matters more
+      // here than in a general-purpose chat.
+      body: JSON.stringify({ model, max_tokens: 700, temperature: 0.5, stream: true, messages: [{ role: 'system', content: SYS + ctx }, { role: 'user', content: text }] }),
     });
     if (!res.ok || !res.body) {
       let errJson = null; try { errJson = await res.json(); } catch (e) {}
@@ -787,7 +872,16 @@
         if (!payload || payload === '[DONE]') continue;
         let json;
         try { json = JSON.parse(payload); } catch (e) { continue; }
-        if (json.error) { const err = new Error(json.error.message || 'stream error'); err.status = json.error.code; throw err; }
+        if (json.error) {
+          const err = new Error(json.error.message || 'stream error');
+          err.status = json.error.code;
+          // Already-spoken/displayed partial content, if any — the caller
+          // uses this to keep it as the final answer instead of discarding
+          // it and having a retry with a different model produce a second,
+          // different answer on top of what was already said out loud.
+          err.partial = full;
+          throw err;
+        }
         const delta = json.choices && json.choices[0] && json.choices[0].delta && json.choices[0].delta.content;
         if (delta) { full += delta; onDelta(delta, full); }
       }
@@ -823,7 +917,13 @@
       const ctx = await buildContext();
       let full = '', spokenUpTo = 0, succeeded = false, lastErr = 'Something went wrong — check your API key.', authFailed = false;
       for (const model of MODELS) {
-        full = ''; spokenUpTo = 0;
+        // A model can stream part of an answer (already spoken/displayed)
+        // and then fail mid-stream — without this, the retry below would
+        // silently start a second, different answer on top of the first,
+        // which is exactly what "he responds twice" was: two partial/whole
+        // replies stacked back to back from two different models.
+        stopSpeaking();
+        full = ''; spokenUpTo = 0; pending.text = ''; render();
         try {
           full = await streamChat(model, key, ctx, text, (delta, accumulated) => {
             full = accumulated;
@@ -852,6 +952,16 @@
             authFailed = true;
             try { localStorage.removeItem(OR_KEY); } catch (e2) {}
             lastErr = "That OpenRouter key isn't working (missing, mistyped, or revoked) — paste a fresh free one below.";
+            break;
+          }
+          // If this model already produced (and possibly already spoke)
+          // some real content before failing, keep it as the final answer
+          // instead of retrying a different model for a fresh one — a
+          // retry here would produce a second, different-sounding answer
+          // stacked right after whatever was already said.
+          if (e.partial && e.partial.trim()) {
+            full = e.partial;
+            succeeded = true;
             break;
           }
           lastErr = e.message || lastErr;

@@ -601,9 +601,9 @@ body.jarvis-voice-active .hub-head { opacity: 0.2; }
       var w = 0, h = 0, dpr = Math.min(window.devicePixelRatio || 1, 2);
       var COLORS = ['#2DE1FC', '#38BDF8', '#7DD3FC', '#67E8F9'];
       var particles = [];
-      function makeParticle() {
+      function makeParticle(cellX, cellY, cellW, cellH) {
         return {
-          x: Math.random() * w, y: Math.random() * h,
+          x: cellX + Math.random() * cellW, y: cellY + Math.random() * cellH,
           r: 0.8 + Math.random() * 1.8,
           vx: (Math.random() - 0.5) * 0.18, vy: (Math.random() - 0.5) * 0.18,
           color: COLORS[Math.floor(Math.random() * COLORS.length)],
@@ -616,9 +616,21 @@ body.jarvis-voice-active .hub-head { opacity: 0.2; }
         canvas.width = w * dpr; canvas.height = h * dpr;
         canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        var count = w < 340 ? 16 : (w < 700 ? 26 : 36);
+        var count = w < 340 ? 30 : (w < 700 ? 46 : 64);
+        // Stratified placement (one particle per grid cell, jittered inside
+        // it) instead of pure Math.random for x/y — pure random at this
+        // count reliably reads as "clumped on one side" for many seconds
+        // at a time on a wide canvas before drifting; this guarantees even
+        // coverage from the first frame while still looking organic.
+        var cols = Math.max(1, Math.round(Math.sqrt(count * w / Math.max(h, 1))));
+        var rows = Math.max(1, Math.ceil(count / cols));
+        var cellW = w / cols, cellH = h / rows;
         particles = [];
-        for (var i = 0; i < count; i++) particles.push(makeParticle());
+        for (var cy = 0; cy < rows && particles.length < count; cy++) {
+          for (var cx = 0; cx < cols && particles.length < count; cx++) {
+            particles.push(makeParticle(cx * cellW, cy * cellH, cellW, cellH));
+          }
+        }
       }
       resize();
       window.addEventListener('resize', resize);
