@@ -44,15 +44,24 @@
   border-radius: 50%; cursor: pointer; overflow: visible; -webkit-tap-highlight-color: transparent;
   background: radial-gradient(circle at 34% 28%, #eafeff 0%, var(--jarvis-cyan) 46%, var(--jarvis-cyan-deep) 100%);
   box-shadow: 0 0 34px color-mix(in srgb, var(--jarvis-cyan) 60%, transparent), inset 0 0 24px rgba(255,255,255,0.3);
-  animation: jarvis-pulse 3.2s ease-in-out infinite;
+  animation: jarvis-blob 9s ease-in-out infinite, jarvis-pulse 3.2s ease-in-out infinite;
   transition: transform 0.15s ease, box-shadow 0.5s ease, background 0.5s ease;
 }
 .jarvis-fab:hover, .jarvis-fab:focus-visible { transform: scale(1.06); }
-.jarvis-core.listening { animation: jarvis-pulse 3.2s ease-in-out infinite, jarvis-listen 1s ease-in-out infinite; }
+.jarvis-core.listening { animation: jarvis-blob 9s ease-in-out infinite, jarvis-pulse 3.2s ease-in-out infinite, jarvis-listen 1s ease-in-out infinite; }
 .jarvis-core.thinking .jarvis-ring-sweep { animation-duration: 0.7s; }
 @keyframes jarvis-pulse {
   0%, 100% { box-shadow: 0 0 34px color-mix(in srgb, var(--jarvis-cyan) 55%, transparent), inset 0 0 24px rgba(255,255,255,0.28); }
   50% { box-shadow: 0 0 48px color-mix(in srgb, var(--jarvis-cyan) 75%, transparent), inset 0 0 30px rgba(255,255,255,0.4); }
+}
+/* A slow, organic morph instead of a perfectly static circle — each of the
+   8 corner radii drifts within a 33–67% band so it always reads as a
+   rounded "plasma blob," never a spiky or lopsided shape. */
+@keyframes jarvis-blob {
+  0%, 100% { border-radius: 42% 58% 61% 39% / 45% 41% 59% 55%; }
+  25%      { border-radius: 58% 42% 39% 61% / 55% 63% 37% 45%; }
+  50%      { border-radius: 48% 52% 35% 65% / 63% 42% 58% 37%; }
+  75%      { border-radius: 39% 61% 58% 42% / 41% 55% 45% 63%; }
 }
 @keyframes jarvis-listen { 0%,100% { box-shadow: 0 0 34px color-mix(in srgb, var(--jarvis-cyan) 70%, transparent); } 50% { box-shadow: 0 0 64px color-mix(in srgb, var(--jarvis-cyan) 95%, transparent); } }
 .jarvis-core::before { content: ''; position: absolute; inset: 15%; border: 1px solid rgba(255,255,255,0.55); border-radius: 50%; pointer-events: none; transition: opacity 0.4s ease; }
@@ -91,7 +100,7 @@
 .jarvis-core.voice-active {
   background: radial-gradient(circle at 50% 45%, rgba(6,20,32,0.95) 0%, rgba(2,8,14,0.98) 65%, rgba(2,8,14,1) 100%);
   box-shadow: 0 0 60px rgba(45,225,252,0.25), inset 0 0 50px rgba(0,0,0,0.55);
-  animation: jarvis-voice-glow 2.4s ease-in-out infinite;
+  animation: jarvis-blob 9s ease-in-out infinite, jarvis-voice-glow 2.4s ease-in-out infinite;
 }
 @keyframes jarvis-voice-glow {
   0%, 100% { box-shadow: 0 0 50px rgba(45,225,252,0.18), inset 0 0 50px rgba(0,0,0,0.55); }
@@ -1287,9 +1296,19 @@
   // speech-to-text regularly mangles proper nouns ("jarviss", "jarv is", a
   // trailing "jarvis," with punctuation already stripped by the API, etc.).
   const WAKE_RE = /\bjarv[a-z]*\b/i;
+  // Chrome's SpeechRecognition is cloud-based (audio is sent to Google's
+  // servers), so calling rec.stop() requests a stop but doesn't guarantee
+  // no more results arrive from audio already in flight — a late/stray
+  // onresult can still land after we've already acted on the one we
+  // wanted. This flag makes acting on a result a one-shot thing per
+  // session regardless of the exact cause, instead of relying on timing:
+  // once we've used a result, every further onresult is ignored until
+  // safeStart() intentionally opens a fresh session.
+  let acceptingResults = true;
   function safeStart(nextMode) {
     if (!secure) { setHint('Voice needs HTTPS — open the dashboard via its https:// address.', true); return; }
     mode = nextMode;
+    acceptingResults = true;
     setWakeIndicator(mode === 'wake');
     if (mode === 'wake') setHint("Listening for \"Jarvis\"…", true);
     try { rec.start(); } catch (e) { /* a session was already active — ignore, onend will retry */ }
@@ -1301,6 +1320,7 @@
     rec.interimResults = false;
     rec.lang = 'en-US';
     rec.onresult = (e) => {
+      if (!acceptingResults) return;
       wakeFailStreak = 0;
       const said = (e.results[e.results.length - 1][0].transcript || '').trim();
       if (mode === 'wake') {
@@ -1315,8 +1335,9 @@
           // starts playing into that still-open mic before it truly closes,
           // the SAME session can pick up Jarvis's own voice and fire a
           // second onresult, i.e. exactly what "he talks twice" turned out
-          // to be. Force it closed the instant we have what we need,
-          // instead of trusting it to close itself in time.
+          // to be. Force it closed the instant we have what we need, and
+          // stop paying attention to this session entirely either way.
+          acceptingResults = false;
           try { rec.stop(); } catch (e) {}
           ask(after, { viaVoice: true });
         } else {
@@ -1329,6 +1350,7 @@
         setHint('Heard: "' + said + '"', false);
         const viaVoice = document.body.classList.contains('jarvis-voice-active');
         if (viaVoice) setCaption('Thinking…');
+        acceptingResults = false;
         try { rec.stop(); } catch (e) {} // same reason as above
         ask(said, { viaVoice });
       }

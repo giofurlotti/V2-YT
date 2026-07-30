@@ -54,31 +54,7 @@ body::after {
     linear-gradient(90deg, color-mix(in srgb, var(--glow) 11%, transparent) 1px, transparent 1px);
   background-size: 42px 42px;
 }
-.today-card, .orbit-link { border-radius: var(--radius-sm) !important; }
 .today-card { border-color: color-mix(in srgb, var(--glow) 30%, var(--card-border)) !important; }
-
-/* Instrument-panel corner brackets — small sharp HUD-style accents at two
-   opposite corners of each card, drawn as background-gradient "lines" on a
-   single pseudo-element (no extra DOM needed, and no clash with the
-   existing ::before glow overlay from theme.css). */
-.today-card::after {
-  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 2; border-radius: inherit;
-  --bc: color-mix(in srgb, var(--glow) 65%, transparent);
-  background:
-    linear-gradient(var(--bc), var(--bc)) top left / 11px 1.5px no-repeat,
-    linear-gradient(var(--bc), var(--bc)) top left / 1.5px 11px no-repeat,
-    linear-gradient(var(--bc), var(--bc)) bottom right / 11px 1.5px no-repeat,
-    linear-gradient(var(--bc), var(--bc)) bottom right / 1.5px 11px no-repeat;
-}
-.orbit-link::before {
-  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 0; border-radius: inherit;
-  --bc: color-mix(in srgb, var(--n-accent) 55%, transparent);
-  background:
-    linear-gradient(var(--bc), var(--bc)) top left / 9px 1.5px no-repeat,
-    linear-gradient(var(--bc), var(--bc)) top left / 1.5px 9px no-repeat,
-    linear-gradient(var(--bc), var(--bc)) bottom right / 9px 1.5px no-repeat,
-    linear-gradient(var(--bc), var(--bc)) bottom right / 1.5px 9px no-repeat;
-}
 
 /* Side widgets double as nav links to their full page — a small arrow marks
    the affordance; buttons/inputs inside them still work normally (JS keeps
@@ -197,14 +173,6 @@ body.jarvis-voice-active .hub-head { opacity: 0.2; }
   margin-bottom: 16px; display: flex; align-items: center; gap: 6px;
 }
 .today-card-label::before { content: ''; width: 6px; height: 6px; background: color-mix(in srgb, var(--glow) 70%, transparent); flex-shrink: 0; }
-
-/* Angular instrument-panel silhouette — a sharp diagonal cut on the top
-   right corner instead of a fully rounded box, so the cards read as
-   technical readouts rather than soft consumer-app tiles. Combines with
-   the existing corner-bracket ::after on the two other corners. */
-.today-card {
-  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%);
-}
 
 /* Tick marks around the readiness ring, like a dial/gauge bezel. */
 .readiness-ring-wrap::before {
