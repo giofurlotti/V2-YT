@@ -1,0 +1,15 @@
+{
+  "name": "Giorgio's Dashboard",
+  "short_name": "Dashboard",
+  "description": "Personal life dashboard — WHOOP, nutrition, fitness, finance, and Jarvis.",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0A1622",
+  "theme_color": "#0A1622",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

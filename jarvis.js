@@ -384,19 +384,81 @@
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
+  // Same 6am-rollover "active day" the goals/stack features already use
+  // (topbar.js) — a supplement or goal logged at 1am still counts as
+  // "yesterday" there, so Jarvis needs to agree with that, not calendar midnight.
+  function activeDateKey() {
+    const now = new Date();
+    const d = new Date(now);
+    if (now.getHours() < 6) d.setDate(d.getDate() - 1);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  // Weather isn't in localStorage anywhere — Main only keeps it in a page
+  // variable — so Jarvis does its own quick fetch, reusing whatever
+  // location Main already saved (geo_pos_v1) rather than asking for
+  // location permission itself. No cached location yet = no weather, same
+  // as any other "hasn't been set up" data source.
+  async function fetchWeatherSnapshot() {
+    let geo = null; try { geo = JSON.parse(localStorage.getItem('geo_pos_v1')); } catch (e) {}
+    if (!geo || geo.lat == null) return null;
+    try {
+      const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + geo.lat + '&longitude=' + geo.lon +
+        '&current=temperature_2m,precipitation,weather_code,wind_speed_10m' +
+        '&daily=precipitation_probability_max,uv_index_max,sunset&timezone=auto';
+      const r = await fetch(url);
+      const j = await r.json();
+      const cur = j.current || {}, daily = j.daily || {};
+      return {
+        tempC: cur.temperature_2m != null ? Math.round(cur.temperature_2m) : null,
+        isRainingNow: (cur.precipitation || 0) > 0,
+        windKmh: cur.wind_speed_10m != null ? Math.round(cur.wind_speed_10m) : null,
+        uvMax: (daily.uv_index_max && daily.uv_index_max[0] != null) ? Math.round(daily.uv_index_max[0]) : null,
+        rainChancePct: (daily.precipitation_probability_max && daily.precipitation_probability_max[0] != null) ? daily.precipitation_probability_max[0] : null,
+        sunset: (daily.sunset && daily.sunset[0]) || null,
+        location: geo.label || null,
+      };
+    } catch (e) { return null; }
+  }
+
   async function buildContext() {
     const profile = loadJSON('user_profile_v1', {});
     const nutrition = loadJSON('nutrition:v1', null);
     const sun = loadJSON('sun_tracker_v1', null);
     const gym = await loadGymData();
     const whoop = await whoopSnapshot();
+    const weather = await fetchWeatherSnapshot();
+
+    const ad = activeDateKey();
+    const stackItems = loadJSON('stack:items', []);
+    const stackTaken = loadJSON('stack:taken:' + ad, {});
+    const supplements = Array.isArray(stackItems) && stackItems.length
+      ? stackItems.map((it) => ({ name: it && it.name, taken: !!(it && stackTaken[it.id]) }))
+      : null;
+
+    const goals = loadJSON('goals:' + ad, []);
+
+    const cafLogs = loadJSON('caf:logs', []);
+    const todayStartMs = new Date(new Date().toDateString()).getTime();
+    const caffeineMgToday = Array.isArray(cafLogs)
+      ? cafLogs.filter((l) => l && l.ts >= todayStartMs).reduce((sum, l) => sum + (+l.mg || 0), 0)
+      : null;
+
+    const nwHistory = loadJSON('nw:history', []);
+    const netWorth = Array.isArray(nwHistory) && nwHistory.length ? nwHistory[nwHistory.length - 1].v : null;
+
     const ctx = {
       today: new Date().toString(),
       profile,
       whoop: whoop || 'not connected or no data synced yet',
+      weather: weather || 'not available — no location saved on this device yet (set it on the Main page)',
       nutritionToday: nutrition && nutrition.logs ? (nutrition.logs[dateKey()] || []) : null,
       sunAndSteps: sun,
       gym: gym ? { exercises: gym.exercises, days: gym.days, recentLogs: gym.logs } : 'not logged yet',
+      supplementsToday: supplements || 'none configured',
+      goalsToday: Array.isArray(goals) && goals.length ? goals : 'none set today',
+      caffeineMgToday: caffeineMgToday != null ? caffeineMgToday : 'not tracked',
+      netWorth: netWorth != null ? netWorth : 'not tracked',
       userNotes: notes() || null,
     };
     return JSON.stringify(ctx);
@@ -426,8 +488,10 @@
 
   const SYS = "You are Jarvis, a witty, sharp, unflappable AI assistant living inside the user's personal life-tracking " +
     "dashboard — think Tony Stark's Jarvis, but for health, fitness, nutrition, and finance instead of a suit of armor. " +
-    "You can see everything this dashboard has already recorded: WHOOP recovery/sleep/strain, nutrition logs, gym " +
-    "training data, sun/steps/vitamin D, and any notes the user left for you. You do NOT have access to their " +
+    "You can see everything this dashboard has already recorded: WHOOP recovery/sleep/strain, today's weather and UV " +
+    "at the user's saved location, nutrition logs, gym training data, sun/steps/vitamin D, today's supplement/stack " +
+    "checklist, today's goals, today's caffeine intake, net worth, and any notes the user left for you. If a field says " +
+    "it isn't tracked or set up yet, say so plainly rather than guessing. You do NOT have access to their " +
     "conversations with any other AI assistant (including Claude) — only what's listed below. Answer concisely, " +
     "reference specific numbers from the data when relevant, and keep a calm, capable, faintly dry tone.\n" +
     "If, and only if, the user is telling you they ate or drank something and wants it logged, estimate its full " +
@@ -470,9 +534,43 @@
     feed.scrollTop = feed.scrollHeight;
   }
 
+  // Free browser voices range from decent to "Stephen Hawking." Chrome/Edge
+  // both ship modern cloud/neural voices alongside the old robotic desktop
+  // ones — Edge on Windows in particular bundles free "Online (Natural)"
+  // voices — but speechSynthesis defaults to whatever the OS considers
+  // voice #1, which is usually the oldest, choppiest one. Actively pick a
+  // better one instead of accepting the default. Voices load asynchronously
+  // (often empty on the very first call), so this re-reads the list once
+  // the browser reports it's ready.
+  let cachedVoices = [];
+  function refreshVoiceList() { if ('speechSynthesis' in window) cachedVoices = window.speechSynthesis.getVoices(); }
+  if ('speechSynthesis' in window) {
+    refreshVoiceList();
+    window.speechSynthesis.onvoiceschanged = refreshVoiceList;
+  }
+  function pickBestVoice() {
+    if (!cachedVoices.length) return null;
+    const pool = cachedVoices.filter((v) => /^en/i.test(v.lang));
+    const candidates = pool.length ? pool : cachedVoices;
+    const rank = [
+      (v) => /natural/i.test(v.name),
+      (v) => /neural/i.test(v.name),
+      (v) => /online/i.test(v.name),
+      (v) => /google/i.test(v.name),
+    ];
+    for (const test of rank) { const found = candidates.find(test); if (found) return found; }
+    return candidates[0];
+  }
   function speakBrowser(text) {
     if (!('speechSynthesis' in window)) return;
-    try { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = 1.02; u.pitch = 0.85; window.speechSynthesis.speak(u); } catch (e) {}
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      const v = pickBestVoice();
+      if (v) u.voice = v;
+      u.rate = 1.0; u.pitch = 0.95;
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
   }
   function speak(text) {
     const plain = text.replace(/\*\*/g, '').replace(/[-•*]\s+/g, '');
@@ -568,6 +666,12 @@
      forever in the background. */
   const WAKE_KEY = 'jarvis_wakeword_enabled';
   const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  // Voice requires a secure context (HTTPS, or localhost) — on plain HTTP
+  // (e.g. opening the dashboard via a bare LAN IP) the browser blocks
+  // microphone access outright with no prompt and no catchable error, which
+  // looks identical to "does nothing when I talk to it." Surface that
+  // distinctly instead of failing silently.
+  const secure = typeof window.isSecureContext === 'undefined' || window.isSecureContext;
   let rec = null, mode = 'idle', wakeEnabled = loadJSON(WAKE_KEY, false), pendingCommand = false, wakeFailStreak = 0;
 
   function setWakeIndicator(on) { document.querySelectorAll('.jarvis-wake-indicator').forEach((el) => el.classList.toggle('on', on)); }
@@ -585,22 +689,15 @@
   // speech-to-text regularly mangles proper nouns ("jarviss", "jarv is", a
   // trailing "jarvis," with punctuation already stripped by the API, etc.).
   const WAKE_RE = /\bjarv[a-z]*\b/i;
-  async function ensureMicPermission() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true; // can't pre-check; let SpeechRecognition itself prompt
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((t) => t.stop());
-      return true;
-    } catch (e) { return false; }
-  }
   function safeStart(nextMode) {
+    if (!secure) { setHint('Voice needs HTTPS — open the dashboard via its https:// address.', true); return; }
     mode = nextMode;
     setWakeIndicator(mode === 'wake');
     if (mode === 'wake') setHint("Listening for \"Jarvis\"…", true);
     try { rec.start(); } catch (e) { /* a session was already active — ignore, onend will retry */ }
   }
 
-  if (SpeechRec) {
+  if (SpeechRec && secure) {
     rec = new SpeechRec();
     rec.continuous = false;
     rec.interimResults = false;
@@ -610,7 +707,7 @@
       const said = (e.results[e.results.length - 1][0].transcript || '').trim();
       if (mode === 'wake') {
         const m = said.match(WAKE_RE);
-        if (!m) return; // not my name — onend will restart passive listening
+        if (!m) { setHint('Heard: "' + said + '" (not my name)', true); return; } // keep passively listening
         const after = said.slice(m.index + m[0].length).replace(/^[,.!\s]+/, '').trim();
         open();
         if (after) {
@@ -623,6 +720,7 @@
         }
       } else if (mode === 'command') {
         $('jarvisInput').value = said;
+        setHint('Heard: "' + said + '"', false);
         ask(said);
       }
     };
@@ -652,36 +750,29 @@
         // Completely normal in wake mode (most restarts hear silence) — not a
         // real failure, don't count it against the fail streak.
       } else if (mode === 'command') {
-        setHint('Could not hear you — try again.', false);
+        setHint('Could not hear you (' + e.error + ') — try again.', false);
       } else {
         wakeFailStreak++;
+        setHint('Voice error: ' + e.error + ' — retrying…', true);
       }
     };
     if (wakeEnabled) safeStart('wake');
   }
 
-  $('jarvisMicBtn').addEventListener('click', async () => {
+  $('jarvisMicBtn').addEventListener('click', () => {
+    if (!secure) { setHint('Voice needs HTTPS — open the dashboard via its https:// address.', false); return; }
     if (!rec) { setHint("This browser doesn't support voice input — try Chrome or Edge, or just type.", false); return; }
     if (mode === 'command') { try { rec.stop(); } catch (e) {} return; }
     $('jarvisMicBtn').classList.add('active');
     document.querySelectorAll('#jarvisCore').forEach((el) => el.classList.add('listening'));
     setHint('Listening…', false);
     if (mode === 'wake') { pendingCommand = true; try { rec.stop(); } catch (e) {} }
-    else {
-      const ok = await ensureMicPermission();
-      if (!ok) { setHint('Microphone permission denied.', false); $('jarvisMicBtn').classList.remove('active'); return; }
-      safeStart('command');
-    }
+    else safeStart('command');
   });
 
-  $('jarvisWakeToggle').addEventListener('click', async () => {
+  $('jarvisWakeToggle').addEventListener('click', () => {
+    if (!secure) { $('jarvisSettingsStatus').textContent = 'Voice needs HTTPS — open the dashboard via its https:// address.'; return; }
     if (!SpeechRec) { $('jarvisSettingsStatus').textContent = "This browser doesn't support voice — try Chrome or Edge."; return; }
-    if (!wakeEnabled) {
-      $('jarvisSettingsStatus').textContent = 'Requesting microphone access…';
-      const ok = await ensureMicPermission();
-      if (!ok) { $('jarvisSettingsStatus').textContent = 'Microphone permission denied — check your browser/site settings.'; return; }
-      $('jarvisSettingsStatus').textContent = '';
-    }
     wakeEnabled = !wakeEnabled;
     saveJSON(WAKE_KEY, wakeEnabled);
     setWakeToggleUI(wakeEnabled);
